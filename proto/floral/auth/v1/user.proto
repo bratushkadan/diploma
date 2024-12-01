@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package floral.auth.v1;
+
+option go_package = "floral/auth/v1;auth_pb";
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+}
+
+message GetUserRequest {
+  uint64 id = 1;
+}
+
+message GetUserResponse {
+  uint64 id = 1;
+  string name = 2;
+}
