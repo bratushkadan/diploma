@@ -1,5 +1,19 @@
 # Floral
 
+## Run
+
+### Auth service
+
+```bash
+go run github.com/bratushkadan/floral/cmd/auth
+```
+
+### Test Auth service is running
+
+```bash
+grpcurl -plaintext -d '{"id": 1}' '127.0.0.1:48612' floral.auth.v1.UserService/GetUser
+```
+
 ## gRPC & Go dependencies
 
 Install:

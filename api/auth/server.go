@@ -1,12 +1,16 @@
 package auth
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"math/rand/v2"
 	"net"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
-	"github.com/bratushkadan/floral/pb/floral/v1"
+	auth_pb "github.com/bratushkadan/floral/pb/floral/auth/v1"
 )
 
 type AuthServerConfig struct {
@@ -20,7 +24,17 @@ func NewAuthServerConfig(port int) *AuthServerConfig {
 }
 
 type serverImpl struct {
-	floral.UnimplementedUserServiceServer
+	auth_pb.UnimplementedUserServiceServer
+}
+
+func (s *serverImpl) GetUser(ctx context.Context, req *auth_pb.GetUserRequest) (*auth_pb.GetUserResponse, error) {
+	if rand.IntN(10) == 0 {
+		return nil, errors.New("service unavailable")
+	}
+	return &auth_pb.GetUserResponse{
+		Id:   req.GetId(),
+		Name: "bratushkadan",
+	}, nil
 }
 
 func RunServer(conf *AuthServerConfig) error {
@@ -31,7 +45,9 @@ func RunServer(conf *AuthServerConfig) error {
 
 	s := grpc.NewServer()
 
-	floral.RegisterUserServiceServer(s, &serverImpl{})
+	reflection.Register(s)
+
+	auth_pb.RegisterUserServiceServer(s, &serverImpl{})
 	if err := s.Serve(lis); err != nil {
 		return fmt.Errorf("failed to serve gRPC: %v", err)
 	}

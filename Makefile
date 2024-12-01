@@ -5,3 +5,4 @@ gen: go-generate
 go-gen:
 	@mkdir -p pb
 	@go generate ./...
+
