@@ -2,17 +2,34 @@ syntax = "proto3";
 
 package floral.auth.v1;
 
+import "google/api/annotations.proto";
+
 option go_package = "floral/auth/v1;auth_pb";
 
 service UserService {
-  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc GetUsers(GetUsersRequest) returns (GetUsersResponse) {
+    option (google.api.http) = {get: "/v1/users"};
+  }
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {
+    option (google.api.http) = {get: "/v1/users/{id}"};
+  }
 }
 
+message GetUsersRequest {}
+
 message GetUserRequest {
-  uint64 id = 1;
+  string id = 1;
+}
+
+message GetUsersResponse {
+  message User {
+    string id = 1;
+    string name = 2;
+  }
+  repeated User users = 1;
 }
 
 message GetUserResponse {
-  uint64 id = 1;
+  string id = 1;
   string name = 2;
 }

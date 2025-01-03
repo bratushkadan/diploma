@@ -2,9 +2,7 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"math/rand/v2"
 	"net"
 
 	"google.golang.org/grpc"
@@ -28,17 +26,29 @@ type serverImpl struct {
 }
 
 func (s *serverImpl) GetUser(ctx context.Context, req *auth_pb.GetUserRequest) (*auth_pb.GetUserResponse, error) {
-	if rand.IntN(10) == 0 {
-		return nil, errors.New("service unavailable")
-	}
 	return &auth_pb.GetUserResponse{
 		Id:   req.GetId(),
 		Name: "bratushkadan",
 	}, nil
 }
 
+func (s *serverImpl) GetUsers(ctx context.Context, req *auth_pb.GetUsersRequest) (*auth_pb.GetUsersResponse, error) {
+	return &auth_pb.GetUsersResponse{
+		Users: []*auth_pb.GetUsersResponse_User{
+			{
+				Id:   "bratushkadan",
+				Name: "Danila Bratushka",
+			},
+			{
+				Id:   "andronidze",
+				Name: "Andrey Skochok",
+			},
+		},
+	}, nil
+}
+
 func RunServer(conf *AuthServerConfig) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", conf.Port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", conf.Port))
 	if err != nil {
 		return fmt.Errorf("failed to serve tcp: %v", err)
 	}
