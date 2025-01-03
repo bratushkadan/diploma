@@ -88,30 +88,45 @@ func (p *JwtProvider) Parse(token string, claims jwt.Claims) error {
 	return nil
 }
 
-// FIXME: fix the issue of private key being required
-type JwtProviderConf struct {
-	PrivateKey []byte
-	PublicKey  []byte
+type JwtProviderBuilder struct {
+	privateKey []byte
+	publicKey  []byte
 }
 
-func NewJwtProvider(conf JwtProviderConf) (*JwtProvider, error) {
-	if len(conf.PrivateKey) == 0 {
-		return nil, fmt.Errorf("private key can't be empty bytes")
+func NewJwtProviderBuilder() *JwtProviderBuilder {
+	return &JwtProviderBuilder{}
+}
+
+func (b *JwtProviderBuilder) WithPrivateKey(privateKey []byte) *JwtProviderBuilder {
+	b.privateKey = privateKey
+	return b
+}
+func (b *JwtProviderBuilder) WithPublicKey(publicKey []byte) *JwtProviderBuilder {
+	b.publicKey = publicKey
+	return b
+}
+func (b *JwtProviderBuilder) Build() (*JwtProvider, error) {
+	if len(b.publicKey) == 0 {
+		return nil, fmt.Errorf("public key can't be empty")
 	}
-	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(conf.PrivateKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse RSA private key from PEM for asymmetric JWT signing: %w", err)
-	}
-	if len(conf.PublicKey) == 0 {
-		return nil, fmt.Errorf("public key can't be empty bytes")
-	}
-	publicKey, err := jwt.ParseRSAPublicKeyFromPEM(conf.PublicKey)
+	publicKey, err := jwt.ParseRSAPublicKeyFromPEM(b.publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse RSA public key from PEM for asymmetric JWT validation: %w", err)
 	}
 
+	var privateKey *rsa.PrivateKey
+	if b.privateKey != nil {
+		if len(b.privateKey) == 0 {
+			return nil, fmt.Errorf("private key can't be empty bytes")
+		}
+		privateKey, err = jwt.ParseRSAPrivateKeyFromPEM(b.privateKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse RSA private key from PEM for asymmetric JWT signing: %w", err)
+		}
+	}
+
 	return &JwtProvider{
-		privateKey: privateKey,
 		publicKey:  publicKey,
+		privateKey: privateKey,
 	}, nil
 }

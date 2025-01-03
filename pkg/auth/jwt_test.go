@@ -17,12 +17,15 @@ var privateKey []byte
 //go:embed test_fixtures/public.key
 var publicKey []byte
 
+func getJwtTokenProvider() (*auth.JwtProvider, error) {
+	return auth.NewJwtProviderBuilder().
+		WithPublicKey(publicKey).
+		WithPrivateKey(privateKey).
+		Build()
+}
+
 func TestJwt(t *testing.T) {
-	conf := auth.JwtProviderConf{
-		PrivateKey: privateKey,
-		PublicKey:  publicKey,
-	}
-	tokenProv, err := auth.NewJwtProvider(conf)
+	tokenProv, err := getJwtTokenProvider()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,19 +42,15 @@ func TestJwt(t *testing.T) {
 	tokenProv.Parse(tokenString, &decodedClaims)
 
 	if decodedClaims.TokenType != auth.RefreshTokenType {
-		fmt.Errorf(`expected TokenType of refresh token decodedClaims to be "%s", got "%s"`, auth.RefreshTokenType, decodedClaims.TokenType)
+		t.Error(fmt.Errorf(`expected TokenType of refresh token decodedClaims to be "%s", got "%s"`, auth.RefreshTokenType, decodedClaims.TokenType))
 	}
 	if decodedClaims.SubjectId != refreshTokenSubjectId {
-		fmt.Errorf(`expected SubjectId of refresh token decodedClaims to be "%s", got "%s"`, refreshTokenSubjectId, decodedClaims.TokenType)
+		t.Error(fmt.Errorf(`expected SubjectId of refresh token decodedClaims to be "%s", got "%s"`, refreshTokenSubjectId, decodedClaims.TokenType))
 	}
 }
 
 func TestJwtDecodeExpired(t *testing.T) {
-	conf := auth.JwtProviderConf{
-		PrivateKey: privateKey,
-		PublicKey:  publicKey,
-	}
-	tokenProv, err := auth.NewJwtProvider(conf)
+	tokenProv, err := getJwtTokenProvider()
 	if err != nil {
 		t.Fatal(err)
 	}

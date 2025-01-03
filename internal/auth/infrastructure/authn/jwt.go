@@ -7,9 +7,11 @@ func loadPem(privateKeyPath string, publicKeyPath string) error {
 }
 
 func foo() {
-	conf := auth.JwtProviderConf{
-		PrivateKey: []byte{},
-		PublicKey:  []byte{},
+	_, err := auth.NewJwtProviderBuilder().
+		WithPrivateKey(nil).
+		WithPublicKey(nil).
+		Build()
+	if err != nil {
+		return
 	}
-	auth.NewJwtProvider(conf)
 }
