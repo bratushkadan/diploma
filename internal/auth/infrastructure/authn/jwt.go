@@ -17,8 +17,8 @@ const (
 )
 
 type JwtProviderConf struct {
-	privateKeyPath string
-	publicKeyPath  string
+	PrivateKeyPath string
+	PublicKeyPath  string
 }
 
 type JwtProvider struct {
@@ -133,11 +133,11 @@ func (p *AccessTokenJwtProvider) Decode(tokenString string) (*domain.AccessToken
 }
 
 func NewJwtProvider(conf JwtProviderConf) (*JwtProvider, error) {
-	privateKey, err := os.ReadFile(conf.privateKeyPath)
+	privateKey, err := os.ReadFile(conf.PrivateKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read private key from file: %w", err)
 	}
-	publicKey, err := os.ReadFile(conf.publicKeyPath)
+	publicKey, err := os.ReadFile(conf.PublicKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read public key from file: %w", err)
 	}
