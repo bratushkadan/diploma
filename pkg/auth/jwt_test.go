@@ -31,7 +31,7 @@ func TestJwt(t *testing.T) {
 	}
 
 	refreshTokenSubjectId := "dan"
-	claims := auth.NewRefreshTokenJwtClaims(refreshTokenSubjectId)
+	claims := auth.NewRefreshTokenJwtClaims("", refreshTokenSubjectId)
 
 	tokenString, err := tokenProv.Create(claims)
 	if err != nil {
@@ -56,7 +56,7 @@ func TestJwtDecodeExpired(t *testing.T) {
 	}
 
 	refreshTokenSubjectId := "dan"
-	claims := auth.NewRefreshTokenJwtClaims(refreshTokenSubjectId)
+	claims := auth.NewRefreshTokenJwtClaims("", refreshTokenSubjectId)
 	claims.RegisteredClaims.ExpiresAt = &jwt.NumericDate{Time: time.Now().Add(-1 * time.Minute)}
 
 	tokenString, err := tokenProv.Create(claims)

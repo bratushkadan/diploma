@@ -7,7 +7,13 @@ import (
 
 	"github.com/bratushkadan/floral/internal/auth/domain"
 	"github.com/bratushkadan/floral/pkg/auth"
+	"github.com/bratushkadan/floral/pkg/resource"
 	"github.com/golang-jwt/jwt/v5"
+)
+
+const (
+	RefreshTokenIdByteLength = 24
+	RefreshTokenIdPrefix     = "ry"
 )
 
 type JwtProviderConf struct {
@@ -20,11 +26,11 @@ type JwtProvider struct {
 }
 
 type RefreshTokenJwtProvider struct {
-	prov          *auth.JwtProvider
+	jwt           *JwtProvider
 	tokenDuration time.Duration
 }
 type AccessTokenJwtProvider struct {
-	prov          *auth.JwtProvider
+	jwt           *JwtProvider
 	tokenDuration time.Duration
 }
 
@@ -33,24 +39,25 @@ var _ domain.AccessTokenProvider = (*AccessTokenJwtProvider)(nil)
 
 func NewRefreshTokenJwtProvider(p *JwtProvider, tokenDuration time.Duration) *RefreshTokenJwtProvider {
 	return &RefreshTokenJwtProvider{
-		prov:          p.p,
+		jwt:           p,
 		tokenDuration: tokenDuration,
 	}
 }
 
 func NewAccessTokenJwtProvider(p *JwtProvider, tokenDuration time.Duration) *AccessTokenJwtProvider {
 	return &AccessTokenJwtProvider{
-		prov:          p.p,
+		jwt:           p,
 		tokenDuration: tokenDuration,
 	}
 }
 
 func (p *RefreshTokenJwtProvider) Create(subjectId string) (*domain.RefreshToken, string, error) {
-	claims := auth.NewRefreshTokenJwtClaims(subjectId)
+	id := resource.GenerateIdPrefix(RefreshTokenIdByteLength, RefreshTokenIdPrefix)
+	claims := auth.NewRefreshTokenJwtClaims(id, subjectId)
 	claims.RegisteredClaims.Issuer = auth.FloralJwtIssuer
 	claims.RegisteredClaims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(p.tokenDuration))
 
-	tokenString, err := p.prov.Create(claims)
+	tokenString, err := p.jwt.p.Create(claims)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create jwt refresh token: %w", err)
 	}
@@ -64,11 +71,16 @@ func (p *RefreshTokenJwtProvider) Create(subjectId string) (*domain.RefreshToken
 
 func (p *RefreshTokenJwtProvider) Decode(tokenString string) (*domain.RefreshToken, error) {
 	var claims auth.RefreshTokenJwtClaims
-	if err := p.prov.Parse(tokenString, &claims); err != nil {
-		return nil, fmt.Errorf("")
+	if err := p.jwt.p.Parse(tokenString, &claims); err != nil {
+		return nil, fmt.Errorf("failed to parse jwt: %w", err)
+	}
+
+	if err := resource.ValidateIdByteLenPrefix(claims.TokenId, RefreshTokenIdByteLength, RefreshTokenIdPrefix); err != nil {
+		return nil, fmt.Errorf("failed to validate jwt id: %w", err)
 	}
 
 	return &domain.RefreshToken{
+		TokenId:   claims.TokenId,
 		TokenType: claims.TokenType,
 		SubjectId: claims.SubjectId,
 		ExpiresAt: claims.RegisteredClaims.ExpiresAt.Time,
@@ -80,7 +92,7 @@ func (p *AccessTokenJwtProvider) Create(subjectId string, subjectType string) (*
 	claims.RegisteredClaims.Issuer = auth.FloralJwtIssuer
 	claims.RegisteredClaims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(p.tokenDuration))
 
-	tokenString, err := p.prov.Create(claims)
+	tokenString, err := p.jwt.p.Create(claims)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create jwt refresh token: %w", err)
 	}
@@ -95,7 +107,7 @@ func (p *AccessTokenJwtProvider) Create(subjectId string, subjectType string) (*
 
 func (p *AccessTokenJwtProvider) Decode(tokenString string) (*domain.AccessToken, error) {
 	var claims auth.AccessTokenJwtClaims
-	if err := p.prov.Parse(tokenString, &claims); err != nil {
+	if err := p.jwt.p.Parse(tokenString, &claims); err != nil {
 		return nil, fmt.Errorf("")
 	}
 

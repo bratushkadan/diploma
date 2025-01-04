@@ -17,13 +17,15 @@ var (
 )
 
 type RefreshTokenJwtClaims struct {
+	TokenId   string `json:"token_id"`
 	TokenType string `json:"token_type"`
 	SubjectId string `json:"subject_id"`
 	jwt.RegisteredClaims
 }
 
-func NewRefreshTokenJwtClaims(subjectId string) *RefreshTokenJwtClaims {
+func NewRefreshTokenJwtClaims(tokenId string, subjectId string) *RefreshTokenJwtClaims {
 	return &RefreshTokenJwtClaims{
+		TokenId:   tokenId,
 		TokenType: RefreshTokenType,
 		SubjectId: subjectId,
 	}
