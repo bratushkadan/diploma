@@ -23,12 +23,10 @@ type RefreshTokenJwtClaims struct {
 }
 
 func NewRefreshTokenJwtClaims(subjectId string) *RefreshTokenJwtClaims {
-	claims := &RefreshTokenJwtClaims{
+	return &RefreshTokenJwtClaims{
 		TokenType: RefreshTokenType,
 		SubjectId: subjectId,
 	}
-	claims.RegisteredClaims.Issuer = FloralJwtIssuer
-	return claims
 }
 
 type AccessTokenJwtClaims struct {
@@ -39,13 +37,11 @@ type AccessTokenJwtClaims struct {
 }
 
 func NewAccessTokenJwtClaims(subjectId string, subjectType string) *AccessTokenJwtClaims {
-	claims := &AccessTokenJwtClaims{
+	return &AccessTokenJwtClaims{
 		TokenType:   AccessTokenType,
 		SubjectId:   subjectId,
 		SubjectType: subjectType,
 	}
-	claims.RegisteredClaims.Issuer = FloralJwtIssuer
-	return claims
 }
 
 type JwtProvider struct {
@@ -55,6 +51,7 @@ type JwtProvider struct {
 
 func (p *JwtProvider) Create(claims jwt.Claims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 
 	tokenString, err := token.SignedString(p.privateKey)
 	if err != nil {
@@ -72,17 +69,10 @@ func (p *JwtProvider) Parse(token string, claims jwt.Claims) error {
 		return p.publicKey, nil
 	})
 	if err != nil {
-		return fmt.Errorf("failed to parse token: %w", err)
+		return fmt.Errorf("failed to parse jwt token: %w", err)
 	}
 	if !parsedToken.Valid {
-		return fmt.Errorf("invalid refresh token")
-	}
-	issuer, err := claims.GetIssuer()
-	if err != nil {
-		return fmt.Errorf(`failed to get issuer of jwt, expected "%s"`, FloralJwtIssuer)
-	}
-	if issuer != FloralJwtIssuer {
-		return fmt.Errorf(`invalid refresh token issuer, expected "%s"`, FloralJwtIssuer)
+		return fmt.Errorf("invalid jwt token")
 	}
 
 	return nil
