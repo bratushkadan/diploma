@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -9,6 +10,8 @@ import (
 	"github.com/bratushkadan/floral/internal/auth/domain"
 	"github.com/bratushkadan/floral/internal/auth/frontend"
 	"github.com/bratushkadan/floral/internal/auth/infrastructure/authn"
+	"github.com/bratushkadan/floral/internal/auth/infrastructure/provider"
+	"github.com/bratushkadan/floral/pkg/postgres"
 )
 
 // "github.com/bratushkadan/floral/api/auth"
@@ -22,6 +25,26 @@ func main() {
 	// 	log.Fatal(err)
 	// }
 
+	userProv, err := setupProviders()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	user, err := userProv.CreateUser(context.Background(), domain.UserProviderCreateUserReq{
+		Id:       19948102,
+		Name:     "Larisa",
+		Password: "foobar123",
+		Email:    "larisa.bratushka@mail.ru",
+		Type:     "customer",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("%+v", user)
+
+	return
+
 	authSvc, err := setup()
 	if err != nil {
 		log.Fatalf("failed to setup auth service: %v", err)
@@ -30,6 +53,27 @@ func main() {
 	if err := run(front, authSvc); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func setupProviders() (*provider.PostgresUserProvider, error) {
+	conf, err := postgres.NewDBConf().
+		WithDbHost("localhost").
+		WithDbUser("root").
+		WithDbPassword("root").
+		WithDbPort(5432).
+		WithDbName("auth").
+		Build()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create DBConf: %v", err)
+	}
+	db, err := provider.NewDbconnPool(conf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize db: %v", err)
+	}
+
+	prov := provider.NewPostgresUserProvider(conf, db)
+
+	return prov, nil
 }
 
 func setup() (*domain.AuthService, error) {
