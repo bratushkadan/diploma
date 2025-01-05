@@ -35,6 +35,7 @@ func (f *HttpImpl) Start(auth *domain.AuthService) error {
 	})
 	usersRouter.Post("/:register", http.HandlerFunc(f.RegisterUserHandler))
 	usersRouter.Post("/:authenticate", http.HandlerFunc(f.AuthenticateHandler))
+	usersRouter.Post("/:renewRefreshToken", http.HandlerFunc(f.RenewRefreshTokenHandler))
 
 	r.Mount("/api", apiRouter)
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
@@ -101,6 +102,41 @@ func (f *HttpImpl) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, domain.ErrInvalidCredentials) {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(`{"errors":[{"code": 2, "message": "bad user credentials"}]}`))
+			return
+		}
+		log.Print(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"errors":[{"code": 1, "message": "internal server error"}]}`))
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(&struct {
+		RefreshToken string `json:"refresh_token"`
+	}{
+		RefreshToken: refreshToken,
+	}); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"errors":[{"code": 1, "message": "internal server error"}]}`))
+		return
+	}
+}
+
+func (f *HttpImpl) RenewRefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
+	var reqData struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil || reqData.RefreshToken == "" {
+		log.Print(err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`{"errors":[{"code": 123, "message": "bad request body"}]}`))
+		return
+	}
+
+	refreshToken, err := f.auth.RenewRefreshToken(r.Context(), reqData.RefreshToken)
+	if err != nil {
+		if errors.Is(err, domain.ErrInvalidRefreshToken) {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"errors":[{"code": 3, "message": "invalid refresh token"}]}`))
 			return
 		}
 		log.Print(err)
