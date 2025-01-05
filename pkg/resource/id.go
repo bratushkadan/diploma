@@ -9,23 +9,31 @@ import (
 	"strings"
 )
 
-func GenerateIdPrefix(byteLen int, prefix string) string {
-	idBytes := make([]byte, byteLen)
-	_, _ = rand.Read(idBytes)
-	dst := make([]byte, base32.StdEncoding.EncodedLen(byteLen))
+func IdFromBytesPrefix(idBytes []byte, prefix string) string {
+	dst := make([]byte, base32.StdEncoding.EncodedLen(len(idBytes)))
 	_, _ = rand.Read(dst)
 	base32.StdEncoding.Encode(dst, idBytes)
 
 	return prefix + string(bytes.TrimRight(bytes.ToLower(dst), "="))
 }
 
+func IdFromBytes(idBytes []byte) string {
+	return IdFromBytesPrefix(idBytes, "")
+}
+
+func GenerateIdPrefix(byteLen int, prefix string) string {
+	idBytes := make([]byte, byteLen)
+	_, _ = rand.Read(idBytes)
+	return IdFromBytesPrefix(idBytes, prefix)
+}
+
 func GenerateId(byteLen int) string {
 	return GenerateIdPrefix(byteLen, "")
 }
 
-func ValidateIdByteLenPrefix(id string, byteLen int, prefix string) error {
+func IdByteLenPrefixToBytes(id string, byteLen int, prefix string) ([]byte, error) {
 	if prefix != "" && !strings.HasPrefix(id, prefix) {
-		return errors.New("wrong id prefix")
+		return nil, errors.New("wrong id prefix")
 	}
 
 	id = strings.TrimPrefix(id, prefix)
@@ -34,12 +42,17 @@ func ValidateIdByteLenPrefix(id string, byteLen int, prefix string) error {
 
 	decoded, err := base32.StdEncoding.DecodeString(idWithPadding)
 	if err != nil {
-		return fmt.Errorf("failed to decode id: %w", err)
+		return nil, fmt.Errorf("failed to decode id: %w", err)
 	}
 	if byteLen != -1 && len(decoded) != byteLen {
-		return errors.New("wrong id length")
+		return nil, errors.New("wrong id length")
 	}
-	return nil
+
+	return decoded, nil
+}
+func ValidateIdByteLenPrefix(id string, byteLen int, prefix string) error {
+	_, err := IdByteLenPrefixToBytes(id, byteLen, prefix)
+	return err
 }
 
 func ValidateIdByteLen(id string, byteLen int) error {
