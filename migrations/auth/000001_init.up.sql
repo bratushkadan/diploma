@@ -10,11 +10,11 @@ CREATE TABLE "auth"."users" (
 );
 
 CREATE TABLE "auth"."refresh_tokens" (
-  id VARCHAR(75) NOT NULL,
-  user_id BIGINT NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  expires_at TIMESTAMP NOT NULL,
-  PRIMARY KEY ("id", "user_id"),
-  FOREIGN KEY (user_id) REFERENCES "auth"."users" (id) ON DELETE CASCADE
+    id VARCHAR(75) NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    PRIMARY KEY ("id", "user_id"),
+    FOREIGN KEY (user_id) REFERENCES "auth"."users" (id) ON DELETE CASCADE
 );
 

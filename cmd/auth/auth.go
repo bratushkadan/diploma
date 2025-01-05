@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -26,34 +25,12 @@ func main() {
 	// 	log.Fatal(err)
 	// }
 
-	userProv, err := setupProviders()
+	userProv, rtPerProv, err := setupProviders()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	hasher := auth.NewPasswordHasher("84778381-9207-4EC5-92A2-30F658D55872")
-
-	pass := "foobar123"
-	hashedPass, err := hasher.Hash(pass)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	user, err := userProv.CreateUser(context.Background(), domain.UserProviderCreateUserReq{
-		Name:     "Danila",
-		Password: hashedPass,
-		Email:    "danilabratushka@ya.ru",
-		Type:     "admin",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("%+v", user)
-
-	return
-
-	authSvc, err := setup()
+	authSvc, err := setup(userProv, rtPerProv)
 	if err != nil {
 		log.Fatalf("failed to setup auth service: %v", err)
 	}
@@ -63,7 +40,7 @@ func main() {
 	}
 }
 
-func setupProviders() (*provider.PostgresUserProvider, error) {
+func setupProviders() (*provider.PostgresUserProvider, *provider.PostgresRefreshTokenPersisterProvider, error) {
 	conf, err := postgres.NewDBConf().
 		WithDbHost("localhost").
 		WithDbUser("root").
@@ -72,19 +49,21 @@ func setupProviders() (*provider.PostgresUserProvider, error) {
 		WithDbName("auth").
 		Build()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create DBConf: %v", err)
+		return nil, nil, fmt.Errorf("failed to create DBConf: %v", err)
 	}
 	db, err := provider.NewDbconnPool(conf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize db: %v", err)
+		return nil, nil, fmt.Errorf("failed to initialize db: %v", err)
 	}
 
-	prov := provider.NewPostgresUserProvider(conf, db)
+	hasher := auth.NewPasswordHasher("84778381-9207-4EC5-92A2-30F658D55872")
+	userProv := provider.NewPostgresUserProvider(conf, db, hasher)
+	rtPerProv := provider.NewPostgresRefreshTokenPersisterProvider(conf, db)
 
-	return prov, nil
+	return userProv, rtPerProv, nil
 }
 
-func setup() (*domain.AuthService, error) {
+func setup(userProvider domain.UserProvider, rtPersisterProvider domain.RefreshTokenPersisterProvider) (*domain.AuthService, error) {
 	appConfig := struct {
 		JwtPrivateKeyPath    string
 		JwtPublicKeyPath     string
@@ -111,9 +90,8 @@ func setup() (*domain.AuthService, error) {
 		RefreshTokenProvider: authn.NewRefreshTokenJwtProvider(jwtProvider, appConfig.RefreshTokenDuration),
 		AccessTokenProvider:  authn.NewAccessTokenJwtProvider(jwtProvider, appConfig.AccessTokenDuration),
 
-		// FIXME:
-		// UserProvider: domain.UserProvider,
-		// RefreshTokenPersisterProvider: domain.RefreshTokenPersisterProvider,
+		UserProvider:                  userProvider,
+		RefreshTokenPersisterProvider: rtPersisterProvider,
 
 		SecretToken: appConfig.SecretToken,
 	}

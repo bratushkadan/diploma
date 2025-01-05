@@ -109,13 +109,13 @@ func (s *AuthService) lookupRefreshToken(ctx context.Context, refreshTokenString
 		return nil, fmt.Errorf("%w: failed to decode refresh token: %w", ErrInvalidRefreshToken, err)
 	}
 
-	tokens, err := s.rtPerProv.Get(ctx, token.SubjectId)
+	tokenIds, err := s.rtPerProv.Get(ctx, token.SubjectId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve refresh tokens for subject: %w", err)
 	}
 
-	for _, v := range tokens {
-		if v.TokenId == token.TokenId {
+	for _, id := range tokenIds {
+		if id == token.TokenId {
 			return token, nil
 		}
 	}
@@ -155,10 +155,10 @@ func (s *AuthService) CreateAdmin(ctx context.Context, req CreateAdminReq) (*Use
 func (s *AuthService) Authenticate(ctx context.Context, email, password string) (string, error) {
 	user, err := s.userProv.CheckUserCredentials(ctx, email, password)
 	if err != nil {
+		if errors.Is(err, ErrInvalidCredentials) {
+			return "", err
+		}
 		return "", fmt.Errorf("failed to check user credentials: %w", err)
-	}
-	if user == nil {
-		return "", ErrInvalidCredentials
 	}
 
 	return s.createPersistToken(ctx, user.Id)

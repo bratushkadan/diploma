@@ -37,7 +37,6 @@ type AccessTokenProvider interface {
 }
 
 type UserProviderCreateUserReq struct {
-	Id       int
 	Name     string
 	Password string
 	Email    string
@@ -52,7 +51,7 @@ type UserProvider interface {
 }
 
 type RefreshTokenPersisterProvider interface {
-	Get(ctx context.Context, subjectId string) ([]RefreshToken, error)
+	Get(ctx context.Context, subjectId string) (tokenIds []string, err error)
 	Add(context.Context, *RefreshToken) error
 	Delete(ctx context.Context, tokenId string) error
 }
