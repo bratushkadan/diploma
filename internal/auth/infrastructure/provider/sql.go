@@ -118,11 +118,11 @@ func (p *PostgresRefreshTokenPersisterProvider) Get(ctx context.Context, subject
 		return nil, fmt.Errorf("failed to generate id for user creation: %v", err)
 	}
 
-	smt := fmt.Sprintf(`SELECT id FROM "%s"."%s" (id) WHERE "user_id" = $1 AND CURRENT_TIMESTAMP <= "expires_at"`, AuthServiceSchema, TableRefreshTokens)
+	smt := fmt.Sprintf(`SELECT id FROM "%s"."%s" WHERE "user_id" = $1 AND CURRENT_TIMESTAMP <= "expires_at"`, AuthServiceSchema, TableRefreshTokens)
 
 	rows, err := p.db.QueryContext(ctx, smt, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to insert token into the database: %v", err)
+		return nil, fmt.Errorf("failed to query tokens from the database: %v", err)
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
