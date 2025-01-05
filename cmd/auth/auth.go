@@ -11,6 +11,7 @@ import (
 	"github.com/bratushkadan/floral/internal/auth/frontend"
 	"github.com/bratushkadan/floral/internal/auth/infrastructure/authn"
 	"github.com/bratushkadan/floral/internal/auth/infrastructure/provider"
+	"github.com/bratushkadan/floral/pkg/auth"
 	"github.com/bratushkadan/floral/pkg/postgres"
 )
 
@@ -30,12 +31,19 @@ func main() {
 		log.Fatal(err)
 	}
 
+	hasher := auth.NewPasswordHasher("84778381-9207-4EC5-92A2-30F658D55872")
+
+	pass := "foobar123"
+	hashedPass, err := hasher.Hash(pass)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	user, err := userProv.CreateUser(context.Background(), domain.UserProviderCreateUserReq{
-		Id:       19948102,
-		Name:     "Larisa",
-		Password: "foobar123",
-		Email:    "larisa.bratushka@mail.ru",
-		Type:     "customer",
+		Name:     "Danila",
+		Password: hashedPass,
+		Email:    "danilabratushka@ya.ru",
+		Type:     "admin",
 	})
 	if err != nil {
 		log.Fatal(err)
