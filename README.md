@@ -34,3 +34,75 @@ Install:
 3. Run `make go-gen`; 
 4. Import pb in code (example: `github.com/bratushkadan/floral/pb/floral/auth/v1`).
 
+## HTTP API Docs
+
+### Auth
+
+#### Error Response
+
+Sample:
+```json
+{
+  "errors": [
+    {
+      "code": 1,
+      "message": "bad request"
+    }
+  ]
+}
+```
+
+#### Endpoints
+
+##### `POST /api/v1/users/:register`
+
+Request sample:
+```json
+{
+  "name": "danila",
+  "email": "foobar@yahoo.com",
+  "password": "secretpass123"
+}
+```
+
+Response sample:
+```json
+{
+  "id": "i1qwk6jcuwjeqzy",
+  "name": "danila"
+}
+```
+
+
+##### `POST /api/v1/users/:authenticate`
+
+Request sample:
+```json
+{
+  "email": "foobar@yahoo.com",
+  "password": "secretpass123"
+}
+```
+
+Response sample:
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+##### `POST /api/v1/users/:renewRefreshToken`
+
+Request sample:
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+Response sample:
+```json
+{
+  "refresh_token": "..."
+}
+```
