@@ -170,7 +170,16 @@ func (s *AuthService) RenewRefreshToken(ctx context.Context, refreshTokenString 
 		return "", err
 	}
 
-	return s.createPersistToken(ctx, token.SubjectId)
+	tokenStr, err := s.createPersistToken(ctx, token.SubjectId)
+	if err != nil {
+		return "", err
+	}
+
+	if err := s.rtPerProv.Delete(ctx, token.TokenId); err != nil {
+		return "", err
+	}
+
+	return tokenStr, nil
 }
 
 func (s *AuthService) GetAccessToken(ctx context.Context, refreshTokenString string) (string, error) {
