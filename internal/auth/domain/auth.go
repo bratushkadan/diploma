@@ -37,6 +37,7 @@ type AccessTokenProvider interface {
 }
 
 type UserProviderCreateUserReq struct {
+	Id       int
 	Name     string
 	Password string
 	Email    string
@@ -44,7 +45,7 @@ type UserProviderCreateUserReq struct {
 }
 
 type UserProvider interface {
-	CreateUser(context.Context, UserProviderCreateUserReq) (User, error)
+	CreateUser(context.Context, UserProviderCreateUserReq) (*User, error)
 	FindUser(ctx context.Context, id string) (*User, error)
 	FindUserByEmail(ctx context.Context, email string) (*User, error)
 	CheckUserCredentials(ctx context.Context, email string, password string) (*User, error)

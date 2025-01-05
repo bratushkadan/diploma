@@ -87,7 +87,7 @@ func (s *AuthService) createUser(ctx context.Context, req CreateUserReq, userTyp
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	return &user, nil
+	return user, nil
 }
 
 func (s *AuthService) createPersistToken(ctx context.Context, subjectId string) (string, error) {
