@@ -63,6 +63,7 @@ func (p *RefreshTokenJwtProvider) Create(subjectId string) (*domain.RefreshToken
 	}
 
 	return &domain.RefreshToken{
+		TokenId:   claims.TokenId,
 		TokenType: claims.TokenType,
 		SubjectId: claims.SubjectId,
 		ExpiresAt: claims.ExpiresAt.Time,
@@ -78,7 +79,7 @@ func (p *RefreshTokenJwtProvider) Decode(tokenString string) (*domain.RefreshTok
 	if claims.TokenType != auth.RefreshTokenType {
 		return nil, fmt.Errorf(`expected token type to be "%s"`, auth.RefreshTokenType)
 	}
-	if claims.ExpiresAt.After(time.Now()) {
+	if time.Now().After(claims.ExpiresAt.Time) {
 		return nil, fmt.Errorf("token is expired")
 	}
 	if err := resource.ValidateIdByteLenPrefix(claims.TokenId, RefreshTokenIdByteLength, RefreshTokenIdPrefix); err != nil {
@@ -120,7 +121,7 @@ func (p *AccessTokenJwtProvider) Decode(tokenString string) (*domain.AccessToken
 	if claims.TokenType != auth.AccessTokenType {
 		return nil, fmt.Errorf(`expected token type to be "%s"`, auth.AccessTokenType)
 	}
-	if claims.ExpiresAt.After(time.Now()) {
+	if time.Now().After(claims.ExpiresAt.Time) {
 		return nil, fmt.Errorf("token is expired")
 	}
 
