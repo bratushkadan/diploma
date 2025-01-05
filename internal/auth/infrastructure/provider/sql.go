@@ -157,5 +157,12 @@ func (p *PostgresRefreshTokenPersisterProvider) Add(ctx context.Context, token *
 	return nil
 }
 func (p *PostgresRefreshTokenPersisterProvider) Delete(ctx context.Context, tokenId string) error {
+	smt := fmt.Sprintf(`DELETE FROM "%s"."%s" WHERE "id" = $1`, AuthServiceSchema, TableRefreshTokens)
+
+	row := p.db.QueryRowContext(ctx, smt, tokenId)
+	if err := row.Err(); err != nil {
+		return fmt.Errorf("failed to delete token from the database: %w", err)
+	}
+
 	return nil
 }
