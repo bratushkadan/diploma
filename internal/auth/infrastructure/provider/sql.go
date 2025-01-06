@@ -61,6 +61,9 @@ func (p *PostgresUserProvider) CreateUser(ctx context.Context, req domain.UserPr
 	var userId int64
 	var user domain.User
 	if err := row.Scan(&userId, &user.Name, &user.Type); err != nil {
+		if postgres.IsUniqueConstraintViolation(err) {
+			return nil, fmt.Errorf("%w: %w", domain.ErrEmailIsInUse, err)
+		}
 		return nil, fmt.Errorf("failed to create user: %v", err)
 	}
 	user.Id = Int64ToUserId(userId)

@@ -47,6 +47,7 @@ var (
 	ErrInvalidAccessToken  = errors.New("invalid access token")
 	ErrPermissionDenied    = errors.New("permission denied")
 	ErrUserNotFound        = errors.New("user not found")
+	ErrEmailIsInUse        = errors.New("email is in use")
 )
 
 var (

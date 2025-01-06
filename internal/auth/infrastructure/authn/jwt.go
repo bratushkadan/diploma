@@ -128,7 +128,7 @@ func (p *AccessTokenJwtProvider) Decode(tokenString string) (*domain.AccessToken
 	return &domain.AccessToken{
 		TokenType:   claims.TokenType,
 		SubjectId:   claims.SubjectId,
-		SubjectType: claims.SubjectId,
+		SubjectType: claims.SubjectType,
 		ExpiresAt:   claims.RegisteredClaims.ExpiresAt.Time,
 	}, nil
 }

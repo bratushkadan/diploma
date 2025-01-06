@@ -73,6 +73,53 @@ Response sample:
 }
 ```
 
+##### `POST /api/v1/users/:registerSeller`
+
+**admin only**
+
+Request sample:
+```json
+{
+  "seller": {
+    "name": "danila",
+    "email": "foobar@yahoo.com",
+    "password": "secretpass123"
+  },
+  "access_token": "..."
+}
+```
+
+Response sample:
+```json
+{
+  "id": "i1qwk6jcuwjeqzy",
+  "name": "danila"
+}
+```
+
+##### `POST /api/v1/users/:registerAdmin`
+
+**admin only** - expose this endpoint with **extreme caution**
+
+Request sample:
+```json
+{
+  "admin": {
+    "name": "danila",
+    "email": "foobar@yahoo.com",
+    "password": "secretpass123"
+  },
+  "secret_token": "..."
+}
+```
+
+Response sample:
+```json
+{
+  "id": "i1qwk6jcuwjeqzy",
+  "name": "danila"
+}
+```
 
 ##### `POST /api/v1/users/:authenticate`
 
@@ -104,5 +151,22 @@ Response sample:
 ```json
 {
   "refresh_token": "..."
+}
+```
+
+##### `POST /api/v1/users/:createAccessToken`
+
+Request sample:
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+Response sample:
+```json
+{
+  "access_token": "...",
+  "expires_at": "2025-01-06T21:02:13+03:00"
 }
 ```
