@@ -44,7 +44,9 @@ var (
 	ErrInvalidCredentials  = errors.New("invalid credentials")
 	ErrInvalidEmail        = errors.New("invalid email address")
 	ErrInvalidRefreshToken = errors.New("invalid refresh token")
+	ErrInvalidAccessToken  = errors.New("invalid access token")
 	ErrPermissionDenied    = errors.New("permission denied")
+	ErrUserNotFound        = errors.New("user not found")
 )
 
 var (
@@ -130,7 +132,7 @@ func (s *AuthService) CreateCustomer(ctx context.Context, req CreateCustomerReq)
 func (s *AuthService) CreateSeller(ctx context.Context, req CreateSellerReq, accessTokenString string) (*User, error) {
 	accessToken, err := s.atProv.Decode(accessTokenString)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode access token: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidAccessToken, err)
 	}
 
 	if accessToken.SubjectType != auth.UserTypeAdmin {
@@ -182,21 +184,21 @@ func (s *AuthService) RenewRefreshToken(ctx context.Context, refreshTokenString 
 	return tokenStr, nil
 }
 
-func (s *AuthService) GetAccessToken(ctx context.Context, refreshTokenString string) (string, error) {
+func (s *AuthService) GetAccessToken(ctx context.Context, refreshTokenString string) (*AccessToken, string, error) {
 	token, err := s.lookupRefreshToken(ctx, refreshTokenString)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
 	user, err := s.userProv.FindUser(ctx, token.SubjectId)
 	if err != nil {
-		return "", fmt.Errorf("failed to request user: %w", err)
+		return nil, "", fmt.Errorf("failed to request user: %w", err)
 	}
 
-	_, tokenStr, err := s.atProv.Create(user.Id, user.Type)
+	accessToken, tokenStr, err := s.atProv.Create(user.Id, user.Type)
 	if err != nil {
-		return "", fmt.Errorf("failed to create access token: %w", err)
+		return nil, "", fmt.Errorf("failed to create access token: %w", err)
 	}
 
-	return tokenStr, nil
+	return accessToken, tokenStr, nil
 }

@@ -68,11 +68,42 @@ func (p *PostgresUserProvider) CreateUser(ctx context.Context, req domain.UserPr
 	return &user, nil
 }
 
-func (p *PostgresUserProvider) FindUser(ctx context.Context, id string) (*domain.User, error) {
-	return nil, errors.New("unimplemented")
+func (p *PostgresUserProvider) FindUser(ctx context.Context, strId string) (*domain.User, error) {
+	id, err := UserIdToInt64(strId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate id for user creation: %v", err)
+	}
+
+	smt := fmt.Sprintf(`SELECT id, name, type FROM "%s"."%s" WHERE "id" = $1`, AuthServiceSchema, TableUsers)
+
+	row := p.db.QueryRowContext(ctx, smt, id)
+	var intId int64
+	var user domain.User
+	if err := row.Scan(&intId, &user.Name, &user.Type); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%w: %w", domain.ErrUserNotFound, err)
+		}
+		return nil, err
+	}
+	user.Id = Int64ToUserId(intId)
+
+	return &user, nil
 }
 func (p *PostgresUserProvider) FindUserByEmail(ctx context.Context, email string) (*domain.User, error) {
-	return nil, errors.New("unimplemented")
+	smt := fmt.Sprintf(`SELECT id, name, type FROM "%s"."%s" WHERE "email" = $1`, AuthServiceSchema, TableUsers)
+
+	row := p.db.QueryRowContext(ctx, smt, email)
+	var intId int64
+	var user domain.User
+	if err := row.Scan(&intId, &user.Name, &user.Type); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%w: %w", domain.ErrUserNotFound, err)
+		}
+		return nil, err
+	}
+	user.Id = Int64ToUserId(intId)
+
+	return &user, nil
 }
 func (p *PostgresUserProvider) CheckUserCredentials(ctx context.Context, email string, password string) (*domain.User, error) {
 	smt := fmt.Sprintf(`SELECT id, name, password, type FROM "%s"."%s" WHERE "email" = $1`, AuthServiceSchema, TableUsers)
