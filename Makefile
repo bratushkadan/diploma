@@ -17,4 +17,4 @@ migrate_auth_up:
 
 .PHONY: migrate_auth_down
 migrate_auth_down:
-	@migrate -path "./migrations/auth" -database "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable" -verbose down
+	@migrate -path "./migrations/auth" -database "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable" -verbose down 1
