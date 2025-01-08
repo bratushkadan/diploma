@@ -6,17 +6,20 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/bratushkadan/floral/internal/auth/domain"
 	"github.com/bratushkadan/floral/pkg/auth"
 	"github.com/bratushkadan/floral/pkg/postgres"
+	"github.com/bratushkadan/floral/pkg/resource"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 var (
-	AuthServiceSchema  = "auth"
-	TableUsers         = "users"
-	TableRefreshTokens = "refresh_tokens"
+	AuthServiceSchema    = "auth"
+	TableUsers           = "users"
+	TableRefreshTokens   = "refresh_tokens"
+	TableConfirmationIds = "confirmation_ids"
 )
 
 func NewDbconnPool(conf *postgres.DBConf) (*sql.DB, error) {
@@ -28,19 +31,34 @@ func NewDbconnPool(conf *postgres.DBConf) (*sql.DB, error) {
 	return db, nil
 }
 
+type ConfirmationIdsOpts struct {
+	// The duration confirmation id will be valid for.
+	ExpiresAfter time.Duration
+}
+
+type PostgresUserProviderConf struct {
+	Db               *sql.DB
+	DbConf           *postgres.DBConf
+	PasswordHasher   *auth.PasswordHasher
+	ConfirmationOpts ConfirmationIdsOpts
+}
+
 type PostgresUserProvider struct {
-	ph   *auth.PasswordHasher
-	conf *postgres.DBConf
-	db   *sql.DB
+	db               *sql.DB
+	conf             *postgres.DBConf
+	ph               *auth.PasswordHasher
+	confirmationOpts ConfirmationIdsOpts
 }
 
 var _ domain.UserProvider = (*PostgresUserProvider)(nil)
 
-func NewPostgresUserProvider(conf *postgres.DBConf, db *sql.DB, ph *auth.PasswordHasher) *PostgresUserProvider {
+func NewPostgresUserProvider(conf PostgresUserProviderConf) *PostgresUserProvider {
 	return &PostgresUserProvider{
-		ph:   ph,
-		conf: conf,
-		db:   db,
+		db:   conf.Db,
+		conf: conf.DbConf,
+		ph:   conf.PasswordHasher,
+		// FIXME: only id should be returned by the db adapter
+		confirmationOpts: conf.ConfirmationOpts,
 	}
 }
 
@@ -69,6 +87,68 @@ func (p *PostgresUserProvider) CreateUser(ctx context.Context, req domain.UserPr
 	user.Id = Int64ToUserId(userId)
 
 	return &user, nil
+}
+
+func (p *PostgresUserProvider) AddEmailConfirmationId(ctx context.Context, email string) (string, error) {
+	smt := fmt.Sprintf(`INSERT INTO "%s"."%s" (email, id, expires_at) VALUES ($1, $2, $3)`, AuthServiceSchema, TableConfirmationIds)
+
+	id := genEmailConfirmationId()
+	expiresAt := time.Now().Add(p.confirmationOpts.ExpiresAfter)
+	if _, err := p.db.ExecContext(ctx, smt, email, id, expiresAt); err != nil {
+		return "", fmt.Errorf("failed to save email confirmation id: %v", err)
+	}
+
+	return id, nil
+}
+
+var (
+	confirmUserAccountSqlQuerySmt = fmt.Sprintf(`
+WITH updated_row AS (
+    UPDATE "%s"."%s" u
+    SET "activated" = true
+    WHERE EXISTS (
+        SELECT 1
+        FROM "%s"."%s"
+        WHERE "id" = $1 AND "email" = u.email AND CURRENT_TIMESTAMP <= "expires_at"
+    ) AND "activated" = false
+    RETURNING id
+)
+SELECT COUNT(id) AS rows_updated FROM updated_row;
+`, AuthServiceSchema, TableUsers, AuthServiceSchema, TableConfirmationIds)
+)
+
+func (p *PostgresUserProvider) ConfirmEmailByConfirmationId(ctx context.Context, id string) error {
+	if err := validateEmailConfirmationId(id); err != nil {
+		return fmt.Errorf("wrong email confirmation id: %w", err)
+	}
+
+	smt := fmt.Sprintf(`SELECT "email", "expires_at" FROM "%s"."%s" WHERE "id" = $1`, AuthServiceSchema, TableConfirmationIds)
+
+	var (
+		email     string
+		expiresAt time.Time
+	)
+	row := p.db.QueryRowContext(ctx, smt, id)
+	if err := row.Scan(&email, &expiresAt); err != nil {
+		return err
+	}
+
+	if time.Now().After(expiresAt) {
+		return errors.New("confirmation id expires")
+	}
+
+	var rowsUpdated int
+	row = p.db.QueryRow(confirmUserAccountSqlQuerySmt, id)
+	if err := row.Scan(&rowsUpdated); err != nil {
+		return err
+	}
+
+	if rowsUpdated == 0 {
+		// TODO: separate errors
+		return errors.New("wrong confirmation id, token expired or user account already activated")
+	}
+
+	return nil
 }
 
 func (p *PostgresUserProvider) FindUser(ctx context.Context, strId string) (*domain.User, error) {
@@ -199,4 +279,29 @@ func (p *PostgresRefreshTokenPersisterProvider) Delete(ctx context.Context, toke
 	}
 
 	return nil
+}
+
+func (p *PostgresUserProvider) GetIsUserConfirmedByEmail(ctx context.Context, email string) (bool, error) {
+	smt := fmt.Sprintf(`SELECT "activated" FROM "%s"."%s" WHERE "email" = $1`, AuthServiceSchema, TableUsers)
+
+	row := p.db.QueryRowContext(ctx, smt, email)
+	var activated bool
+	if err := row.Scan(&activated); err != nil {
+		return false, err
+	}
+	return activated, nil
+
+}
+
+const (
+	EmailConfirmationIdByteLen = 32
+	EmailConfirmationIdPrefix  = "emconf"
+)
+
+func genEmailConfirmationId() string {
+	return resource.GenerateIdPrefix(EmailConfirmationIdByteLen, EmailConfirmationIdPrefix)
+}
+
+func validateEmailConfirmationId(str string) error {
+	return resource.ValidateIdByteLenPrefix(str, 32, "emconf")
 }

@@ -62,10 +62,26 @@ var (
 			Message: fmt.Sprintf(`email "%s" is already in use`, email),
 		}
 	}
+	ErrHttpEmailIsNotConfirmed = HttpError{
+		Code:    8,
+		Message: "email is not confirmed",
+	}
+	ErrHttpBadEmailConfirmationId = HttpError{
+		Code:    9,
+		Message: "bad email confirmation id",
+	}
 )
 
 type HttpImpl struct {
-	auth *domain.AuthService
+	auth                        *domain.AuthService
+	confirmationIdQueryParamKey string
+}
+
+func NewHttpImpl(auth *domain.AuthService, confirmationIdQueryParamKey string) *HttpImpl {
+	return &HttpImpl{
+		auth:                        auth,
+		confirmationIdQueryParamKey: confirmationIdQueryParamKey,
+	}
 }
 
 func (f *HttpImpl) Start(auth *domain.AuthService) error {
@@ -80,8 +96,10 @@ func (f *HttpImpl) Start(auth *domain.AuthService) error {
 	apiRouter.Mount("/v1", v1Router)
 
 	usersRouter := chi.NewRouter()
+	usersConfirmationRouter := chi.NewRouter()
 
 	v1Router.Mount("/users", usersRouter)
+	v1Router.Mount("/usersConfirmation", usersConfirmationRouter)
 
 	usersRouter.Post("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotImplemented)
@@ -93,6 +111,8 @@ func (f *HttpImpl) Start(auth *domain.AuthService) error {
 	usersRouter.Post("/:authenticate", http.HandlerFunc(f.AuthenticateHandler))
 	usersRouter.Post("/:renewRefreshToken", http.HandlerFunc(f.RenewRefreshTokenHandler))
 	usersRouter.Post("/:createAccessToken", http.HandlerFunc(f.CreateAccessToken))
+
+	usersConfirmationRouter.Get("/:confirmEmail", http.HandlerFunc(f.ConfirmEmailHandler))
 
 	r.Mount("/api", apiRouter)
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
@@ -246,6 +266,7 @@ func (f *HttpImpl) RegisterSellerHandler(w http.ResponseWriter, r *http.Request)
 	}, reqData.AccessToken)
 	if err != nil {
 		log.Print(err)
+		// FIXME: domain ничего не должен знать про access/refresh-токены: нужно понять, на каком уровне нужно организовать security, валидацию токенов и парсинг credentials из security-токенов
 		if errors.Is(err, domain.ErrInvalidAccessToken) {
 			w.WriteHeader(http.StatusUnauthorized)
 			if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpInvalidAccessToken)); err != nil {
@@ -308,6 +329,13 @@ func (f *HttpImpl) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, domain.ErrInvalidCredentials) {
 			w.WriteHeader(http.StatusBadRequest)
 			if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
+				log.Print(err)
+			}
+			return
+		}
+		if errors.Is(err, domain.ErrAccountEmailNotConfirmed) {
+			w.WriteHeader(http.StatusBadRequest)
+			if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpEmailIsNotConfirmed)); err != nil {
 				log.Print(err)
 			}
 			return
@@ -418,4 +446,27 @@ func (f *HttpImpl) CreateAccessToken(w http.ResponseWriter, r *http.Request) {
 			log.Print(err)
 		}
 	}
+}
+
+func (f *HttpImpl) ConfirmEmailHandler(w http.ResponseWriter, r *http.Request) {
+	confirmationId := r.URL.Query().Get(f.confirmationIdQueryParamKey)
+
+	if confirmationId == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadEmailConfirmationId)); err != nil {
+			log.Print(err)
+		}
+		return
+	}
+
+	if err := f.auth.ConfirmEmail(r.Context(), confirmationId); err != nil {
+		log.Print(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpInternalServerError)); err != nil {
+			log.Print(err)
+		}
+		return
+	}
+
+	w.Write([]byte("Email is successfully confirmed."))
 }

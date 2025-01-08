@@ -18,6 +18,7 @@ import (
 
 const webPort = 48612
 
+// TODO: godot
 func main() {
 	// conf := auth.NewAuthServerConfig(webPort)
 	// err := auth.RunServer(conf)
@@ -34,7 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to setup auth service: %v", err)
 	}
-	front := &frontend.HttpImpl{}
+	front := frontend.NewHttpImpl(authSvc, "id")
 	if err := run(front, authSvc); err != nil {
 		log.Fatal(err)
 	}
@@ -57,7 +58,14 @@ func setupProviders() (*provider.PostgresUserProvider, *provider.PostgresRefresh
 	}
 
 	hasher := auth.NewPasswordHasher("84778381-9207-4EC5-92A2-30F658D55872")
-	userProv := provider.NewPostgresUserProvider(conf, db, hasher)
+	userProv := provider.NewPostgresUserProvider(provider.PostgresUserProviderConf{
+		Db:             db,
+		DbConf:         conf,
+		PasswordHasher: hasher,
+		ConfirmationOpts: provider.ConfirmationIdsOpts{
+			ExpiresAfter: 4 * time.Hour,
+		},
+	})
 	rtPerProv := provider.NewPostgresRefreshTokenPersisterProvider(conf, db)
 
 	return userProv, rtPerProv, nil
@@ -86,10 +94,20 @@ func setup(userProvider domain.UserProvider, rtPersisterProvider domain.RefreshT
 		return nil, fmt.Errorf("failed to setup jwt provider: %v", err)
 	}
 
+	yandexMailAppPassword := os.Getenv("YANDEX_MAIL_APP_PASSWORD")
+
 	conf := &domain.AuthServiceConf{
 		RefreshTokenProvider: authn.NewRefreshTokenJwtProvider(jwtProvider, appConfig.RefreshTokenDuration),
 		AccessTokenProvider:  authn.NewAccessTokenJwtProvider(jwtProvider, appConfig.AccessTokenDuration),
 
+		ConfirmationProvider: provider.NewYandexMailConfirmationProvider(provider.YandexMailConfirmationProviderConf{
+			SenderMail: "danilabratushka@ya.ru",
+			SenderPass: yandexMailAppPassword,
+			ConfirmationOpts: provider.YandexMailConfirmationOpts{
+				Endpoint:            "http://localhost:8080/api/v1/usersConfirmation/:confirmEmail",
+				TokenQueryParameter: "id",
+			},
+		}),
 		UserProvider:                  userProvider,
 		RefreshTokenPersisterProvider: rtPersisterProvider,
 

@@ -11,7 +11,7 @@ go run github.com/bratushkadan/floral/cmd/auth
 #### Or this way
 
 ```bash
-AUTH_JWT_PRIVATE_KEY_PATH=./pkg/auth/test_fixtures/private.key AUTH_JWT_PUBLIC_KEY_PATH=./pkg/auth/test_fixtures/public.key go run ./cmd/auth/auth.go
+AUTH_JWT_PRIVATE_KEY_PATH=./pkg/auth/test_fixtures/private.key AUTH_JWT_PUBLIC_KEY_PATH=./pkg/auth/test_fixtures/public.key YANDEX_MAIL_APP_PASSWORD=<password> go run ./cmd/auth/auth.go
 ```
 
 ### Test Auth service is running
@@ -19,6 +19,13 @@ AUTH_JWT_PRIVATE_KEY_PATH=./pkg/auth/test_fixtures/private.key AUTH_JWT_PUBLIC_K
 ```bash
 grpcurl -plaintext -d '{"id": 1}' '127.0.0.1:48612' floral.auth.v1.UserService/GetUser
 ```
+
+## Email Sending
+
+1. https://id.yandex.ru/security/app-passwords - add password
+
+[Official Yandex Mail docs](https://yandex.ru/support/yandex-360/business/mail/ru/web/security/oauth)
+
 
 ## gRPC & Go dependencies
 

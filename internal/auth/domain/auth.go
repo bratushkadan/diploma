@@ -48,10 +48,17 @@ type UserProvider interface {
 	FindUser(ctx context.Context, id string) (*User, error)
 	FindUserByEmail(ctx context.Context, email string) (*User, error)
 	CheckUserCredentials(ctx context.Context, email string, password string) (*User, error)
+	AddEmailConfirmationId(ctx context.Context, email string) (string, error)
+	GetIsUserConfirmedByEmail(ctx context.Context, email string) (bool, error)
+	ConfirmEmailByConfirmationId(ctx context.Context, id string) error
 }
 
 type RefreshTokenPersisterProvider interface {
 	Get(ctx context.Context, subjectId string) (tokenIds []string, err error)
 	Add(context.Context, *RefreshToken) error
 	Delete(ctx context.Context, tokenId string) error
+}
+
+type ConfirmationProvider interface {
+	Send(ctx context.Context, emailAddr, confirmationId string) error
 }

@@ -13,6 +13,7 @@ type AuthServiceConf struct {
 	RefreshTokenProvider RefreshTokenProvider
 	AccessTokenProvider  AccessTokenProvider
 
+	ConfirmationProvider          ConfirmationProvider
 	UserProvider                  UserProvider
 	RefreshTokenPersisterProvider RefreshTokenPersisterProvider
 
@@ -24,30 +25,35 @@ type AuthService struct {
 	rtProv RefreshTokenProvider
 	atProv AccessTokenProvider
 
-	userProv  UserProvider
-	rtPerProv RefreshTokenPersisterProvider
+	confirmationProv ConfirmationProvider
+	userProv         UserProvider
+	rtPerProv        RefreshTokenPersisterProvider
 
 	secretToken string
 }
 
 func NewAuthService(conf *AuthServiceConf) *AuthService {
 	return &AuthService{
-		rtProv:      conf.RefreshTokenProvider,
-		atProv:      conf.AccessTokenProvider,
-		userProv:    conf.UserProvider,
-		rtPerProv:   conf.RefreshTokenPersisterProvider,
+		rtProv: conf.RefreshTokenProvider,
+		atProv: conf.AccessTokenProvider,
+
+		confirmationProv: conf.ConfirmationProvider,
+		userProv:         conf.UserProvider,
+		rtPerProv:        conf.RefreshTokenPersisterProvider,
+
 		secretToken: conf.SecretToken,
 	}
 }
 
 var (
-	ErrInvalidCredentials  = errors.New("invalid credentials")
-	ErrInvalidEmail        = errors.New("invalid email address")
-	ErrInvalidRefreshToken = errors.New("invalid refresh token")
-	ErrInvalidAccessToken  = errors.New("invalid access token")
-	ErrPermissionDenied    = errors.New("permission denied")
-	ErrUserNotFound        = errors.New("user not found")
-	ErrEmailIsInUse        = errors.New("email is in use")
+	ErrInvalidCredentials       = errors.New("invalid credentials")
+	ErrInvalidEmail             = errors.New("invalid email address")
+	ErrInvalidRefreshToken      = errors.New("invalid refresh token")
+	ErrInvalidAccessToken       = errors.New("invalid access token")
+	ErrPermissionDenied         = errors.New("permission denied")
+	ErrUserNotFound             = errors.New("user not found")
+	ErrEmailIsInUse             = errors.New("email is in use")
+	ErrAccountEmailNotConfirmed = errors.New("account email is not confirmed")
 )
 
 var (
@@ -75,7 +81,8 @@ func (s *AuthService) validateEmail(email string) bool {
 	return RegexEmail.MatchString(email)
 }
 
-func (s *AuthService) createUser(ctx context.Context, req CreateUserReq, userType string) (*User, error) {
+// FIXME: add way to re-send confirmation link
+func (s *AuthService) createUserAccount(ctx context.Context, req CreateUserReq, userType string) (*User, error) {
 	if ok := s.validateEmail(req.Email); !ok {
 		return nil, ErrInvalidEmail
 	}
@@ -87,7 +94,16 @@ func (s *AuthService) createUser(ctx context.Context, req CreateUserReq, userTyp
 		Type:     userType,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create user: %w", err)
+		return nil, err
+	}
+
+	confirmationId, err := s.userProv.AddEmailConfirmationId(ctx, req.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.confirmationProv.Send(ctx, req.Email, confirmationId); err != nil {
+		return nil, err
 	}
 
 	return user, nil
@@ -127,7 +143,7 @@ func (s *AuthService) lookupRefreshToken(ctx context.Context, refreshTokenString
 }
 
 func (s *AuthService) CreateCustomer(ctx context.Context, req CreateCustomerReq) (*User, error) {
-	return s.createUser(ctx, req.CreateUserReq, auth.UserTypeCustomer)
+	return s.createUserAccount(ctx, req.CreateUserReq, auth.UserTypeCustomer)
 }
 
 func (s *AuthService) CreateSeller(ctx context.Context, req CreateSellerReq, accessTokenString string) (*User, error) {
@@ -140,7 +156,7 @@ func (s *AuthService) CreateSeller(ctx context.Context, req CreateSellerReq, acc
 		return nil, fmt.Errorf("only admins can create seller accounts: %w", ErrPermissionDenied)
 	}
 
-	return s.createUser(ctx, req.CreateUserReq, auth.UserTypeSeller)
+	return s.createUserAccount(ctx, req.CreateUserReq, auth.UserTypeSeller)
 }
 
 // Expose this method carefully.
@@ -151,7 +167,7 @@ func (s *AuthService) CreateAdmin(ctx context.Context, req CreateAdminReq) (*Use
 	if req.SecretToken != s.secretToken {
 		return nil, errors.New("failed to create admin account: incorrect secret token provided")
 	}
-	return s.createUser(ctx, req.CreateUserReq, auth.UserTypeAdmin)
+	return s.createUserAccount(ctx, req.CreateUserReq, auth.UserTypeAdmin)
 }
 
 // Returns token if the provided credentials are correct
@@ -162,6 +178,14 @@ func (s *AuthService) Authenticate(ctx context.Context, email, password string) 
 			return "", err
 		}
 		return "", fmt.Errorf("failed to check user credentials: %w", err)
+	}
+
+	ok, err := s.userProv.GetIsUserConfirmedByEmail(ctx, email)
+	if err != nil {
+		return "", err
+	}
+	if !ok {
+		return "", ErrAccountEmailNotConfirmed
 	}
 
 	return s.createPersistToken(ctx, user.Id)
@@ -202,4 +226,8 @@ func (s *AuthService) GetAccessToken(ctx context.Context, refreshTokenString str
 	}
 
 	return accessToken, tokenStr, nil
+}
+
+func (s *AuthService) ConfirmEmail(ctx context.Context, confirmationId string) error {
+	return s.userProv.ConfirmEmailByConfirmationId(ctx, confirmationId)
 }
