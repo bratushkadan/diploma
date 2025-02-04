@@ -144,7 +144,7 @@ go run github.com/bratushkadan/floral/cmd/auth
 #### Or this way
 
 ```bash
-AUTH_JWT_PRIVATE_KEY_PATH=./pkg/auth/test_fixtures/private.key AUTH_JWT_PUBLIC_KEY_PATH=./pkg/auth/test_fixtures/public.key YANDEX_MAIL_APP_PASSWORD=<password> go run ./cmd/auth/auth.go
+AUTH_JWT_PRIVATE_KEY_PATH=./pkg/auth/test_fixtures/private.key AUTH_JWT_PUBLIC_KEY_PATH=./pkg/auth/test_fixtures/public.key YANDEX_MAIL_APP_PASSWORD=<password> go run ./cmd/auth/main.go
 ```
 
 ## Email Sending
