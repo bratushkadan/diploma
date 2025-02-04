@@ -1,4 +1,4 @@
-# Yandex Message Queue Lab – register, send confirmation email, validate confirmtion token & validate email
+# Auth service for e-com platform
 
 ## Roadmap
 
@@ -129,4 +129,163 @@ aws dynamodb update-time-to-live \
     --table-name "${TABLE_CONF_TOKENS_NAME}"  \
     --time-to-live-specification "Enabled=true, AttributeName=expires_at" \
   --endpoint "$YDB_DOC_API_ENDPOINT"
+```
+
+# Floral - old docs
+
+## Run
+
+### Auth service
+
+```bash
+go run github.com/bratushkadan/floral/cmd/auth
+```
+
+#### Or this way
+
+```bash
+AUTH_JWT_PRIVATE_KEY_PATH=./pkg/auth/test_fixtures/private.key AUTH_JWT_PUBLIC_KEY_PATH=./pkg/auth/test_fixtures/public.key YANDEX_MAIL_APP_PASSWORD=<password> go run ./cmd/auth/auth.go
+```
+
+## Email Sending
+
+1. https://id.yandex.ru/security/app-passwords - add password
+
+[Official Yandex Mail docs](https://yandex.ru/support/yandex-360/business/mail/ru/web/security/oauth)
+
+## HTTP API Docs
+
+### Auth
+
+#### Error Response
+
+Sample:
+```json
+{
+  "errors": [
+    {
+      "code": 1,
+      "message": "bad request"
+    }
+  ]
+}
+```
+
+#### Endpoints
+
+##### `POST /api/v1/users/:register`
+
+Request sample:
+```json
+{
+  "name": "danila",
+  "email": "foobar@yahoo.com",
+  "password": "secretpass123"
+}
+```
+
+Response sample:
+```json
+{
+  "id": "i1qwk6jcuwjeqzy",
+  "name": "danila"
+}
+```
+
+##### `POST /api/v1/users/:registerSeller`
+
+**admin only**
+
+Request sample:
+```json
+{
+  "seller": {
+    "name": "danila",
+    "email": "foobar@yahoo.com",
+    "password": "secretpass123"
+  },
+  "access_token": "..."
+}
+```
+
+Response sample:
+```json
+{
+  "id": "i1qwk6jcuwjeqzy",
+  "name": "danila"
+}
+```
+
+##### `POST /api/v1/users/:registerAdmin`
+
+**admin only** - expose this endpoint with **extreme caution**
+
+Request sample:
+```json
+{
+  "admin": {
+    "name": "danila",
+    "email": "foobar@yahoo.com",
+    "password": "secretpass123"
+  },
+  "secret_token": "..."
+}
+```
+
+Response sample:
+```json
+{
+  "id": "i1qwk6jcuwjeqzy",
+  "name": "danila"
+}
+```
+
+##### `POST /api/v1/users/:authenticate`
+
+Request sample:
+```json
+{
+  "email": "foobar@yahoo.com",
+  "password": "secretpass123"
+}
+```
+
+Response sample:
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+##### `POST /api/v1/users/:renewRefreshToken`
+
+Request sample:
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+Response sample:
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+##### `POST /api/v1/users/:createAccessToken`
+
+Request sample:
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+Response sample:
+```json
+{
+  "access_token": "...",
+  "expires_at": "2025-01-06T21:02:13+03:00"
+}
 ```

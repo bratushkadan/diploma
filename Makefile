@@ -1,10 +1,3 @@
-.PHONY: gen
-gen: go-generate	
-.PHONY: go-gen
-go-gen:
-	@mkdir -p pb
-	@go generate ./...
-
 .PHONY: migrate_auth_create
 migrate_auth_create:
 	@migrate create -ext=sql -dir "./migrations/auth" -seq init
