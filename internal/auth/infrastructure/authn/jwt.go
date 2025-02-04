@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/bratushkadan/floral/internal/auth/domain"
+	"github.com/bratushkadan/floral/internal/auth/core/domain"
 	"github.com/bratushkadan/floral/pkg/auth"
 	"github.com/bratushkadan/floral/pkg/resource"
 	"github.com/golang-jwt/jwt/v5"

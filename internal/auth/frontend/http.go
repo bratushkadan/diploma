@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bratushkadan/floral/internal/auth/domain"
+	"github.com/bratushkadan/floral/internal/auth/core/domain"
 	"github.com/go-chi/chi/v5"
 )
 

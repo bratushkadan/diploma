@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/bratushkadan/floral/internal/auth/domain"
+	"github.com/bratushkadan/floral/internal/auth/core/domain"
 	"github.com/bratushkadan/floral/internal/auth/frontend"
 	"github.com/bratushkadan/floral/internal/auth/infrastructure/authn"
 	"github.com/bratushkadan/floral/internal/auth/infrastructure/provider"
