@@ -25,6 +25,8 @@ output "ydb_ymq_manager_static_key_lockbox_secret_id" {
 output "app_sa" {
   value = {
     id                           = yandex_iam_service_account.app.id
+    key_id                       = yandex_iam_service_account_key.app_sa.id
+    auth_key_lockbox_secret_id   = yandex_lockbox_secret.app_sa_static_key.id
     static_key_lockbox_secret_id = yandex_lockbox_secret.app_sa_static_key.id
   }
 }

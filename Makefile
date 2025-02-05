@@ -1,3 +1,10 @@
+.PHONY: auth_run
+auth_run:
+	@YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS="$$(scripts/ydb_access_token.sh)" \
+		YDB_ENDPOINT="$$(./terraform/tf output -json | jq -cMr .ydb.value.full_endpoint)" \
+		YDB_AUTH_METHOD=environ \
+		go run cmd/auth_ydb/main.go
+
 .PHONY: migrate_auth_create_ydb
 migrate_auth_create_ydb:
 	@sh -c "if [ -z "$$MIGRATION_NAME" ]; then echo 'Error: provide the \"MIGRATION_NAME\" env variable like MIGRATION_NAME=\"00001_create_first_table\"' >&2 && exit 1; else :; fi" && \

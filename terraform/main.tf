@@ -49,6 +49,15 @@ resource "yandex_lockbox_secret" "app_sa_static_key" {
   description = "static key secret for application sa for serverless ymq type standard practicum course lab"
 }
 
+resource "yandex_iam_service_account_key" "app_sa" {
+  service_account_id = yandex_iam_service_account.app.id
+  description        = "auth key for app sa ${yandex_iam_service_account.app.name}"
+
+  output_to_lockbox {
+    secret_id             = yandex_lockbox_secret.app_sa_static_key.id
+    entry_for_private_key = "auth_key"
+  }
+}
 resource "yandex_iam_service_account_static_access_key" "app_sa" {
   service_account_id = yandex_iam_service_account.app.id
   description        = "static access key for app sa"
