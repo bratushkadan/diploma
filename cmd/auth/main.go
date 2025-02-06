@@ -58,7 +58,7 @@ func setupProviders() (*provider.PostgresUserProvider, *provider.PostgresRefresh
 		return nil, nil, fmt.Errorf("failed to initialize db: %v", err)
 	}
 
-	hasher := auth.NewPasswordHasher("84778381-9207-4EC5-92A2-30F658D55872")
+	hasher, _ := auth.NewPasswordHasher("84778381-9207-4EC5-92A2-30F658D55872")
 	userProv := provider.NewPostgresUserProvider(provider.PostgresUserProviderConf{
 		Db:             db,
 		DbConf:         conf,

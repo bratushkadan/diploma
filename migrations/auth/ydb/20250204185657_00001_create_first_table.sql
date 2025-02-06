@@ -17,6 +17,8 @@ CREATE TABLE refresh_tokens (
     created_at TIMESTAMP NOT NULL,
     expires_at TIMESTAMP NOT NULL,
     PRIMARY KEY (id, user_id),
+) WITH (
+    TTL = Interval("P30D") ON expires_at
 );
 -- +goose StatementEnd
 

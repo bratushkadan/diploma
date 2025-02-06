@@ -1,15 +1,22 @@
 package auth
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"errors"
+
+	"golang.org/x/crypto/bcrypt"
+)
 
 type PasswordHasher struct {
 	pepper string
 }
 
-func NewPasswordHasher(secretPhrase string) *PasswordHasher {
+func NewPasswordHasher(secretPhrase string) (*PasswordHasher, error) {
+	if secretPhrase == "" {
+		return nil, errors.New("password hasher secret phrase can't be empty")
+	}
 	return &PasswordHasher{
 		pepper: secretPhrase,
-	}
+	}, nil
 }
 
 func (h *PasswordHasher) Hash(pass string) (string, error) {

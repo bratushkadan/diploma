@@ -18,6 +18,13 @@ var (
 	ErrAccountEmailNotConfirmed = errors.New("account email is not confirmed")
 )
 
+// TODO: domain only errors
+
+// Adapter errors
+var (
+	ErrSendAccountConfirmationFailed = errors.New("failed to send account confirmation email")
+)
+
 var (
 	RegexEmail = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 )

@@ -7,7 +7,82 @@ import (
 
 	"github.com/bratushkadan/floral/internal/auth/core/domain"
 	"github.com/bratushkadan/floral/pkg/auth"
+	"go.uber.org/zap"
 )
+
+type AuthV2 struct {
+	accProv             domain.AccountProvider
+	accConfirmationProv domain.AccountConfirmationProvider
+
+	l *zap.Logger
+}
+
+var _ domain.AuthServiceV2 = (*AuthV2)(nil)
+
+type AuthV2Builder struct {
+	auth *AuthV2
+}
+
+func (b *AuthV2Builder) AccountProvider(prov domain.AccountProvider) *AuthV2Builder {
+	b.auth.accProv = prov
+	return b
+}
+func (b *AuthV2Builder) AccountConfirmationProvider(prov domain.AccountConfirmationProvider) *AuthV2Builder {
+	b.auth.accConfirmationProv = prov
+	return b
+}
+
+func (b *AuthV2Builder) Logger(l *zap.Logger) *AuthV2Builder {
+	b.auth.l = l
+	return b
+}
+
+func (b *AuthV2Builder) Build() (*AuthV2, error) {
+	return b.auth, nil
+}
+
+func NewAuthBuilder() *AuthV2Builder {
+	return &AuthV2Builder{auth: &AuthV2{}}
+}
+
+func (svc *AuthV2) CreateAccount(ctx context.Context, req domain.CreateAccountReq) (domain.CreateAccountRes, error) {
+	acc, err := domain.NewUserAccount(req.Name, req.Password, req.Email, req.Type)
+	if err != nil {
+		return domain.CreateAccountRes{}, err
+	}
+
+	out, err := svc.accProv.CreateAccount(ctx, domain.CreateAccountDTOInput{
+		Name:     acc.Name(),
+		Password: acc.Password(),
+		Email:    acc.Email(),
+		Type:     acc.Type(),
+	})
+	if err != nil {
+		svc.l.Error("failed to create account", zap.Error(err))
+		return domain.CreateAccountRes{}, err
+	}
+
+	accountRes := domain.CreateAccountRes{
+		Id:    out.Id,
+		Name:  out.Name,
+		Email: out.Email,
+		Type:  out.Type,
+	}
+
+	_, err = svc.accConfirmationProv.Send(ctx, domain.SendAccountConfirmationDTOInput{
+		Name:  accountRes.Name,
+		Email: accountRes.Email,
+	})
+	if err != nil {
+		svc.l.Error("failed to send email confirmation message", zap.Error(err))
+		err = fmt.Errorf("%w: %v", domain.ErrSendAccountConfirmationFailed, err)
+		return domain.CreateAccountRes{}, err
+	}
+
+	return accountRes, nil
+}
+
+// -----------------------------
 
 type AuthConf struct {
 	RefreshTokenProvider domain.RefreshTokenProvider

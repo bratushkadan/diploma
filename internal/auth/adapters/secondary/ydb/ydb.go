@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bratushkadan/floral/internal/auth/core/domain"
+	"github.com/bratushkadan/floral/pkg/auth"
 	"github.com/bratushkadan/floral/pkg/resource/idhash"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-sdk/v3"
@@ -21,25 +22,27 @@ const (
 	TableRefreshTokens = "refresh_tokens"
 )
 
-type YDBAccountAdapter struct {
+type Account struct {
 	db       *ydb.Driver
 	l        *zap.Logger
 	idHasher idhash.IdHasher
+	ph       *auth.PasswordHasher
 }
 
-var _ domain.AccountProviderYDB = (*YDBAccountAdapter)(nil)
+var _ domain.AccountProvider = (*Account)(nil)
 
-type YDBAccountAdapterConf struct {
-	DbDriver *ydb.Driver
-	Logger   *zap.Logger
-	IdHasher idhash.IdHasher
-	// TODO: password hasher
+type Conf struct {
+	DbDriver       *ydb.Driver
+	Logger         *zap.Logger
+	IdHasher       idhash.IdHasher
+	PasswordHasher *auth.PasswordHasher
 }
 
-func NewYDBAccountAdapter(conf YDBAccountAdapterConf) *YDBAccountAdapter {
-	adapter := &YDBAccountAdapter{
+func New(conf Conf) *Account {
+	adapter := &Account{
 		db:       conf.DbDriver,
 		idHasher: conf.IdHasher,
+		ph:       conf.PasswordHasher,
 	}
 
 	if conf.Logger == nil {
@@ -60,14 +63,19 @@ VALUES ( $name, $password, $email, $type, $created_at )
 RETURNING id, name, email, type
 `, TableAccounts)
 
-func (a *YDBAccountAdapter) CreateAccount(ctx context.Context, in domain.CreateAccountDTOInput) (domain.CreateAccountDTOOutput, error) {
+func (a *Account) CreateAccount(ctx context.Context, in domain.CreateAccountDTOInput) (domain.CreateAccountDTOOutput, error) {
 	var out domain.CreateAccountDTOOutput
 
-	err := a.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+	hashedPass, err := a.ph.Hash(in.Password)
+	if err != nil {
+		return domain.CreateAccountDTOOutput{}, fmt.Errorf("failed to hash account password: %v", err)
+	}
+
+	err = a.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
 		res, err := tx.Execute(ctx, queryCreateAccount, table.NewQueryParameters(
 			table.ValueParam("$name", types.UTF8Value(in.Name)),
 			table.ValueParam("$email", types.UTF8Value(in.Email)),
-			table.ValueParam("$password", types.UTF8Value(in.Password)),
+			table.ValueParam("$password", types.UTF8Value(hashedPass)),
 			table.ValueParam("$type", types.StringValueFromString(in.Type)),
 			table.ValueParam("$created_at", types.TimestampValueFromTime(time.Now())),
 		))
@@ -116,3 +124,7 @@ func (a *YDBAccountAdapter) CreateAccount(ctx context.Context, in domain.CreateA
 
 	return out, nil
 }
+
+//	if ok := p.ph.Check(password, dbPassword); !ok {
+//		return nil, domain.ErrInvalidCredentials
+//	}

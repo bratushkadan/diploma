@@ -1,2 +1,3 @@
 /.zip
 .ydb-access-token
+.env

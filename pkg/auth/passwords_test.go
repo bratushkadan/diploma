@@ -9,7 +9,7 @@ import (
 func TestPassordHasher(t *testing.T) {
 	pass := "foobar12345"
 	incorrectPass := "fueo$9"
-	h := auth.NewPasswordHasher("verysecretphrase")
+	h, _ := auth.NewPasswordHasher("verysecretphrase")
 
 	hashedPass, err := h.Hash(pass)
 	if err != nil {
