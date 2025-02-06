@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bratushkadan/floral/internal/auth/core/domain"
+	"github.com/bratushkadan/floral/internal/auth/service"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -73,18 +74,18 @@ var (
 )
 
 type HttpImpl struct {
-	auth                        *domain.AuthService
+	auth                        *service.Auth
 	confirmationIdQueryParamKey string
 }
 
-func NewHttpImpl(auth *domain.AuthService, confirmationIdQueryParamKey string) *HttpImpl {
+func NewHttpImpl(auth *service.Auth, confirmationIdQueryParamKey string) *HttpImpl {
 	return &HttpImpl{
 		auth:                        auth,
 		confirmationIdQueryParamKey: confirmationIdQueryParamKey,
 	}
 }
 
-func (f *HttpImpl) Start(auth *domain.AuthService) error {
+func (f *HttpImpl) Start(auth *service.Auth) error {
 	f.auth = auth
 
 	r := chi.NewRouter()

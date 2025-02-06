@@ -10,6 +10,7 @@ import (
 	"github.com/bratushkadan/floral/internal/auth/frontend"
 	"github.com/bratushkadan/floral/internal/auth/infrastructure/authn"
 	"github.com/bratushkadan/floral/internal/auth/infrastructure/provider"
+	"github.com/bratushkadan/floral/internal/auth/service"
 	"github.com/bratushkadan/floral/pkg/auth"
 	"github.com/bratushkadan/floral/pkg/postgres"
 )
@@ -71,7 +72,7 @@ func setupProviders() (*provider.PostgresUserProvider, *provider.PostgresRefresh
 	return userProv, rtPerProv, nil
 }
 
-func setup(userProvider domain.UserProvider, rtPersisterProvider domain.RefreshTokenPersisterProvider) (*domain.AuthService, error) {
+func setup(userProvider domain.UserProvider, rtPersisterProvider domain.RefreshTokenPersisterProvider) (*service.Auth, error) {
 	appConfig := struct {
 		JwtPrivateKeyPath    string
 		JwtPublicKeyPath     string
@@ -96,7 +97,7 @@ func setup(userProvider domain.UserProvider, rtPersisterProvider domain.RefreshT
 
 	yandexMailAppPassword := os.Getenv("YANDEX_MAIL_APP_PASSWORD")
 
-	conf := &domain.AuthServiceConf{
+	conf := &service.AuthConf{
 		RefreshTokenProvider: authn.NewRefreshTokenJwtProvider(jwtProvider, appConfig.RefreshTokenDuration),
 		AccessTokenProvider:  authn.NewAccessTokenJwtProvider(jwtProvider, appConfig.AccessTokenDuration),
 
@@ -113,10 +114,10 @@ func setup(userProvider domain.UserProvider, rtPersisterProvider domain.RefreshT
 
 		SecretToken: appConfig.SecretToken,
 	}
-	authSvc := domain.NewAuthService(conf)
+	authSvc := service.NewAuth(conf)
 	return authSvc, nil
 }
 
-func run(front frontend.FrontEnd, authSvc *domain.AuthService) error {
-	return front.Start(authSvc)
+func run(front frontend.FrontEnd, svc *service.Auth) error {
+	return front.Start(svc)
 }

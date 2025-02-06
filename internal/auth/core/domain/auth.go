@@ -2,7 +2,24 @@ package domain
 
 import (
 	"context"
+	"errors"
+	"regexp"
 	"time"
+)
+
+var (
+	ErrInvalidCredentials       = errors.New("invalid credentials")
+	ErrInvalidEmail             = errors.New("invalid email address")
+	ErrInvalidRefreshToken      = errors.New("invalid refresh token")
+	ErrInvalidAccessToken       = errors.New("invalid access token")
+	ErrPermissionDenied         = errors.New("permission denied")
+	ErrUserNotFound             = errors.New("user not found")
+	ErrEmailIsInUse             = errors.New("email is in use")
+	ErrAccountEmailNotConfirmed = errors.New("account email is not confirmed")
+)
+
+var (
+	RegexEmail = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 )
 
 // Also known as Subject.
@@ -10,6 +27,64 @@ type User struct {
 	Id   string
 	Name string
 	Type string
+}
+
+type CreateUserReq struct {
+	Name     string
+	Password string
+	Email    string
+}
+type CreateCustomerReq struct {
+	CreateUserReq
+}
+type CreateSellerReq struct {
+	CreateUserReq
+}
+type CreateAdminReq struct {
+	CreateUserReq
+	SecretToken string
+}
+
+func NewUser() User {
+	return User{}
+}
+
+type UserAccount struct {
+	name        string
+	password    string
+	email       string
+	accountType string
+}
+
+func (a UserAccount) Name() string {
+	return a.name
+}
+func (a UserAccount) Password() string {
+	return a.password
+}
+func (a UserAccount) Email() string {
+	return a.email
+}
+func (a UserAccount) Type() string {
+	return a.accountType
+}
+func (a UserAccount) validateEmail() bool {
+	return RegexEmail.MatchString(a.email)
+}
+
+func NewUserAccount(name, password, email, accountType string) (UserAccount, error) {
+	acc := UserAccount{
+		name:        name,
+		password:    password,
+		email:       email,
+		accountType: accountType,
+	}
+
+	if !acc.validateEmail() {
+		return acc, ErrInvalidEmail
+	}
+
+	return acc, nil
 }
 
 type RefreshToken struct {
@@ -57,6 +132,10 @@ type RefreshTokenPersisterProvider interface {
 	Get(ctx context.Context, subjectId string) (tokenIds []string, err error)
 	Add(context.Context, *RefreshToken) error
 	Delete(ctx context.Context, tokenId string) error
+}
+
+type NotificationProvider interface {
+	NotifyAccountCreated(ctx context.Context) error
 }
 
 type ConfirmationProvider interface {

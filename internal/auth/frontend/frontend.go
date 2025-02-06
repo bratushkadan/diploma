@@ -1,7 +1,7 @@
 package frontend
 
-import "github.com/bratushkadan/floral/internal/auth/core/domain"
+import "github.com/bratushkadan/floral/internal/auth/service"
 
 type FrontEnd interface {
-	Start(auth *domain.AuthService) error
+	Start(auth *service.Auth) error
 }

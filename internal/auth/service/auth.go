@@ -1,39 +1,39 @@
-package domain
+package service
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 
+	"github.com/bratushkadan/floral/internal/auth/core/domain"
 	"github.com/bratushkadan/floral/pkg/auth"
 )
 
-type AuthServiceConf struct {
-	RefreshTokenProvider RefreshTokenProvider
-	AccessTokenProvider  AccessTokenProvider
+type AuthConf struct {
+	RefreshTokenProvider domain.RefreshTokenProvider
+	AccessTokenProvider  domain.AccessTokenProvider
 
-	ConfirmationProvider          ConfirmationProvider
-	UserProvider                  UserProvider
-	RefreshTokenPersisterProvider RefreshTokenPersisterProvider
+	ConfirmationProvider          domain.ConfirmationProvider
+	UserProvider                  domain.UserProvider
+	RefreshTokenPersisterProvider domain.RefreshTokenPersisterProvider
 
 	// "Break the glass" token for managing admin accounts.
 	SecretToken string
 }
 
-type AuthService struct {
-	rtProv RefreshTokenProvider
-	atProv AccessTokenProvider
+type Auth struct {
+	rtProv domain.RefreshTokenProvider
+	atProv domain.AccessTokenProvider
 
-	confirmationProv ConfirmationProvider
-	userProv         UserProvider
-	rtPerProv        RefreshTokenPersisterProvider
+	confirmationProv domain.ConfirmationProvider
+	userProv         domain.UserProvider
+	rtPerProv        domain.RefreshTokenPersisterProvider
 
 	secretToken string
 }
 
-func NewAuthService(conf *AuthServiceConf) *AuthService {
-	return &AuthService{
+func NewAuth(conf *AuthConf) *Auth {
+	return &Auth{
 		rtProv: conf.RefreshTokenProvider,
 		atProv: conf.AccessTokenProvider,
 
@@ -45,53 +45,18 @@ func NewAuthService(conf *AuthServiceConf) *AuthService {
 	}
 }
 
-var (
-	ErrInvalidCredentials       = errors.New("invalid credentials")
-	ErrInvalidEmail             = errors.New("invalid email address")
-	ErrInvalidRefreshToken      = errors.New("invalid refresh token")
-	ErrInvalidAccessToken       = errors.New("invalid access token")
-	ErrPermissionDenied         = errors.New("permission denied")
-	ErrUserNotFound             = errors.New("user not found")
-	ErrEmailIsInUse             = errors.New("email is in use")
-	ErrAccountEmailNotConfirmed = errors.New("account email is not confirmed")
-)
-
-var (
-	RegexEmail = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-)
-
-type CreateUserReq struct {
-	Name     string
-	Password string
-	Email    string
-}
-
-type CreateCustomerReq struct {
-	CreateUserReq
-}
-type CreateSellerReq struct {
-	CreateUserReq
-}
-type CreateAdminReq struct {
-	CreateUserReq
-	SecretToken string
-}
-
-func (s *AuthService) validateEmail(email string) bool {
-	return RegexEmail.MatchString(email)
-}
-
 // FIXME: add way to re-send confirmation link
-func (s *AuthService) createUserAccount(ctx context.Context, req CreateUserReq, userType string) (*User, error) {
-	if ok := s.validateEmail(req.Email); !ok {
-		return nil, ErrInvalidEmail
+func (s *Auth) createUserAccount(ctx context.Context, req domain.CreateUserReq, userType string) (*domain.User, error) {
+	acc, err := domain.NewUserAccount(req.Name, req.Password, req.Email, userType)
+	if err != nil {
+		return nil, err
 	}
 
-	user, err := s.userProv.CreateUser(ctx, UserProviderCreateUserReq{
-		Name:     req.Name,
-		Password: req.Password,
-		Email:    req.Email,
-		Type:     userType,
+	user, err := s.userProv.CreateUser(ctx, domain.UserProviderCreateUserReq{
+		Name:     acc.Name(),
+		Password: acc.Password(),
+		Email:    acc.Email(),
+		Type:     acc.Type(),
 	})
 	if err != nil {
 		return nil, err
@@ -109,7 +74,7 @@ func (s *AuthService) createUserAccount(ctx context.Context, req CreateUserReq, 
 	return user, nil
 }
 
-func (s *AuthService) createPersistToken(ctx context.Context, subjectId string) (string, error) {
+func (s *Auth) createPersistToken(ctx context.Context, subjectId string) (string, error) {
 	token, tokenString, err := s.rtProv.Create(subjectId)
 	if err != nil {
 		return "", fmt.Errorf("failed to create refresh token: %w", err)
@@ -122,10 +87,10 @@ func (s *AuthService) createPersistToken(ctx context.Context, subjectId string) 
 	return tokenString, nil
 }
 
-func (s *AuthService) lookupRefreshToken(ctx context.Context, refreshTokenString string) (*RefreshToken, error) {
+func (s *Auth) lookupRefreshToken(ctx context.Context, refreshTokenString string) (*domain.RefreshToken, error) {
 	token, err := s.rtProv.Decode(refreshTokenString)
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed to decode refresh token: %w", ErrInvalidRefreshToken, err)
+		return nil, fmt.Errorf("%w: failed to decode refresh token: %w", domain.ErrInvalidRefreshToken, err)
 	}
 
 	tokenIds, err := s.rtPerProv.Get(ctx, token.SubjectId)
@@ -139,28 +104,28 @@ func (s *AuthService) lookupRefreshToken(ctx context.Context, refreshTokenString
 		}
 	}
 
-	return nil, fmt.Errorf("failed to lookup refresh token: %w", ErrInvalidRefreshToken)
+	return nil, fmt.Errorf("failed to lookup refresh token: %w", domain.ErrInvalidRefreshToken)
 }
 
-func (s *AuthService) CreateCustomer(ctx context.Context, req CreateCustomerReq) (*User, error) {
+func (s *Auth) CreateCustomer(ctx context.Context, req domain.CreateCustomerReq) (*domain.User, error) {
 	return s.createUserAccount(ctx, req.CreateUserReq, auth.UserTypeCustomer)
 }
 
-func (s *AuthService) CreateSeller(ctx context.Context, req CreateSellerReq, accessTokenString string) (*User, error) {
+func (s *Auth) CreateSeller(ctx context.Context, req domain.CreateSellerReq, accessTokenString string) (*domain.User, error) {
 	accessToken, err := s.atProv.Decode(accessTokenString)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrInvalidAccessToken, err)
+		return nil, fmt.Errorf("%w: %w", domain.ErrInvalidAccessToken, err)
 	}
 
 	if accessToken.SubjectType != auth.UserTypeAdmin {
-		return nil, fmt.Errorf("only admins can create seller accounts: %w", ErrPermissionDenied)
+		return nil, fmt.Errorf("only admins can create seller accounts: %w", domain.ErrPermissionDenied)
 	}
 
 	return s.createUserAccount(ctx, req.CreateUserReq, auth.UserTypeSeller)
 }
 
 // Expose this method carefully.
-func (s *AuthService) CreateAdmin(ctx context.Context, req CreateAdminReq) (*User, error) {
+func (s *Auth) CreateAdmin(ctx context.Context, req domain.CreateAdminReq) (*domain.User, error) {
 	if req.SecretToken == "" {
 		return nil, errors.New("admin account creation is disabled: no secret token provided")
 	}
@@ -171,10 +136,10 @@ func (s *AuthService) CreateAdmin(ctx context.Context, req CreateAdminReq) (*Use
 }
 
 // Returns token if the provided credentials are correct
-func (s *AuthService) Authenticate(ctx context.Context, email, password string) (string, error) {
+func (s *Auth) Authenticate(ctx context.Context, email, password string) (string, error) {
 	user, err := s.userProv.CheckUserCredentials(ctx, email, password)
 	if err != nil {
-		if errors.Is(err, ErrInvalidCredentials) {
+		if errors.Is(err, domain.ErrInvalidCredentials) {
 			return "", err
 		}
 		return "", fmt.Errorf("failed to check user credentials: %w", err)
@@ -185,13 +150,13 @@ func (s *AuthService) Authenticate(ctx context.Context, email, password string) 
 		return "", err
 	}
 	if !ok {
-		return "", ErrAccountEmailNotConfirmed
+		return "", domain.ErrAccountEmailNotConfirmed
 	}
 
 	return s.createPersistToken(ctx, user.Id)
 }
 
-func (s *AuthService) RenewRefreshToken(ctx context.Context, refreshTokenString string) (string, error) {
+func (s *Auth) RenewRefreshToken(ctx context.Context, refreshTokenString string) (string, error) {
 	token, err := s.lookupRefreshToken(ctx, refreshTokenString)
 	if err != nil {
 		return "", err
@@ -209,7 +174,7 @@ func (s *AuthService) RenewRefreshToken(ctx context.Context, refreshTokenString 
 	return tokenStr, nil
 }
 
-func (s *AuthService) GetAccessToken(ctx context.Context, refreshTokenString string) (*AccessToken, string, error) {
+func (s *Auth) GetAccessToken(ctx context.Context, refreshTokenString string) (*domain.AccessToken, string, error) {
 	token, err := s.lookupRefreshToken(ctx, refreshTokenString)
 	if err != nil {
 		return nil, "", err
@@ -228,6 +193,6 @@ func (s *AuthService) GetAccessToken(ctx context.Context, refreshTokenString str
 	return accessToken, tokenStr, nil
 }
 
-func (s *AuthService) ConfirmEmail(ctx context.Context, confirmationId string) error {
+func (s *Auth) ConfirmEmail(ctx context.Context, confirmationId string) error {
 	return s.userProv.ConfirmEmailByConfirmationId(ctx, confirmationId)
 }
