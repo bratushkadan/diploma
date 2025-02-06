@@ -1,6 +1,7 @@
 package ydbpkg
 
 import (
+	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	environ "github.com/ydb-platform/ydb-go-sdk-auth-environ"
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	yc "github.com/ydb-platform/ydb-go-yc"
@@ -28,4 +29,8 @@ func GetYdbAuthOpts(ydbAuthMethod string) []ydb.Option {
 	}
 
 	return opts
+}
+
+func IsUniqueConstraintViolation(err error) bool {
+	return ydb.IsOperationError(err, Ydb.StatusIds_PRECONDITION_FAILED)
 }
