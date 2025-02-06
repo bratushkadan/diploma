@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bratushkadan/floral/internal/auth/core/domain"
+	"github.com/bratushkadan/floral/pkg/resource/idhash"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
@@ -21,8 +22,9 @@ const (
 )
 
 type YDBAccountAdapter struct {
-	db *ydb.Driver
-	l  *zap.Logger
+	db       *ydb.Driver
+	l        *zap.Logger
+	idHasher idhash.IdHasher
 }
 
 var _ domain.AccountProviderYDB = (*YDBAccountAdapter)(nil)
@@ -30,13 +32,15 @@ var _ domain.AccountProviderYDB = (*YDBAccountAdapter)(nil)
 type YDBAccountAdapterConf struct {
 	DbDriver *ydb.Driver
 	Logger   *zap.Logger
+	IdHasher idhash.IdHasher
 	// TODO: password hasher
 }
 
 func NewYDBAccountAdapter(conf YDBAccountAdapterConf) *YDBAccountAdapter {
-	adapter := &YDBAccountAdapter{}
-
-	adapter.db = conf.DbDriver
+	adapter := &YDBAccountAdapter{
+		db:       conf.DbDriver,
+		idHasher: conf.IdHasher,
+	}
 
 	if conf.Logger == nil {
 		adapter.l = zap.NewNop()
@@ -84,7 +88,6 @@ func (a *YDBAccountAdapter) CreateAccount(ctx context.Context, in domain.CreateA
 
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
-				// FIXME: project it to string type
 				var id int64
 				if err := res.ScanNamed(
 					named.Required("id", &id),
@@ -94,7 +97,13 @@ func (a *YDBAccountAdapter) CreateAccount(ctx context.Context, in domain.CreateA
 				); err != nil {
 					return err
 				}
-				out.Id = fmt.Sprintf("%d", id)
+
+				idStr, err := a.idHasher.EncodeInt64(id)
+				if err != nil {
+					return fmt.Errorf("failed to hash encode int64 id %d: %v", id, err)
+				}
+
+				out.Id = idStr
 			}
 		}
 
