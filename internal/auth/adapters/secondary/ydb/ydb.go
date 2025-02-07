@@ -2,7 +2,6 @@ package ydb_adapter
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -133,7 +132,8 @@ DECLARE $id AS Int64;
 SELECT
   name,
   email,
-  type
+  type,
+  (activated_at IS NOT NULL) AS activated
 FROM
   %s
 WHERE
@@ -166,6 +166,7 @@ func (a *Account) FindAccount(ctx context.Context, in domain.FindAccountDTOInput
 					named.Required("name", &account.Name),
 					named.Required("email", &account.Email),
 					named.Required("type", &account.Type),
+					named.Required("activated", &account.Activated),
 				); err != nil {
 					return err
 				}
@@ -187,7 +188,8 @@ DECLARE $email AS Utf8;
 SELECT
   id,
   name,
-  type
+  type,
+  (activated_at IS NOT NULL) AS activated
 FROM
   %s
 VIEW
@@ -218,6 +220,7 @@ func (a *Account) FindAccountByEmail(ctx context.Context, in domain.FindAccountB
 					named.Required("id", &intId),
 					named.Required("name", &account.Name),
 					named.Required("type", &account.Type),
+					named.Required("activated", &account.Activated),
 				); err != nil {
 					return err
 				}
@@ -288,6 +291,61 @@ func (a *Account) CheckAccountCredentials(ctx context.Context, in domain.CheckAc
 	return out, nil
 }
 
-func (a *Account) ConfirmAccountsByEmail(ctx context.Context, in domain.ConfirmAccountsByEmailDTOInput) error {
-	return errors.New("unimplemented")
+var queryActivateAccountsByEmail = fmt.Sprintf(`
+DECLARE $activated_at AS Datetime;
+DECLARE $emails AS List<Utf8>;
+
+-- 1. (TableRangeScan)
+
+$to_update = (
+    SELECT
+      id,
+      $activated_at AS activated_at
+    FROM
+      %s
+    VIEW
+      %s
+    WHERE
+      email IN $emails
+);
+
+UPDATE
+  %s
+ON
+  SELECT * FROM $to_update;
+
+-- 2. (TableFullScan)
+
+-- UPDATE
+--   %s
+-- SET
+--   activated_at = $activated_at
+-- WHERE
+--   email IN $emails;
+`, TableAccounts, TableAccountsIndexEmailUnique, TableAccounts, TableAccounts)
+
+func (a *Account) ActivateAccountsByEmail(ctx context.Context, in domain.ActivateAccountsByEmailDTOInput) error {
+	if err := a.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		emailValues := make([]types.Value, 0, len(in.Emails))
+		for _, v := range in.Emails {
+			emailValues = append(emailValues, types.UTF8Value(v))
+		}
+
+		res, err := tx.Execute(ctx, queryActivateAccountsByEmail, table.NewQueryParameters(
+			table.ValueParam("$activated_at", types.DatetimeValueFromTime(time.Now())),
+			table.ValueParam("$emails", types.ListValue(emailValues...)),
+		))
+		if err != nil {
+			return err
+		}
+		if err := res.Close(); err != nil {
+			return err
+		}
+
+		return res.Err()
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -41,9 +41,7 @@ type AccountProvider interface {
 	FindAccount(context.Context, FindAccountDTOInput) (*FindAccountDTOOutput, error)
 	FindAccountByEmail(context.Context, FindAccountByEmailDTOInput) (*FindAccountByEmailDTOOutput, error)
 	CheckAccountCredentials(context.Context, CheckAccountCredentialsDTOInput) (CheckAccountCredentialsDTOOutput, error)
-	ConfirmAccountsByEmail(context.Context, ConfirmAccountsByEmailDTOInput) error
-	// TODO: move this check to SQL query instead
-	// GetIsAccountConfirmed(ctx context.Context, email string) (bool, error)
+	ActivateAccountsByEmail(context.Context, ActivateAccountsByEmailDTOInput) error
 }
 
 type CreateAccountDTOInput struct {
@@ -63,18 +61,20 @@ type FindAccountDTOInput struct {
 	Id string
 }
 type FindAccountDTOOutput struct {
-	Name  string
-	Email string
-	Type  string
+	Name      string
+	Email     string
+	Type      string
+	Activated bool
 }
 
 type FindAccountByEmailDTOInput struct {
 	Email string
 }
 type FindAccountByEmailDTOOutput struct {
-	Id   string
-	Name string
-	Type string
+	Id        string
+	Name      string
+	Type      string
+	Activated bool
 }
 
 type CheckAccountCredentialsDTOInput struct {
@@ -85,7 +85,7 @@ type CheckAccountCredentialsDTOOutput struct {
 	Ok bool
 }
 
-type ConfirmAccountsByEmailDTOInput struct {
+type ActivateAccountsByEmailDTOInput struct {
 	Emails []string
 }
 

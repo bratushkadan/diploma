@@ -148,4 +148,13 @@ func main() {
 	} else {
 		logger.Info("wrong credentials")
 	}
+
+	logger.Info("activate accounts by email")
+	if err := accountAdapter.ActivateAccountsByEmail(ctx, domain.ActivateAccountsByEmailDTOInput{
+		Emails: []string{email},
+	}); err != nil {
+		logger.Error("failed to activate account", zap.String("email", email), zap.Error(err))
+	} else {
+		logger.Info("account activated", zap.String("email", email))
+	}
 }
