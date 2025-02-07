@@ -2,6 +2,7 @@ package ydb_adapter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -20,6 +21,8 @@ import (
 const (
 	TableAccounts      = "accounts"
 	TableRefreshTokens = "refresh_tokens"
+
+	TableAccountsIndexEmailUnique = "idx_email_uniq"
 )
 
 type Account struct {
@@ -116,7 +119,7 @@ func (a *Account) CreateAccount(ctx context.Context, in domain.CreateAccountDTOI
 		}
 
 		return nil
-		// return res.Close()
+		// return res.Close() // <---- If I do not require RETURNING values when executing query
 	})
 	if err != nil {
 		return out, fmt.Errorf("failed to run create account ydb query: %v", err)
@@ -125,6 +128,122 @@ func (a *Account) CreateAccount(ctx context.Context, in domain.CreateAccountDTOI
 	return out, nil
 }
 
-//	if ok := p.ph.Check(password, dbPassword); !ok {
-//		return nil, domain.ErrInvalidCredentials
-//	}
+var queryFindAccount = fmt.Sprintf(`
+DECLARE $id AS Int64;
+SELECT
+  name,
+  email,
+  type
+FROM
+  %s
+WHERE
+  id = $id;
+`, TableAccounts)
+
+func (a *Account) FindAccount(ctx context.Context, in domain.FindAccountDTOInput) (*domain.FindAccountDTOOutput, error) {
+	intId, err := a.idHasher.DecodeInt64(in.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	var out *domain.FindAccountDTOOutput
+
+	readTx := table.TxControl(table.BeginTx(table.WithOnlineReadOnly()), table.CommitTx())
+
+	err = a.db.Table().Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, res, err := s.Execute(ctx, readTx, queryFindAccount, table.NewQueryParameters(
+			table.ValueParam("$id", types.Int64Value(intId)),
+		))
+		if err != nil {
+			return err
+		}
+		defer res.Close()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var account domain.FindAccountDTOOutput
+				if err := res.ScanNamed(
+					named.Required("name", &account.Name),
+					named.Required("email", &account.Email),
+					named.Required("type", &account.Type),
+				); err != nil {
+					return err
+				}
+				out = &account
+			}
+		}
+
+		return res.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+var queryFindAccountByEmail = fmt.Sprintf(`
+DECLARE $email AS Utf8;
+SELECT
+  id,
+  name,
+  type
+FROM
+  %s
+VIEW
+  %s 
+WHERE
+  email = $email;
+`, TableAccounts, TableAccountsIndexEmailUnique)
+
+func (a *Account) FindAccountByEmail(ctx context.Context, in domain.FindAccountByEmailDTOInput) (*domain.FindAccountByEmailDTOOutput, error) {
+	var out *domain.FindAccountByEmailDTOOutput
+
+	readTx := table.TxControl(table.BeginTx(table.WithOnlineReadOnly()), table.CommitTx())
+
+	if err := a.db.Table().Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, res, err := s.Execute(ctx, readTx, queryFindAccountByEmail, table.NewQueryParameters(
+			table.ValueParam("$email", types.UTF8Value(in.Email)),
+		))
+		if err != nil {
+			return err
+		}
+		defer res.Close()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var intId int64
+				var account domain.FindAccountByEmailDTOOutput
+				if err := res.ScanNamed(
+					named.Required("id", &intId),
+					named.Required("name", &account.Name),
+					named.Required("type", &account.Type),
+				); err != nil {
+					return err
+				}
+
+				if id, err := a.idHasher.EncodeInt64(intId); err != nil {
+					return err
+				} else {
+					account.Id = id
+				}
+				out = &account
+			}
+		}
+
+		return res.Err()
+	}); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+func (a *Account) CheckAccountCredentials(ctx context.Context, in domain.CheckAccountCredentialsDTOInput) (domain.CheckAccountCredentialsDTOOutput, error) {
+	//	if ok := p.ph.Check(password, dbPassword); !ok {
+	//		return nil, domain.ErrInvalidCredentials
+	//	}
+	return domain.CheckAccountCredentialsDTOOutput{}, errors.New("unimplemented")
+}
+func (a *Account) ConfirmAccountsByEmail(ctx context.Context, in domain.ConfirmAccountsByEmailDTOInput) error {
+	return errors.New("unimplemented")
+}

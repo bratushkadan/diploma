@@ -38,12 +38,12 @@ type CreateAccountRes struct {
 
 type AccountProvider interface {
 	CreateAccount(context.Context, CreateAccountDTOInput) (CreateAccountDTOOutput, error)
-	// FindUser(ctx context.Context, id string) (*User, error)
-	// FindUserByEmail(ctx context.Context, email string) (*User, error)
-	// CheckUserCredentials(ctx context.Context, email string, password string) (*User, error)
-	// AddEmailConfirmationId(ctx context.Context, email string) (string, error)
+	FindAccount(context.Context, FindAccountDTOInput) (*FindAccountDTOOutput, error)
+	FindAccountByEmail(context.Context, FindAccountByEmailDTOInput) (*FindAccountByEmailDTOOutput, error)
+	CheckAccountCredentials(context.Context, CheckAccountCredentialsDTOInput) (CheckAccountCredentialsDTOOutput, error)
+	ConfirmAccountsByEmail(context.Context, ConfirmAccountsByEmailDTOInput) error
+	// TODO: move this check to SQL query instead
 	// GetIsAccountConfirmed(ctx context.Context, email string) (bool, error)
-	// ConfirmAccountByEmail(ctx context.Context, email string) error
 }
 
 type CreateAccountDTOInput struct {
@@ -57,6 +57,36 @@ type CreateAccountDTOOutput struct {
 	Name  string
 	Email string
 	Type  string
+}
+
+type FindAccountDTOInput struct {
+	Id string
+}
+type FindAccountDTOOutput struct {
+	Name  string
+	Email string
+	Type  string
+}
+
+type FindAccountByEmailDTOInput struct {
+	Email string
+}
+type FindAccountByEmailDTOOutput struct {
+	Id   string
+	Name string
+	Type string
+}
+
+type CheckAccountCredentialsDTOInput struct {
+	Email    string
+	Password string
+}
+type CheckAccountCredentialsDTOOutput struct {
+	Ok bool
+}
+
+type ConfirmAccountsByEmailDTOInput struct {
+	Emails []string
 }
 
 type AccountConfirmationProvider interface {
