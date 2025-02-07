@@ -126,7 +126,7 @@ func main() {
 	}
 
 	logger.Info("find account by email")
-	accByEmail, err := accountAdapter.FindAccountByEmail(ctx, domain.FindAccountByEmailDTOInput{Email: email})
+	accByEmail, err := accountAdapter.FindAccountByEmail(ctx, domain.FindAccountByEmailDTOInput{Email: "someemail-1738903445714@gmail.com"})
 	if err != nil {
 		logger.Fatal("failed to find account by email", zap.Error(err))
 	}
