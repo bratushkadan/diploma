@@ -95,10 +95,11 @@ func main() {
 
 	logger.Info("create account")
 	email := fmt.Sprintf(`someemail-%d@gmail.com`, time.Now().UnixMilli())
+	password := "ooga"
 	resp, err := authSvc.CreateAccount(ctx, domain.CreateAccountReq{
 		Name:     "Danila",
 		Email:    email,
-		Password: "ooga",
+		Password: password,
 		Type:     "user",
 	})
 	if err != nil {
@@ -113,6 +114,7 @@ func main() {
 		logger.Info("decoded string id to int64", zap.String("str_id", resp.Id), zap.Int64("id", idInt64))
 	}
 
+	logger.Info("find account")
 	acc, err := accountAdapter.FindAccount(ctx, domain.FindAccountDTOInput{Id: resp.Id})
 	if err != nil {
 		logger.Fatal("failed to find account", zap.Error(err))
@@ -123,6 +125,7 @@ func main() {
 		logger.Info("account not found", zap.String("id", resp.Id))
 	}
 
+	logger.Info("find account by email")
 	accByEmail, err := accountAdapter.FindAccountByEmail(ctx, domain.FindAccountByEmailDTOInput{Email: email})
 	if err != nil {
 		logger.Fatal("failed to find account by email", zap.Error(err))
@@ -133,4 +136,16 @@ func main() {
 		logger.Info("account not found", zap.String("id", resp.Id))
 	}
 
+	logger.Info("check account credentials")
+	if out, err := accountAdapter.CheckAccountCredentials(ctx, domain.CheckAccountCredentialsDTOInput{
+		Email:    email,
+		Password: password,
+	}); err != nil {
+		logger.Error("failed to check account credentials", zap.Error(err))
+	} else if out.Ok {
+		logger.Info("you're logged in!")
+
+	} else {
+		logger.Info("wrong credentials")
+	}
 }

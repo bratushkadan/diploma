@@ -238,12 +238,56 @@ func (a *Account) FindAccountByEmail(ctx context.Context, in domain.FindAccountB
 
 	return out, nil
 }
+
+var queryCheckAccountCredentials = fmt.Sprintf(`
+DECLARE $email AS Utf8;
+
+SELECT
+  password
+FROM
+  %s
+VIEW
+  %s 
+WHERE
+  email = $email;
+`, TableAccounts, TableAccountsIndexEmailUnique)
+
 func (a *Account) CheckAccountCredentials(ctx context.Context, in domain.CheckAccountCredentialsDTOInput) (domain.CheckAccountCredentialsDTOOutput, error) {
-	//	if ok := p.ph.Check(password, dbPassword); !ok {
-	//		return nil, domain.ErrInvalidCredentials
-	//	}
-	return domain.CheckAccountCredentialsDTOOutput{}, errors.New("unimplemented")
+	var out domain.CheckAccountCredentialsDTOOutput
+
+	readTx := table.TxControl(table.BeginTx(table.WithOnlineReadOnly()), table.CommitTx())
+
+	if err := a.db.Table().Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, res, err := s.Execute(ctx, readTx, queryCheckAccountCredentials, table.NewQueryParameters(
+			table.ValueParam("$email", types.UTF8Value(in.Email)),
+		))
+		if err != nil {
+			return err
+		}
+		defer res.Close()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var password string
+				if err := res.ScanNamed(
+					named.Required("password", &password),
+				); err != nil {
+					return err
+				}
+
+				isPasswordMatch := a.ph.Check(in.Password, password)
+				out.Ok = isPasswordMatch
+			}
+		}
+
+		return res.Err()
+	}); err != nil {
+		return out, err
+	}
+
+	return out, nil
 }
+
 func (a *Account) ConfirmAccountsByEmail(ctx context.Context, in domain.ConfirmAccountsByEmailDTOInput) error {
 	return errors.New("unimplemented")
 }
