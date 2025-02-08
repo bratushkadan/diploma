@@ -5,36 +5,50 @@ import (
 	"time"
 )
 
-type RefreshTokenProviderV2 interface {
+type RefreshTokenProvider interface {
 	Get(context.Context, RefreshTokenGetDTOInput) (RefreshTokenGetDTOOutput, error)
 	Add(context.Context, RefreshTokenAddDTOInput) (RefreshTokenAddDTOOutput, error)
-	Replace(context.Context, RefreshTokenReplaceDTOOutput) (RefreshTokenReplaceDTOOutput, error)
+	Replace(context.Context, RefreshTokenReplaceDTOInput) (RefreshTokenReplaceDTOOutput, error)
 	Delete(context.Context, RefreshTokenDeleteDTOInput) (RefreshTokenDeleteDTOOutput, error)
+	DeleteByAccountId(context.Context, RefreshTokenDeleteByAccountIdDTOInput) (RefreshTokenDeleteByAccountIdDTOOutput, error)
+}
+
+type AccessTokenProvider interface {
+	Get(context.Context, AccessTokenGetDTOInput) (AccessTokenGetDTOOutput, error)
 }
 
 type RefreshTokenGetDTOInput struct {
 	AccountId string
 }
 type RefreshTokenGetDTOOutput struct {
-	Tokens []struct {
-		Id string `json:"id"`
-	} `json:"tokens"`
+	Tokens []RefreshTokenGetDTOOutputToken `json:"tokens"`
+}
+type RefreshTokenGetDTOOutputToken struct {
+	Id        string    `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 type RefreshTokenAddDTOInput struct {
 	AccountId string
-	Type      string
+	CreatedAt time.Time
 	ExpiresAt time.Time
 }
 type RefreshTokenAddDTOOutput struct {
-	Id string
+	Id        string    `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 type RefreshTokenReplaceDTOInput struct {
-	Id string
+	Id        string
+	CreatedAt time.Time
+	ExpiresAt time.Time
 }
 type RefreshTokenReplaceDTOOutput struct {
-	Id string
+	Id        string    `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 type RefreshTokenDeleteDTOInput struct {
@@ -42,4 +56,19 @@ type RefreshTokenDeleteDTOInput struct {
 }
 type RefreshTokenDeleteDTOOutput struct {
 	Id string
+}
+
+type RefreshTokenDeleteByAccountIdDTOInput struct {
+	Id string
+}
+type RefreshTokenDeleteByAccountIdDTOOutput struct {
+	Ids []string
+}
+
+type AccessTokenGetDTOInput struct {
+	RefreshToken string
+}
+type AccessTokenGetDTOOutput struct {
+	AccessToken string    `json:"access_token"`
+	ExpiresAt   time.Time `json:"expires_at"`
 }

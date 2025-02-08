@@ -1,13 +1,22 @@
 package domain
 
-import "context"
+import (
+	"context"
+	"errors"
+	"time"
+)
+
+var (
+	ErrSendAccountConfirmationFailed = errors.New("failed to send account confirmation email")
+	ErrInvalidCredentials            = errors.New("invalid credentials")
+)
 
 type AuthServiceV2 interface {
 	CreateAccount(context.Context, CreateAccountReq) (CreateAccountRes, error)
-	// ActivateAccounts(context.Context, ActivateAccountsReq) (ActivateAccountsRes, error)
+	ActivateAccounts(context.Context, ActivateAccountsReq) (ActivateAccountsRes, error)
 
-	// Authenticate(context.Context, AuthenticateReq) (AuthenticateRes, error)
-	// RenewRefreshToken(context.Context, RenewRefreshTokenReq) (RenewRefreshTokenRes, error)
+	Authenticate(context.Context, AuthenticateReq) (AuthenticateRes, error)
+	ReplaceRefreshToken(context.Context, ReplaceRefreshTokenReq) (ReplaceRefreshTokenRes, error)
 }
 
 type CreateAccountReq struct {
@@ -35,11 +44,13 @@ type AuthenticateReq struct {
 }
 type AuthenticateRes struct {
 	RefreshToken string `json:"refresh_token"`
+	ExpiresAt    time.Time
 }
 
-type RenewRefreshTokenReq struct {
+type ReplaceRefreshTokenReq struct {
 	RefreshToken string `json:"refresh_token"`
 }
-type RenewRefreshTokenRes struct {
+type ReplaceRefreshTokenRes struct {
 	RefreshToken string `json:"refresh_token"`
+	ExpiresAt    time.Time
 }

@@ -8,21 +8,19 @@ import (
 )
 
 var (
-	ErrInvalidCredentials       = errors.New("invalid credentials")
-	ErrInvalidEmail             = errors.New("invalid email address")
-	ErrInvalidRefreshToken      = errors.New("invalid refresh token")
-	ErrInvalidAccessToken       = errors.New("invalid access token")
-	ErrPermissionDenied         = errors.New("permission denied")
-	ErrUserNotFound             = errors.New("user not found")
-	ErrEmailIsInUse             = errors.New("email is in use")
-	ErrAccountEmailNotConfirmed = errors.New("account email is not confirmed")
+	ErrInvalidEmail     = errors.New("invalid email address")
+	ErrPermissionDenied = errors.New("permission denied")
+	ErrUserNotFound     = errors.New("user not found")
+	ErrEmailIsInUse     = errors.New("email is in use")
+
+	ErrInvalidRefreshToken = errors.New("invalid refresh token")
+	ErrInvalidAccessToken  = errors.New("invalid access token")
+	ErrInvalidTokenType    = errors.New("invalid token type")
+	ErrTokenExpired        = errors.New("token expired")
 )
 
-// TODO: domain only errors
-
-// Adapter errors
 var (
-	ErrSendAccountConfirmationFailed = errors.New("failed to send account confirmation email")
+	ErrAccountEmailNotConfirmed = errors.New("account email is not confirmed")
 )
 
 var (
@@ -56,31 +54,31 @@ func NewUser() User {
 	return User{}
 }
 
-type UserAccount struct {
+type Account struct {
 	name        string
 	password    string
 	email       string
 	accountType string
 }
 
-func (a UserAccount) Name() string {
+func (a Account) Name() string {
 	return a.name
 }
-func (a UserAccount) Password() string {
+func (a Account) Password() string {
 	return a.password
 }
-func (a UserAccount) Email() string {
+func (a Account) Email() string {
 	return a.email
 }
-func (a UserAccount) Type() string {
+func (a Account) Type() string {
 	return a.accountType
 }
-func (a UserAccount) validateEmail() bool {
+func (a Account) validateEmail() bool {
 	return RegexEmail.MatchString(a.email)
 }
 
-func NewUserAccount(name, password, email, accountType string) (UserAccount, error) {
-	acc := UserAccount{
+func NewAccount(name, password, email, accountType string) (Account, error) {
+	acc := Account{
 		name:        name,
 		password:    password,
 		email:       email,
@@ -94,28 +92,30 @@ func NewUserAccount(name, password, email, accountType string) (UserAccount, err
 	return acc, nil
 }
 
+type TokenType string
+
+var (
+	TokenTypeRefresh TokenType = "refresh"
+	TokenTypeAccess  TokenType = "access"
+)
+
 type RefreshToken struct {
-	TokenId   string
-	TokenType string
+	Id        string
 	SubjectId string
 	ExpiresAt time.Time
 }
 
 type AccessToken struct {
-	TokenType   string
 	SubjectId   string
 	SubjectType string
 	ExpiresAt   time.Time
 }
 
-type RefreshTokenProvider interface {
-	Create(subjectId string) (token *RefreshToken, tokenString string, err error)
-	Decode(token string) (*RefreshToken, error)
-}
-
-type AccessTokenProvider interface {
-	Create(subjectId string, subjectType string) (token *AccessToken, tokenString string, err error)
-	Decode(token string) (*AccessToken, error)
+type TokenProvider interface {
+	EncodeRefresh(token RefreshToken) (tokenString string, err error)
+	DecodeRefresh(token string) (RefreshToken, error)
+	EncodeAccess(token AccessToken) (tokenString string, err error)
+	DecodeAccess(token string) (AccessToken, error)
 }
 
 type UserProviderCreateUserReq struct {
@@ -137,7 +137,7 @@ type UserProvider interface {
 
 type RefreshTokenPersisterProvider interface {
 	Get(ctx context.Context, subjectId string) (tokenIds []string, err error)
-	Add(context.Context, *RefreshToken) error
+	Add(context.Context, RefreshToken) error
 	Delete(ctx context.Context, tokenId string) error
 }
 

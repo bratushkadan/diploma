@@ -16,14 +16,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// TODO: read from config
-const (
-	TableAccounts      = "accounts"
-	TableRefreshTokens = "refresh_tokens"
-
-	TableAccountsIndexEmailUnique = "idx_email_uniq"
-)
-
 type Account struct {
 	db       *ydb.Driver
 	l        *zap.Logger
@@ -33,14 +25,14 @@ type Account struct {
 
 var _ domain.AccountProvider = (*Account)(nil)
 
-type Conf struct {
+type AccountConf struct {
 	DbDriver       *ydb.Driver
 	Logger         *zap.Logger
 	IdHasher       idhash.IdHasher
 	PasswordHasher *auth.PasswordHasher
 }
 
-func New(conf Conf) *Account {
+func NewAccount(conf AccountConf) *Account {
 	adapter := &Account{
 		db:       conf.DbDriver,
 		idHasher: conf.IdHasher,
@@ -59,11 +51,11 @@ DECLARE $name AS Utf8;
 DECLARE $password AS Utf8;
 DECLARE $email AS Utf8;
 DECLARE $type AS String;
-DECLARE $created_at AS Timestamp;
+DECLARE $created_at AS Datetime;
 UPSERT INTO %s ( name, password, email, type, created_at )
 VALUES ( $name, $password, $email, $type, $created_at )
 RETURNING id, name, email, type
-`, TableAccounts)
+`, tableAccounts)
 
 func (a *Account) CreateAccount(ctx context.Context, in domain.CreateAccountDTOInput) (domain.CreateAccountDTOOutput, error) {
 	var out domain.CreateAccountDTOOutput
@@ -79,7 +71,7 @@ func (a *Account) CreateAccount(ctx context.Context, in domain.CreateAccountDTOI
 			table.ValueParam("$email", types.UTF8Value(in.Email)),
 			table.ValueParam("$password", types.UTF8Value(hashedPass)),
 			table.ValueParam("$type", types.StringValueFromString(in.Type)),
-			table.ValueParam("$created_at", types.TimestampValueFromTime(time.Now())),
+			table.ValueParam("$created_at", types.DatetimeValueFromTime(time.Now())),
 		))
 		if err != nil {
 			if ydb.IsOperationError(err, Ydb.StatusIds_PRECONDITION_FAILED) {
@@ -138,7 +130,7 @@ FROM
   %s
 WHERE
   id = $id;
-`, TableAccounts)
+`, tableAccounts)
 
 func (a *Account) FindAccount(ctx context.Context, in domain.FindAccountDTOInput) (*domain.FindAccountDTOOutput, error) {
 	intId, err := a.idHasher.DecodeInt64(in.Id)
@@ -196,7 +188,7 @@ VIEW
   %s 
 WHERE
   email = $email;
-`, TableAccounts, TableAccountsIndexEmailUnique)
+`, tableAccounts, tableAccountsIndexEmailUnique)
 
 func (a *Account) FindAccountByEmail(ctx context.Context, in domain.FindAccountByEmailDTOInput) (*domain.FindAccountByEmailDTOOutput, error) {
 	var out *domain.FindAccountByEmailDTOOutput
@@ -246,6 +238,7 @@ var queryCheckAccountCredentials = fmt.Sprintf(`
 DECLARE $email AS Utf8;
 
 SELECT
+  id,
   password
 FROM
   %s
@@ -253,7 +246,7 @@ VIEW
   %s 
 WHERE
   email = $email;
-`, TableAccounts, TableAccountsIndexEmailUnique)
+`, tableAccounts, tableAccountsIndexEmailUnique)
 
 func (a *Account) CheckAccountCredentials(ctx context.Context, in domain.CheckAccountCredentialsDTOInput) (domain.CheckAccountCredentialsDTOOutput, error) {
 	var out domain.CheckAccountCredentialsDTOOutput
@@ -272,11 +265,19 @@ func (a *Account) CheckAccountCredentials(ctx context.Context, in domain.CheckAc
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
 				var password string
+				var intId int64
 				if err := res.ScanNamed(
 					named.Required("password", &password),
+					named.Required("id", &intId),
 				); err != nil {
 					return err
 				}
+
+				id, err := a.idHasher.EncodeInt64(intId)
+				if err != nil {
+					return fmt.Errorf("failed to encode account int id: %w", err)
+				}
+				out.AccountId = id
 
 				isPasswordMatch := a.ph.Check(in.Password, password)
 				out.Ok = isPasswordMatch
@@ -322,7 +323,7 @@ ON
 --   activated_at = $activated_at
 -- WHERE
 --   email IN $emails;
-`, TableAccounts, TableAccountsIndexEmailUnique, TableAccounts, TableAccounts)
+`, tableAccounts, tableAccountsIndexEmailUnique, tableAccounts, tableAccounts)
 
 func (a *Account) ActivateAccountsByEmail(ctx context.Context, in domain.ActivateAccountsByEmailDTOInput) error {
 	if err := a.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {

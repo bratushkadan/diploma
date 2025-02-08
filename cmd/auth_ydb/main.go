@@ -27,8 +27,9 @@ var (
 )
 
 const (
-	EnvKeyIdHashSalt       = "APP_ID_HASH_SALT"
-	EnvKeyPasswordHashSalt = "APP_PASSWORD_HASH_SALT"
+	EnvKeyAccountIdHashSalt = "APP_ID_ACCOUNT_HASH_SALT"
+	EnvKeyTokenIdHashSalt   = "APP_ID_TOKEN_HASH_SALT"
+	EnvKeyPasswordHashSalt  = "APP_PASSWORD_HASH_SALT"
 )
 
 type DummyAccountConfirmationProvider struct {
@@ -55,7 +56,7 @@ func main() {
 		log.Fatal("Error setting up zap")
 	}
 
-	idHasher, err := idhash.New(os.Getenv(EnvKeyIdHashSalt), idhash.WithPrefix("ie"))
+	accountIdHasher, err := idhash.New(os.Getenv(EnvKeyAccountIdHashSalt), idhash.WithPrefix("ie"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -77,9 +78,9 @@ func main() {
 			log.Print()
 		}
 	}()
-	accountAdapter := ydb_adapter.New(ydb_adapter.Conf{
+	accountAdapter := ydb_adapter.NewAccount(ydb_adapter.AccountConf{
 		DbDriver:       db,
-		IdHasher:       idHasher,
+		IdHasher:       accountIdHasher,
 		PasswordHasher: passwordHasher,
 
 		Logger: logger,
@@ -107,7 +108,7 @@ func main() {
 	} else {
 		logger.Info("response creating account", zap.Any("response", resp))
 
-		idInt64, err := idHasher.DecodeInt64(resp.Id)
+		idInt64, err := accountIdHasher.DecodeInt64(resp.Id)
 		if err != nil {
 			logger.Fatal("failed to decode str id to in64", zap.String("str_id", resp.Id), zap.Error(err))
 		}

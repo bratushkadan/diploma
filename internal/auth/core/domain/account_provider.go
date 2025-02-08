@@ -58,7 +58,8 @@ type CheckAccountCredentialsDTOInput struct {
 	Password string
 }
 type CheckAccountCredentialsDTOOutput struct {
-	Ok bool
+	Ok        bool
+	AccountId string
 }
 
 type ActivateAccountsByEmailDTOInput struct {

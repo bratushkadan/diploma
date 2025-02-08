@@ -7,86 +7,20 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var (
-	RefreshTokenType = "refresh"
-	AccessTokenType  = "access"
-)
-
-var (
-	FloralJwtIssuer = "authorization.floral.io"
-)
-
-type RefreshTokenJwtClaims struct {
-	TokenId   string `json:"token_id"`
-	TokenType string `json:"token_type"`
-	SubjectId string `json:"subject_id"`
-	jwt.RegisteredClaims
-}
-
-func NewRefreshTokenJwtClaims(tokenId string, subjectId string) *RefreshTokenJwtClaims {
-	return &RefreshTokenJwtClaims{
-		TokenId:   tokenId,
-		TokenType: RefreshTokenType,
-		SubjectId: subjectId,
-	}
-}
-
-type AccessTokenJwtClaims struct {
-	TokenType   string `json:"token_type"`
-	SubjectId   string `json:"subject_id"`
-	SubjectType string `json:"subject_type"`
-	jwt.RegisteredClaims
-}
-
-func NewAccessTokenJwtClaims(subjectId string, subjectType string) *AccessTokenJwtClaims {
-	return &AccessTokenJwtClaims{
-		TokenType:   AccessTokenType,
-		SubjectId:   subjectId,
-		SubjectType: subjectType,
-	}
-}
-
 type JwtProvider struct {
 	privateKey *rsa.PrivateKey
 	publicKey  *rsa.PublicKey
-}
-
-func (p *JwtProvider) Create(claims jwt.Claims) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-
-	tokenString, err := token.SignedString(p.privateKey)
-	if err != nil {
-		return "", fmt.Errorf("failed to create refresh token: %w", err)
-	}
-
-	return tokenString, nil
-}
-
-func (p *JwtProvider) Parse(token string, claims jwt.Claims) error {
-	parsedToken, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, fmt.Errorf("unexpected signing method for token")
-		}
-		return p.publicKey, nil
-	})
-	if err != nil {
-		return fmt.Errorf("failed to parse jwt token: %w", err)
-	}
-	if !parsedToken.Valid {
-		return fmt.Errorf("invalid jwt token")
-	}
-
-	return nil
+	parserOpts []jwt.ParserOption
 }
 
 type JwtProviderBuilder struct {
 	privateKey []byte
 	publicKey  []byte
+	prov       JwtProvider
 }
 
 func NewJwtProviderBuilder() *JwtProviderBuilder {
-	return &JwtProviderBuilder{}
+	return &JwtProviderBuilder{prov: JwtProvider{}}
 }
 
 func (b *JwtProviderBuilder) WithPrivateKey(privateKey []byte) *JwtProviderBuilder {
@@ -97,6 +31,13 @@ func (b *JwtProviderBuilder) WithPublicKey(publicKey []byte) *JwtProviderBuilder
 	b.publicKey = publicKey
 	return b
 }
+
+// Example: jwt.WithIssuer("foo")
+func (b *JwtProviderBuilder) WithParserOptions(opts ...jwt.ParserOption) *JwtProviderBuilder {
+	b.prov.parserOpts = opts
+	return b
+}
+
 func (b *JwtProviderBuilder) Build() (*JwtProvider, error) {
 	if len(b.publicKey) == 0 {
 		return nil, fmt.Errorf("public key can't be empty")
@@ -117,8 +58,37 @@ func (b *JwtProviderBuilder) Build() (*JwtProvider, error) {
 		}
 	}
 
-	return &JwtProvider{
-		publicKey:  publicKey,
-		privateKey: privateKey,
-	}, nil
+	b.prov.publicKey = publicKey
+	b.prov.privateKey = privateKey
+
+	return &b.prov, nil
+}
+
+func (p *JwtProvider) Create(claims jwt.Claims) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+
+	tokenString, err := token.SignedString(p.privateKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to create refresh token: %w", err)
+	}
+
+	return tokenString, nil
+}
+
+func (p *JwtProvider) Parse(token string, claims jwt.Claims) error {
+	parsedToken, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("unexpected signing method for token")
+		}
+		return p.publicKey, nil
+	}, p.parserOpts...)
+	if err != nil {
+		return fmt.Errorf("failed to parse jwt token: %w", err)
+	}
+	if !parsedToken.Valid {
+		return fmt.Errorf("invalid jwt token")
+	}
+
+	return nil
 }
