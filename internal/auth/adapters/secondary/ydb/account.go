@@ -37,6 +37,7 @@ func NewAccount(conf AccountConf) *Account {
 		db:       conf.DbDriver,
 		idHasher: conf.IdHasher,
 		ph:       conf.PasswordHasher,
+		l:        conf.Logger,
 	}
 
 	if conf.Logger == nil {
@@ -267,8 +268,8 @@ func (a *Account) CheckAccountCredentials(ctx context.Context, in domain.CheckAc
 				var password string
 				var intId int64
 				if err := res.ScanNamed(
-					named.Required("password", &password),
 					named.Required("id", &intId),
+					named.Required("password", &password),
 				); err != nil {
 					return err
 				}

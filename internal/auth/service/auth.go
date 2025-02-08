@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type AuthV2 struct {
+type Auth struct {
 	accProv             domain.AccountProvider
 	accConfirmationProv domain.AccountConfirmationProvider
 	refreshTokenProv    domain.RefreshTokenProvider
@@ -23,52 +23,56 @@ type AuthV2 struct {
 	l *zap.Logger
 }
 
-var _ domain.AuthServiceV2 = (*AuthV2)(nil)
+var _ domain.AuthService = (*Auth)(nil)
 
-type AuthV2Builder struct {
-	auth *AuthV2
+type AuthBuilder struct {
+	auth *Auth
 }
 
-func (b *AuthV2Builder) TokenProvider(prov domain.TokenProvider) *AuthV2Builder {
-	b.auth.tokenProv = prov
-	return b
-}
-func (b *AuthV2Builder) AccountProvider(prov domain.AccountProvider) *AuthV2Builder {
+func (b *AuthBuilder) AccountProvider(prov domain.AccountProvider) *AuthBuilder {
 	b.auth.accProv = prov
 	return b
 }
-func (b *AuthV2Builder) AccountConfirmationProvider(prov domain.AccountConfirmationProvider) *AuthV2Builder {
+func (b *AuthBuilder) AccountConfirmationProvider(prov domain.AccountConfirmationProvider) *AuthBuilder {
 	b.auth.accConfirmationProv = prov
 	return b
 }
+func (b *AuthBuilder) RefreshTokenProvider(prov domain.RefreshTokenProvider) *AuthBuilder {
+	b.auth.refreshTokenProv = prov
+	return b
+}
+func (b *AuthBuilder) TokenProvider(prov domain.TokenProvider) *AuthBuilder {
+	b.auth.tokenProv = prov
+	return b
+}
 
-func (b *AuthV2Builder) RefreshTokenDuration(dur time.Duration) *AuthV2Builder {
+func (b *AuthBuilder) RefreshTokenDuration(dur time.Duration) *AuthBuilder {
 	b.auth.refreshTokenDuration = dur
 	return b
 }
-func (b *AuthV2Builder) AccessTokenDuration(dur time.Duration) *AuthV2Builder {
+func (b *AuthBuilder) AccessTokenDuration(dur time.Duration) *AuthBuilder {
 	b.auth.accessTokenDuration = dur
 	return b
 }
 
-func (b *AuthV2Builder) Logger(l *zap.Logger) *AuthV2Builder {
+func (b *AuthBuilder) Logger(l *zap.Logger) *AuthBuilder {
 	b.auth.l = l
 	return b
 }
 
-func (b *AuthV2Builder) Build() (*AuthV2, error) {
+func (b *AuthBuilder) Build() (*Auth, error) {
 	return b.auth, nil
 }
 
-func NewAuthBuilder() *AuthV2Builder {
-	auth := AuthV2{
+func NewAuthBuilder() *AuthBuilder {
+	auth := Auth{
 		refreshTokenDuration: 30 * 24 * time.Hour,
 		accessTokenDuration:  30 * time.Minute,
 	}
-	return &AuthV2Builder{auth: &auth}
+	return &AuthBuilder{auth: &auth}
 }
 
-func (svc *AuthV2) CreateAccount(ctx context.Context, req domain.CreateAccountReq) (domain.CreateAccountRes, error) {
+func (svc *Auth) CreateAccount(ctx context.Context, req domain.CreateAccountReq) (domain.CreateAccountRes, error) {
 	acc, err := domain.NewAccount(req.Name, req.Password, req.Email, req.Type)
 	if err != nil {
 		svc.l.Error("failed to create new account from provided input", zap.Error(err))
@@ -106,7 +110,7 @@ func (svc *AuthV2) CreateAccount(ctx context.Context, req domain.CreateAccountRe
 	return accountRes, nil
 }
 
-func (svc *AuthV2) ActivateAccounts(ctx context.Context, req domain.ActivateAccountsReq) (domain.ActivateAccountsRes, error) {
+func (svc *Auth) ActivateAccounts(ctx context.Context, req domain.ActivateAccountsReq) (domain.ActivateAccountsRes, error) {
 	if err := svc.accProv.ActivateAccountsByEmail(
 		ctx, domain.ActivateAccountsByEmailDTOInput{Emails: req.Emails},
 	); err != nil {
@@ -117,7 +121,7 @@ func (svc *AuthV2) ActivateAccounts(ctx context.Context, req domain.ActivateAcco
 	return domain.ActivateAccountsRes{}, nil
 }
 
-func (svc *AuthV2) Authenticate(ctx context.Context, req domain.AuthenticateReq) (domain.AuthenticateRes, error) {
+func (svc *Auth) Authenticate(ctx context.Context, req domain.AuthenticateReq) (domain.AuthenticateRes, error) {
 	out, err := svc.accProv.CheckAccountCredentials(ctx, domain.CheckAccountCredentialsDTOInput{
 		Email:    req.Email,
 		Password: req.Password,
@@ -135,6 +139,8 @@ func (svc *AuthV2) Authenticate(ctx context.Context, req domain.AuthenticateReq)
 		SubjectId: out.AccountId,
 	}
 
+	svc.l.Info("account credentials", zap.Any("creds", out))
+
 	// FIXME: clean Go transactions
 	outToken, err := svc.refreshTokenProv.Add(ctx, domain.RefreshTokenAddDTOInput{
 		AccountId: out.AccountId,
@@ -145,7 +151,6 @@ func (svc *AuthV2) Authenticate(ctx context.Context, req domain.AuthenticateReq)
 		svc.l.Error("failed to add data on refresh token", zap.Error(err))
 		return domain.AuthenticateRes{}, err
 	}
-	token.Id = outToken.Id
 	token.ExpiresAt = outToken.ExpiresAt
 
 	tokenStr, err := svc.tokenProv.EncodeRefresh(token)
@@ -160,7 +165,7 @@ func (svc *AuthV2) Authenticate(ctx context.Context, req domain.AuthenticateReq)
 	}, nil
 }
 
-func (svc *AuthV2) ReplaceRefreshToken(ctx context.Context, req domain.ReplaceRefreshTokenReq) (domain.ReplaceRefreshTokenRes, error) {
+func (svc *Auth) ReplaceRefreshToken(ctx context.Context, req domain.ReplaceRefreshTokenReq) (domain.ReplaceRefreshTokenRes, error) {
 	token, err := svc.tokenProv.DecodeRefresh(req.RefreshToken)
 	if err != nil {
 		switch {
@@ -170,6 +175,7 @@ func (svc *AuthV2) ReplaceRefreshToken(ctx context.Context, req domain.ReplaceRe
 		case errors.Is(err, domain.ErrTokenExpired):
 			svc.l.Info("refresh token expired", zap.Any("token", token))
 			return domain.ReplaceRefreshTokenRes{}, err
+		case errors.Is(err, domain.ErrTokenParseFailed):
 		default:
 			svc.l.Error("failed to decode refresh token: %w", zap.Error(err))
 			return domain.ReplaceRefreshTokenRes{}, err
@@ -201,6 +207,53 @@ func (svc *AuthV2) ReplaceRefreshToken(ctx context.Context, req domain.ReplaceRe
 	return domain.ReplaceRefreshTokenRes{
 		RefreshToken: newTokenEncoded,
 		ExpiresAt:    newToken.ExpiresAt,
+	}, nil
+}
+
+func (svc *Auth) CreateAccessToken(ctx context.Context, req domain.CreateAccessTokenReq) (domain.CreateAccessTokenRes, error) {
+	refreshToken, err := svc.tokenProv.DecodeRefresh(req.RefreshToken)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrInvalidRefreshToken):
+			svc.l.Info("invalid refresh token", zap.Error(err))
+			return domain.CreateAccessTokenRes{}, err
+		case errors.Is(err, domain.ErrTokenExpired):
+			svc.l.Info("refresh token expired", zap.Any("token", refreshToken))
+			return domain.CreateAccessTokenRes{}, err
+		case errors.Is(err, domain.ErrTokenParseFailed):
+		default:
+			svc.l.Error("failed to decode refresh token: %w", zap.Error(err))
+			return domain.CreateAccessTokenRes{}, err
+		}
+	}
+
+	out, err := svc.accProv.FindAccount(ctx, domain.FindAccountDTOInput{
+		Id: refreshToken.SubjectId,
+	})
+	if err != nil {
+		svc.l.Error("failed to find account for creating access token: %v", zap.Error(err))
+		return domain.CreateAccessTokenRes{}, err
+	}
+
+	if !out.Activated {
+		svc.l.Info("rejected creating access token for account that has not been activated")
+		return domain.CreateAccessTokenRes{}, domain.ErrAccountNotActivated
+	}
+
+	accessToken := domain.AccessToken{
+		SubjectId:   refreshToken.SubjectId,
+		SubjectType: out.Type,
+		ExpiresAt:   time.Now().Add(svc.accessTokenDuration),
+	}
+	token, err := svc.tokenProv.EncodeAccess(accessToken)
+	if err != nil {
+		svc.l.Error("failed to encode access token: %v", zap.Error(err))
+		return domain.CreateAccessTokenRes{}, err
+	}
+
+	return domain.CreateAccessTokenRes{
+		AccessToken: token,
+		ExpiresAt:   accessToken.ExpiresAt,
 	}, nil
 }
 

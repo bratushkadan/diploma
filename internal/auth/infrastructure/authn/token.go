@@ -39,6 +39,9 @@ type TokenProviderBuilder struct {
 	privateKeyPath string
 	publicKeyPath  string
 
+	privateKey []byte
+	publicKey  []byte
+
 	p *TokenProvider
 }
 
@@ -46,6 +49,22 @@ func NewTokenProviderBuilder() *TokenProviderBuilder {
 	return &TokenProviderBuilder{p: &TokenProvider{}}
 }
 
+func (b *TokenProviderBuilder) PrivateKey(key []byte) *TokenProviderBuilder {
+	b.privateKey = key
+	return b
+}
+func (b *TokenProviderBuilder) PrivateKeyString(key string) *TokenProviderBuilder {
+	b.privateKey = []byte(key)
+	return b
+}
+func (b *TokenProviderBuilder) PublicKey(key []byte) *TokenProviderBuilder {
+	b.publicKey = key
+	return b
+}
+func (b *TokenProviderBuilder) PublicKeyString(key string) *TokenProviderBuilder {
+	b.publicKey = []byte(key)
+	return b
+}
 func (b *TokenProviderBuilder) PrivateKeyPath(path string) *TokenProviderBuilder {
 	b.privateKeyPath = path
 	return b
@@ -56,13 +75,33 @@ func (b *TokenProviderBuilder) PublicKeyPath(path string) *TokenProviderBuilder 
 }
 
 func (b *TokenProviderBuilder) Build() (*TokenProvider, error) {
-	privateKey, err := os.ReadFile(b.privateKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read private key from file: %w", err)
+	var (
+		privateKey, publicKey []byte
+		err                   error
+	)
+
+	if len(b.privateKey) == 0 {
+		if b.privateKeyPath == "" {
+			return nil, errors.New("either a private key or a private key path must be provided to the token provider builder")
+		}
+		privateKey, err = os.ReadFile(b.privateKeyPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read private key from file: %w", err)
+		}
+	} else {
+		privateKey = b.privateKey
 	}
-	publicKey, err := os.ReadFile(b.publicKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read public key from file: %w", err)
+
+	if len(b.publicKey) == 0 {
+		if b.publicKeyPath == "" {
+			return nil, errors.New("either a public key or a public key path must be provided to the token provider builder")
+		}
+		publicKey, err = os.ReadFile(b.publicKeyPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read public key from file: %w", err)
+		}
+	} else {
+		publicKey = b.publicKey
 	}
 
 	jwtProvider, err := auth.NewJwtProviderBuilder().
@@ -107,14 +146,14 @@ func (p *TokenProvider) DecodeRefresh(tokenString string) (domain.RefreshToken, 
 				ExpiresAt: claims.RegisteredClaims.ExpiresAt.Time,
 			}, domain.ErrTokenExpired
 		}
-		return domain.RefreshToken{}, fmt.Errorf("failed to parse jwt: %w: %w", err, domain.ErrInvalidRefreshToken)
+		return domain.RefreshToken{}, fmt.Errorf("failed to parse jwt: %w: %w", err, domain.ErrTokenParseFailed)
 	}
 
 	if claims.TokenType != domain.TokenTypeRefresh {
 		return domain.RefreshToken{}, fmt.Errorf(`expected token type to be "%s": %w`, domain.TokenTypeRefresh, domain.ErrInvalidTokenType)
 	}
 
-	id, found := strings.CutPrefix(claims.SubjectId, RefreshTokenIdPrefix)
+	id, found := strings.CutPrefix(claims.TokenId, RefreshTokenIdPrefix)
 	if !found {
 		return domain.RefreshToken{}, domain.ErrInvalidRefreshToken
 	}

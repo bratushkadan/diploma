@@ -3,7 +3,7 @@
 ## Generate keys
 
 ```bash
-openssl genrsa -out private.key 2048
+openssl genrsa -out private.key 4096
 ```
 
 ```bash
