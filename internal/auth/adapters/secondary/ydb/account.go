@@ -240,7 +240,8 @@ DECLARE $email AS Utf8;
 
 SELECT
   id,
-  password
+  password,
+  (activated_at IS NOT NULL) AS activated
 FROM
   %s
 VIEW
@@ -270,6 +271,7 @@ func (a *Account) CheckAccountCredentials(ctx context.Context, in domain.CheckAc
 				if err := res.ScanNamed(
 					named.Required("id", &intId),
 					named.Required("password", &password),
+					named.Required("activated", &out.Activated),
 				); err != nil {
 					return err
 				}

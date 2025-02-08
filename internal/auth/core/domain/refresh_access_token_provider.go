@@ -6,20 +6,20 @@ import (
 )
 
 type RefreshTokenProvider interface {
-	Get(context.Context, RefreshTokenGetDTOInput) (RefreshTokenGetDTOOutput, error)
+	List(context.Context, RefreshTokenListDTOInput) (RefreshTokenListDTOOutput, error)
 	Add(context.Context, RefreshTokenAddDTOInput) (RefreshTokenAddDTOOutput, error)
 	Replace(context.Context, RefreshTokenReplaceDTOInput) (RefreshTokenReplaceDTOOutput, error)
 	Delete(context.Context, RefreshTokenDeleteDTOInput) (RefreshTokenDeleteDTOOutput, error)
 	DeleteByAccountId(context.Context, RefreshTokenDeleteByAccountIdDTOInput) (RefreshTokenDeleteByAccountIdDTOOutput, error)
 }
 
-type RefreshTokenGetDTOInput struct {
+type RefreshTokenListDTOInput struct {
 	AccountId string
 }
-type RefreshTokenGetDTOOutput struct {
-	Tokens []RefreshTokenGetDTOOutputToken `json:"tokens"`
+type RefreshTokenListDTOOutput struct {
+	Tokens []RefreshTokenListDTOOutputToken `json:"tokens"`
 }
-type RefreshTokenGetDTOOutputToken struct {
+type RefreshTokenListDTOOutputToken struct {
 	Id        string    `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	ExpiresAt time.Time `json:"expires_at"`

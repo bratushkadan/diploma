@@ -44,9 +44,10 @@ func NewToken(conf TokenConf) *Token {
 	return adapter
 }
 
-const RefreshTokensIssuedLimitation = 10
+// TODO: move to config
+const RefreshTokensIssuedLimitation = 5
 
-var queryGetRefreshTokens = template.ReplaceAllPairs(`
+var queryListRefreshTokens = template.ReplaceAllPairs(`
 DECLARE $account_id AS Utf8;
 
 SELECT 
@@ -67,11 +68,11 @@ LIMIT {{tokens_count_limitation}};
 	"{{tokens_count_limitation}}", strconv.Itoa(RefreshTokensIssuedLimitation),
 )
 
-func (p *Token) Get(ctx context.Context, in domain.RefreshTokenGetDTOInput) (domain.RefreshTokenGetDTOOutput, error) {
-	outTokens := make([]domain.RefreshTokenGetDTOOutputToken, 0)
+func (p *Token) List(ctx context.Context, in domain.RefreshTokenListDTOInput) (domain.RefreshTokenListDTOOutput, error) {
+	outTokens := make([]domain.RefreshTokenListDTOOutputToken, 0)
 
 	if err := p.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
-		res, err := tx.Execute(ctx, queryDeleteRefreshTokensByAccountId, table.NewQueryParameters(
+		res, err := tx.Execute(ctx, queryListRefreshTokens, table.NewQueryParameters(
 			table.ValueParam("$account_id", types.UTF8Value(in.AccountId)),
 		))
 		if err != nil {
@@ -88,24 +89,31 @@ func (p *Token) Get(ctx context.Context, in domain.RefreshTokenGetDTOInput) (dom
 
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
-				var outToken domain.RefreshTokenGetDTOOutputToken
+				var outToken domain.RefreshTokenListDTOOutputToken
+				var intId int64
 				if err := res.ScanNamed(
-					named.Required("id", &outToken.Id),
+					named.Required("id", &intId),
 					named.Required("created_at", &outToken.CreatedAt),
 					named.Required("expires_at", &outToken.ExpiresAt),
 				); err != nil {
 					return err
 				}
+
+				outToken.Id, err = p.idHasher.EncodeInt64(intId)
+				if err != nil {
+					return fmt.Errorf("failed to encode refresh token id: %v", err)
+				}
+
 				outTokens = append(outTokens, outToken)
 			}
 		}
 
 		return nil
 	}); err != nil {
-		return domain.RefreshTokenGetDTOOutput{}, fmt.Errorf("failed to execute query transaction get refresh token: %w", err)
+		return domain.RefreshTokenListDTOOutput{}, fmt.Errorf("failed to execute query transaction list refresh tokens: %w", err)
 	}
 
-	return domain.RefreshTokenGetDTOOutput{
+	return domain.RefreshTokenListDTOOutput{
 		Tokens: outTokens,
 	}, nil
 }
@@ -250,7 +258,7 @@ func (p *Token) Replace(ctx context.Context, in domain.RefreshTokenReplaceDTOInp
 		res, err := tx.Execute(ctx, queryReplaceRefreshToken, table.NewQueryParameters(
 			table.ValueParam("$id", types.Int64Value(intId)),
 			table.ValueParam("$created_at", types.DatetimeValueFromTime(in.CreatedAt)),
-			table.ValueParam("$expiress_at", types.DatetimeValueFromTime(in.ExpiresAt)),
+			table.ValueParam("$expires_at", types.DatetimeValueFromTime(in.ExpiresAt)),
 		))
 		if err != nil {
 			return err
@@ -266,12 +274,18 @@ func (p *Token) Replace(ctx context.Context, in domain.RefreshTokenReplaceDTOInp
 
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
+				var intId int64
 				if err := res.ScanNamed(
-					named.Required("id", &out.Id),
+					named.Required("id", &intId),
 					named.Required("created_at", &out.CreatedAt),
 					named.Required("expires_at", &out.ExpiresAt),
 				); err != nil {
 					return err
+				}
+
+				out.Id, err = p.idHasher.EncodeInt64(intId)
+				if err != nil {
+					return fmt.Errorf("failed to encode refresh token id: %v", err)
 				}
 			}
 		}
@@ -322,10 +336,16 @@ func (p *Token) Delete(ctx context.Context, in domain.RefreshTokenDeleteDTOInput
 
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
+				var intId int64
 				if err := res.ScanNamed(
-					named.Required("id", &out.Id),
+					named.Required("id", &intId),
 				); err != nil {
 					return err
+				}
+
+				out.Id, err = p.idHasher.EncodeInt64(intId)
+				if err != nil {
+					return fmt.Errorf("failed to encode refresh token id: %v", err)
 				}
 			}
 		}
@@ -339,7 +359,7 @@ func (p *Token) Delete(ctx context.Context, in domain.RefreshTokenDeleteDTOInput
 }
 
 var queryDeleteRefreshTokensByAccountId = template.ReplaceAllPairs(`
-DECLARE $account_id AS Int64;
+DECLARE $account_id AS Utf8;
 
 $to_delete = (
     SELECT

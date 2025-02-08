@@ -10,11 +10,13 @@ var (
 	ErrSendAccountConfirmationFailed = errors.New("failed to send account confirmation email")
 	ErrInvalidCredentials            = errors.New("invalid credentials")
 
-	ErrInvalidRefreshToken = errors.New("invalid refresh token")
-	ErrInvalidAccessToken  = errors.New("invalid access token")
-	ErrInvalidTokenType    = errors.New("invalid token type")
-	ErrTokenParseFailed    = errors.New("token parse failed")
-	ErrTokenExpired        = errors.New("token expired")
+	ErrInvalidRefreshToken           = errors.New("invalid refresh token")
+	ErrInvalidAccessToken            = errors.New("invalid access token")
+	ErrInvalidTokenType              = errors.New("invalid token type")
+	ErrTokenParseFailed              = errors.New("token parse failed")
+	ErrTokenExpired                  = errors.New("token expired")
+	ErrTokenRevoked                  = errors.New("token revoked")
+	ErrRefreshTokenToReplaceNotFound = errors.New("refresh token to replace not found")
 )
 
 type AuthService interface {

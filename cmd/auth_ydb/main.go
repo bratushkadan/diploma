@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"time"
 
 	ydb_adapter "github.com/bratushkadan/floral/internal/auth/adapters/secondary/ydb"
@@ -117,12 +118,12 @@ func main() {
 		logger.Fatal("could not build auth svc", zap.Error(err))
 	}
 
-	if err := runAccountTests(ctx, accountIdHasher, logger, authSvc, accountAdapter); err != nil {
+	if err := runAccountTests(ctx, accountIdHasher, logger, authSvc, tokenProvider, refreshTokenAdapter, accountAdapter); err != nil {
 		logger.Fatal("failed to run account service tests", zap.Error(err))
 	}
 }
 
-func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logger *zap.Logger, svc domain.AuthService, accAdapter domain.AccountProvider) error {
+func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logger *zap.Logger, svc domain.AuthService, tokenProvider domain.TokenProvider, refreshTokenAdapter domain.RefreshTokenProvider, accAdapter domain.AccountProvider) error {
 	logger.Info("create account")
 	email := fmt.Sprintf(`someemail-%d@gmail.com`, time.Now().UnixMilli())
 	password := "ooga"
@@ -143,9 +144,10 @@ func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logge
 		}
 		logger.Info("decoded string id to int64", zap.String("str_id", resp.Id), zap.Int64("id", idInt64))
 	}
+	accountId := resp.Id
 
 	logger.Info("find account")
-	acc, err := accAdapter.FindAccount(ctx, domain.FindAccountDTOInput{Id: resp.Id})
+	acc, err := accAdapter.FindAccount(ctx, domain.FindAccountDTOInput{Id: accountId})
 	if err != nil {
 		return fmt.Errorf("failed to find account: %w", err)
 	}
@@ -156,11 +158,11 @@ func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logge
 	}
 
 	logger.Info("find account by email")
-	accByEmail, err := accAdapter.FindAccountByEmail(ctx, domain.FindAccountByEmailDTOInput{Email: "someemail-1738903445714@gmail.com"})
+	accByEmail, err := accAdapter.FindAccountByEmail(ctx, domain.FindAccountByEmailDTOInput{Email: email})
 	if err != nil {
 		return fmt.Errorf("failed to find account by email: %w", err)
 	}
-	if acc != nil {
+	if accByEmail != nil {
 		logger.Info("found account by email", zap.Any("account", accByEmail))
 	} else {
 		logger.Info("account not found", zap.String("id", resp.Id))
@@ -214,5 +216,114 @@ func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logge
 		zap.Any("expires_at", createAccountTokenRes.ExpiresAt),
 	)
 
+	logger.Info("replace refresh token")
+	replaceRefreshTokenRes, err := svc.ReplaceRefreshToken(ctx, domain.ReplaceRefreshTokenReq{
+		RefreshToken: refreshToken,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to replace refresh token: %w", err)
+	}
+
+	logger.Info("create access token with the replaced refresh token")
+	createAccountTokenRes, err = svc.CreateAccessToken(ctx, domain.CreateAccessTokenReq{
+		RefreshToken: refreshToken,
+	})
+	if err == nil {
+		return fmt.Errorf("expected create access token with the replaced refresh token to fail")
+	}
+	logger.Info("failed to create access token with the replaced refresh token - as expected")
+
+	refreshToken = replaceRefreshTokenRes.RefreshToken
+	logger.Info("create access token with the replaced refresh token")
+	createAccountTokenRes, err = svc.CreateAccessToken(ctx, domain.CreateAccessTokenReq{
+		RefreshToken: replaceRefreshTokenRes.RefreshToken,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create access token with the replaced refresh token: %w", err)
+	}
+	logger.Info(
+		"created access token with the replaced refresh token",
+		zap.String("access_token", createAccountTokenRes.AccessToken),
+		zap.Any("expires_at", createAccountTokenRes.ExpiresAt),
+	)
+
+	logger.Info("authenticate multiple times to issue multiple refresh tokens and check whether older tokens are deleted")
+	n := 6
+	authMultTimesResponses := make([]domain.AuthenticateRes, 0, n)
+	for range n {
+		res, err := svc.Authenticate(ctx, domain.AuthenticateReq{
+			Email:    email,
+			Password: password,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to authenticate account: %w", err)
+		}
+
+		authMultTimesResponses = append(authMultTimesResponses, res)
+	}
+	logger.Info(fmt.Sprintf("authenticated %d times", n))
+
+	logger.Info("list account refresh tokens")
+	accountRefreshTokensRes, err := refreshTokenAdapter.List(ctx, domain.RefreshTokenListDTOInput{
+		AccountId: resp.Id,
+	})
+
+	for _, respToken := range authMultTimesResponses[1:] {
+		refreshToken, err := tokenProvider.DecodeRefresh(respToken.RefreshToken)
+		if err != nil {
+			return fmt.Errorf("failed to decode refresh token from multiple auth: %v", err)
+		}
+
+		if !slices.ContainsFunc(accountRefreshTokensRes.Tokens, func(token domain.RefreshTokenListDTOOutputToken) bool {
+			return refreshToken.Id == refreshToken.Id
+		}) {
+			return errors.New("list refresh tokens response doesn't contain refresh tokens that should not have been revoked")
+		}
+	}
+	logger.Info("checked there's a correct amount of refresh tokens stored and the excess ones are revoked")
+
+	logger.Info("delete refresh token")
+	deletedRefToken, err := refreshTokenAdapter.Delete(ctx, domain.RefreshTokenDeleteDTOInput{
+		Id: accountRefreshTokensRes.Tokens[1].Id,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete refresh token: %v", err)
+	}
+	logger.Info("deleted refresh token")
+
+	logger.Info("list refresh tokens")
+	accountRefreshTokensRes, err = refreshTokenAdapter.List(ctx, domain.RefreshTokenListDTOInput{
+		AccountId: resp.Id,
+	})
+	logger.Info("listed refresh tokens")
+
+	if slices.ContainsFunc(accountRefreshTokensRes.Tokens, func(token domain.RefreshTokenListDTOOutputToken) bool {
+		return token.Id == deletedRefToken.Id
+	}) {
+		return errors.New("refresh token must have been deleted, but it hasn't")
+	}
+
+	logger.Info("delete refresh tokens by account id")
+	deleteAccountTokensRes, err := refreshTokenAdapter.DeleteByAccountId(ctx, domain.RefreshTokenDeleteByAccountIdDTOInput{
+		Id: accByEmail.Id,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete account by id: %v", err)
+	}
+	logger.Info("deleted refresh tokens by account id")
+
+	if len(accountRefreshTokensRes.Tokens) != len(deleteAccountTokensRes.Ids) {
+		return errors.New("amount of deleted account refresh tokens must match the amount of last refresh tokens listed the last time")
+	}
+
+	accountRefreshTokensRes, err = refreshTokenAdapter.List(ctx, domain.RefreshTokenListDTOInput{
+		AccountId: accountId,
+	})
+
+	if len(accountRefreshTokensRes.Tokens) != 0 {
+		return errors.New("there must be no refresh tokens for account")
+	}
+
+	logger.Info("all tests passed")
 	return nil
 }

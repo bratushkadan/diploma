@@ -18,6 +18,48 @@
 - [x] Add Rate Limiting to API Gateway
 - [x] Add validation to API Gateway
 
+### Auth
+
+- [ ] ⏳ Add CreateSeller/CreateAdmin service methods (or make CreateAccount method polymorphic?)
+- [ ] ⏳ Test YMQ/SQS AccountActivation Secondary Adapter
+- [ ] ⏳ Wire service and HTTP primary adapter
+- [ ] Create Cloud Functions Code Boilerplate
+- [ ] Create Cloud Functions Terraform Configuration Code
+- [ ] ⏳ Write Integration Tests
+
+#### Tests Roadmap
+
+- [ ] Integration Tests
+  - [ ] Service
+    - [x] `CreateAccount`
+    - [x] `ActivateAccounts`
+    - [x] `Authenticate`
+    - [x] `ReplaceRefreshToken`
+    - [x] `CreateAccessToken`
+    - [ ] `CreateSeller`
+    - [ ] `CreateAdmin`
+  - [x] Secondary Adapters
+    - [x] Account YDB
+      - [x] `CreateAccount`
+      - [x] `FindAccount`
+      - [x] `FindAccountByEmail`
+      - [x] `CheckAccountCredentials`
+      - [x] `ActivateAccountsByEmail`
+    - [x] RefreshToken YDB
+      - [x] `List`
+      - [x] `Add`
+      - [x] `Replace`
+      - [x] `Delete`
+      - [x] `DeleteByAccountId`
+    - [ ] AccountActivation YMQ
+      - [ ] `Send`
+    - [x] Token Provider (JWT)
+      - [x] `EncodeRefresh`
+      - [x] `DecodeRefresh`
+      - [x] `EncodeAccess`
+      - [x] `DecodeAccess`
+
+
 # New workflow with Terraform + yc/aws CLI
 
 ## Setup

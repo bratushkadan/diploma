@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/bratushkadan/floral/internal/auth/core/domain"
@@ -135,11 +136,14 @@ func (svc *Auth) Authenticate(ctx context.Context, req domain.AuthenticateReq) (
 		return domain.AuthenticateRes{}, domain.ErrInvalidCredentials
 	}
 
+	if !out.Activated {
+		svc.l.Info("rejected creating refresh token for account that has not been activated")
+		return domain.AuthenticateRes{}, domain.ErrAccountNotActivated
+	}
+
 	token := domain.RefreshToken{
 		SubjectId: out.AccountId,
 	}
-
-	svc.l.Info("account credentials", zap.Any("creds", out))
 
 	// FIXME: clean Go transactions
 	outToken, err := svc.refreshTokenProv.Add(ctx, domain.RefreshTokenAddDTOInput{
@@ -151,6 +155,7 @@ func (svc *Auth) Authenticate(ctx context.Context, req domain.AuthenticateReq) (
 		svc.l.Error("failed to add data on refresh token", zap.Error(err))
 		return domain.AuthenticateRes{}, err
 	}
+	token.Id = outToken.Id
 	token.ExpiresAt = outToken.ExpiresAt
 
 	tokenStr, err := svc.tokenProv.EncodeRefresh(token)
@@ -191,6 +196,9 @@ func (svc *Auth) ReplaceRefreshToken(ctx context.Context, req domain.ReplaceRefr
 		svc.l.Error("failed to replace refresh token: %w", zap.Error(err))
 		return domain.ReplaceRefreshTokenRes{}, err
 	}
+	if out.Id == "" {
+		return domain.ReplaceRefreshTokenRes{}, domain.ErrRefreshTokenToReplaceNotFound
+	}
 
 	newToken := domain.RefreshToken{
 		Id:        out.Id,
@@ -227,7 +235,21 @@ func (svc *Auth) CreateAccessToken(ctx context.Context, req domain.CreateAccessT
 		}
 	}
 
-	out, err := svc.accProv.FindAccount(ctx, domain.FindAccountDTOInput{
+	out, err := svc.refreshTokenProv.List(ctx, domain.RefreshTokenListDTOInput{
+		AccountId: refreshToken.SubjectId,
+	})
+	if err != nil {
+		svc.l.Error("failed to list refresh tokens for creating access token", zap.Error(err))
+		return domain.CreateAccessTokenRes{}, err
+	}
+
+	if tokenNotRevoked := slices.ContainsFunc(out.Tokens, func(v domain.RefreshTokenListDTOOutputToken) bool {
+		return v.Id == refreshToken.Id
+	}); !tokenNotRevoked {
+		return domain.CreateAccessTokenRes{}, domain.ErrTokenRevoked
+	}
+
+	acc, err := svc.accProv.FindAccount(ctx, domain.FindAccountDTOInput{
 		Id: refreshToken.SubjectId,
 	})
 	if err != nil {
@@ -235,14 +257,9 @@ func (svc *Auth) CreateAccessToken(ctx context.Context, req domain.CreateAccessT
 		return domain.CreateAccessTokenRes{}, err
 	}
 
-	if !out.Activated {
-		svc.l.Info("rejected creating access token for account that has not been activated")
-		return domain.CreateAccessTokenRes{}, domain.ErrAccountNotActivated
-	}
-
 	accessToken := domain.AccessToken{
 		SubjectId:   refreshToken.SubjectId,
-		SubjectType: out.Type,
+		SubjectType: acc.Type,
 		ExpiresAt:   time.Now().Add(svc.accessTokenDuration),
 	}
 	token, err := svc.tokenProv.EncodeAccess(accessToken)

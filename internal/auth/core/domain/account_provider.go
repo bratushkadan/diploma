@@ -55,6 +55,7 @@ type CheckAccountCredentialsDTOInput struct {
 }
 type CheckAccountCredentialsDTOOutput struct {
 	Ok        bool
+	Activated bool
 	AccountId string
 }
 
