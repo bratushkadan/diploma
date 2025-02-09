@@ -1,4 +1,4 @@
-package frontend
+package http_adapter
 
 //
 // import (
