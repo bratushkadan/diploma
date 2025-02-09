@@ -10,6 +10,7 @@ import (
 	"time"
 
 	ydb_adapter "github.com/bratushkadan/floral/internal/auth/adapters/secondary/ydb"
+	ymq_adapter "github.com/bratushkadan/floral/internal/auth/adapters/secondary/ymq"
 	"github.com/bratushkadan/floral/internal/auth/core/domain"
 	"github.com/bratushkadan/floral/internal/auth/infrastructure/authn"
 	"github.com/bratushkadan/floral/internal/auth/service"
@@ -17,6 +18,7 @@ import (
 	"github.com/bratushkadan/floral/pkg/cfg"
 	"github.com/bratushkadan/floral/pkg/resource/idhash"
 	ydbpkg "github.com/bratushkadan/floral/pkg/ydb"
+	"github.com/bratushkadan/floral/pkg/ymq"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
@@ -26,8 +28,12 @@ import (
 )
 
 var (
-	ydbFullEndpoint = cfg.MustEnv("YDB_ENDPOINT")
+	ydbFullEndpoint string
 	authMethod      = cfg.EnvDefault("YDB_AUTH_METHOD", "metadata")
+
+	sqsQueueUrl        string
+	sqsAccessKeyId     string
+	sqsSecretAccessKey string
 )
 
 const (
@@ -36,22 +42,23 @@ const (
 	EnvKeyPasswordHashSalt        = "APP_PASSWORD_HASH_SALT"
 	EnvKeyAuthTokenPrivateKeyPath = "APP_AUTH_TOKEN_PRIVATE_KEY_PATH"
 	EnvKeyAuthTokenPublicKeyPath  = "APP_AUTH_TOKEN_PUBLIC_KEY_PATH"
+
+	EnvKeySqsQueueUrl        = "SQS_QUEUE_URL"
+	EnvKeySqsAccessKeyId     = "SQS_ACCESS_KEY_ID"
+	EnvKeySqsSecretAccessKey = "SQS_SECRET_ACCESS_KEY"
 )
-
-type DummyAccountCreationNotificationProvider struct {
-}
-
-func (p DummyAccountCreationNotificationProvider) Send(_ context.Context, _ domain.SendAccountCreationNotificationDTOInput) (domain.SendAccountCreationNotificationDTOOutput, error) {
-	return domain.SendAccountCreationNotificationDTOOutput{}, nil
-}
-
-var _ domain.AccountCreationNotificationProvider = (*DummyAccountCreationNotificationProvider)(nil)
 
 func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env files")
 	}
+
+	ydbFullEndpoint = cfg.MustEnv("YDB_ENDPOINT")
+
+	sqsQueueUrl = cfg.MustEnv(EnvKeySqsQueueUrl)
+	sqsAccessKeyId = cfg.MustEnv(EnvKeySqsAccessKeyId)
+	sqsSecretAccessKey = cfg.MustEnv(EnvKeySqsSecretAccessKey)
 
 	// conf := zap.NewProductionConfig()
 	conf := zap.NewDevelopmentConfig()
@@ -108,11 +115,20 @@ func main() {
 		Logger:   logger,
 	})
 
+	ymq, err := ymq.New(ctx, sqsAccessKeyId, sqsSecretAccessKey, sqsQueueUrl, logger)
+	if err != nil {
+		logger.Fatal("failed to setup ymq")
+	}
+	accountCreationNotificationAdapter := ymq_adapter.AccountCreation{
+		Sqs:         ymq.Cl,
+		SqsQueueUrl: sqsQueueUrl,
+	}
+
 	authSvc, err := service.NewAuthBuilder().
 		AccountProvider(accountAdapter).
 		RefreshTokenProvider(refreshTokenAdapter).
 		TokenProvider(tokenProvider).
-		AccountCreationNotificationProvider(DummyAccountCreationNotificationProvider{}).
+		AccountCreationNotificationProvider(&accountCreationNotificationAdapter).
 		Logger(zap.NewNop()).
 		Build()
 	if err != nil {
@@ -127,7 +143,7 @@ func main() {
 func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logger *zap.Logger, svc domain.AuthService, tokenProvider domain.TokenProvider, refreshTokenAdapter domain.RefreshTokenProvider, accAdapter domain.AccountProvider) error {
 	logger.Info("create account")
 	email := fmt.Sprintf(`someemail-%d@gmail.com`, time.Now().UnixMilli())
-	password := uuid.New().String()[:30]
+	password := uuid.New().String()[:24]
 	resp, err := svc.CreateUser(ctx, domain.CreateUserReq{
 		Name:     "Danila",
 		Email:    email,
@@ -325,7 +341,7 @@ func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logge
 	}
 
 	adminEmail := fmt.Sprintf("admin-%d@admin.com", time.Now().Unix())
-	adminPassword := uuid.New().String()[:30]
+	adminPassword := uuid.New().String()[:24]
 	logger.Info("create admin")
 	createAdminRes, err := svc.CreateAdmin(ctx, domain.CreateAdminReq{
 		Name:     fmt.Sprintf("Dan %d", time.Now().Unix()),
@@ -364,7 +380,7 @@ func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logge
 	logger.Info("created access token for admin")
 
 	sellerEmail := fmt.Sprintf("seller-%d@seller.com", time.Now().Unix())
-	sellerPassword := uuid.New().String()[:30]
+	sellerPassword := uuid.New().String()[:24]
 	logger.Info("create seller using admin's access token")
 	createSellerRes, err := svc.CreateSeller(ctx, domain.CreateSellerReq{
 		Name:        "seller",

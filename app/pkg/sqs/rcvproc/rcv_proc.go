@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	"go.uber.org/zap"
 )
 
 type Decoder[T any] func(body string, target *T) error
@@ -17,6 +18,8 @@ type RcvProcessor[T any] struct {
 	sqsQueueUrl string
 
 	decoder Decoder[T]
+
+	logger *zap.Logger
 }
 
 func jsonDecoder[T any](body string, target *T) error {
@@ -41,6 +44,13 @@ func WithDecoder[T any](d Decoder[T]) Option[T] {
 	}
 }
 
+func WithLogger[T any](logger *zap.Logger) Option[T] {
+	return func(p *RcvProcessor[T]) error {
+		p.logger = logger
+		return nil
+	}
+}
+
 func New[T any](sqs *sqs.Client, sqsQueueUrl string, opts ...Option[T]) (*RcvProcessor[T], error) {
 	proc := RcvProcessor[T]{
 		sqs:         sqs,
@@ -55,6 +65,10 @@ func New[T any](sqs *sqs.Client, sqsQueueUrl string, opts ...Option[T]) (*RcvPro
 		proc.decoder = stringDecoder
 	}
 
+	if proc.logger == nil {
+		proc.logger = zap.NewNop()
+	}
+
 	return &proc, nil
 }
 
@@ -62,11 +76,13 @@ func New[T any](sqs *sqs.Client, sqsQueueUrl string, opts ...Option[T]) (*RcvPro
 func (q *RcvProcessor[T]) RcvProcess(ctx context.Context, process func(ctx context.Context, messages []T) error) error {
 	// Long Polling
 	// https://docs.amazonaws.cn/en_us/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-short-and-long-polling.html
+	q.logger.Info("start polling sqs messages", zap.String("queue_url", q.sqsQueueUrl))
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
+			q.logger.Info("poll sqs messages", zap.String("queue_url", q.sqsQueueUrl))
 			output, err := q.sqs.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
 				QueueUrl:            aws.String(q.sqsQueueUrl),
 				MaxNumberOfMessages: 10,
@@ -75,6 +91,7 @@ func (q *RcvProcessor[T]) RcvProcess(ctx context.Context, process func(ctx conte
 			if err != nil {
 				return fmt.Errorf("failed to receive ymq sqs messages: %v", err)
 			}
+			q.logger.Info("polled sqs messages", zap.Int("count", len(output.Messages)), zap.String("queue_url", q.sqsQueueUrl))
 
 			decodedMsgs := make([]T, 0, len(output.Messages))
 			deleteMessageBatchReqEntries := make([]types.DeleteMessageBatchRequestEntry, 0, len(output.Messages))
@@ -88,6 +105,10 @@ func (q *RcvProcessor[T]) RcvProcess(ctx context.Context, process func(ctx conte
 					Id:            message.MessageId,
 					ReceiptHandle: message.ReceiptHandle,
 				})
+			}
+
+			if len(decodedMsgs) == 0 {
+				continue
 			}
 
 			if err := process(ctx, decodedMsgs); err != nil {

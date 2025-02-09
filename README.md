@@ -4,7 +4,7 @@
 
 ### Auth
 
-#### Run account creation consumer
+#### Common steps
 
 ```sh
 cd app
@@ -21,6 +21,14 @@ SECRET=$(yc lockbox payload get "${APP_SA_STATIC_KEY_SECRET_ID}")
 export SQS_ACCESS_KEY_ID=$(echo $SECRET | yq -M '.entries.[] | select(.key == "access_key_id").text_value')
 export SQS_SECRET_ACCESS_KEY=$(echo $SECRET | yq -M '.entries.[] | select(.key == "secret_access_key").text_value')
 ```
+
+#### Run integration tests
+
+```sh
+go run cmd/auth/integration_tests/main.go
+```
+
+#### Run account creation consumer
 
 ```sh
 go run cmd/auth/account-creation-consumer/main.go
@@ -47,9 +55,27 @@ go run cmd/auth/account-creation-consumer/main.go
 ### Auth
 
 - [x] ⏳ Add CreateSeller/CreateAdmin service methods
-- [ ] Create YMQ/SQS Secondary Adapter
-- [ ] ⏳ Test YMQ/SQS AccountActivation Secondary Adapter
-- [ ] ⏳ Wire service and HTTP primary adapter
+- [ ] Create Notification Secondary Adapter
+  - [x] Account Creation
+  - [ ] Email Confirmation
+- [ ] Create Notification Primary Adapter
+  - [ ] Long Polling
+    - [x] Account Creation
+    - [ ] Email Confirmation
+  - [ ] Cloud Function (HTTP handler)
+    - [ ] Account Creation
+    - [ ] Email Confirmation
+- [ ] Test Notification Secondary Adapter
+  - [x] Account Creation
+  - [ ] Email Confirmation
+- [ ] Test Notification Primary Adapter
+  - [ ] Long Polling
+    - [x] Account Creation
+    - [ ] Email Confirmation
+  - [ ] Cloud Function (HTTP handler)
+    - [ ] Account Creation
+    - [ ] Email Confirmation
+- [ ] Wire service and HTTP primary adapter
 - [ ] Create Cloud Functions Code Boilerplate
 - [ ] Create Cloud Functions Terraform Configuration Code
 - [x] ⏳ Write service/infrastructure Integration Tests
@@ -78,8 +104,8 @@ go run cmd/auth/account-creation-consumer/main.go
       - [x] `Replace`
       - [x] `Delete`
       - [x] `DeleteByAccountId`
-    - [ ] AccountActivation YMQ
-      - [ ] `Send`
+    - [x] Account Created Notifications
+      - [x] `Send`
     - [x] Token Provider (JWT)
       - [x] `EncodeRefresh`
       - [x] `DecodeRefresh`

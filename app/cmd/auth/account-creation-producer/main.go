@@ -43,19 +43,23 @@ func (p DummyAccountCreationNotificationProvider) Send(_ context.Context, _ doma
 
 var _ domain.AccountCreationNotificationProvider = (*DummyAccountCreationNotificationProvider)(nil)
 
-func main() {
+func init() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env files")
 	}
+}
 
+func init() {
 	ydbFullEndpoint = cfg.MustEnv("YDB_ENDPOINT")
 	authMethod = cfg.EnvDefault("YDB_AUTH_METHOD", "metadata")
 
 	sqsQueueUrl = cfg.MustEnv(EnvKeySqsQueueUrl)
 	sqsAccessKeyId = cfg.MustEnv(EnvKeySqsAccessKeyId)
 	sqsSecretAccessKey = cfg.MustEnv(EnvKeySqsSecretAccessKey)
+}
 
+func main() {
 	conf := zap.NewDevelopmentConfig()
 	conf.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 

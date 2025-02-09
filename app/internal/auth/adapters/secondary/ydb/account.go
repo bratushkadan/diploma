@@ -304,7 +304,7 @@ DECLARE $emails AS List<Utf8>;
 $to_update = (
     SELECT
       id,
-      $activated_at AS activated_at
+      COALESCE(activated_at, $activated_at) AS activated_at
     FROM
       %s
     VIEW

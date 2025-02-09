@@ -57,6 +57,7 @@ func (b *AccountCreationBuilder) Build() (*AccountCreation, error) {
 		b.sqs,
 		b.ac.sqsQueueUrl,
 		rcvproc.WithJsonDecoder[api.AccountConfirmationMessage](),
+		rcvproc.WithLogger[api.AccountConfirmationMessage](b.ac.l),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set up RcvProcessor for account creation daemon sqs adapter: %v", err)
@@ -67,20 +68,9 @@ func (b *AccountCreationBuilder) Build() (*AccountCreation, error) {
 	return &b.ac, nil
 }
 
-// func (q *AccountCreation) PublishConfirmation(ctx context.Context, confirmation api.AccountConfirmationMessage) error {
-// 	emailConfirmationMsg, err := json.Marshal(&confirmation)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to serialize account creation dto: %v", err)
-// 	}
-// 	_, err = q.ymq.Cl.SendMessage(ctx, &sqs.SendMessageInput{
-// 		MessageBody: aws.String(string(emailConfirmationMsg)),
-// 		QueueUrl:    aws.String(q.ymq.Endpoint()),
-// 	})
-// 	return err
-// }
-
 func (a *AccountCreation) ReceiveProcessAccountCreationMessages(ctx context.Context) error {
 	proc := func(ctx context.Context, messages []api.AccountConfirmationMessage) error {
+		a.l.Info("processing account creation messages", zap.Int("count", len(messages)))
 		emails := make([]string, 0, len(messages))
 		for _, msg := range messages {
 			emails = append(emails, msg.Email)
@@ -89,7 +79,11 @@ func (a *AccountCreation) ReceiveProcessAccountCreationMessages(ctx context.Cont
 		_, err := a.svc.ActivateAccounts(ctx, domain.ActivateAccountsReq{
 			Emails: emails,
 		})
-		return err
+		if err != nil {
+			return err
+		}
+		a.l.Info("processed account creation messages", zap.Int("count", len(messages)))
+		return nil
 	}
 
 	return a.rcvProc.RcvProcess(ctx, proc)

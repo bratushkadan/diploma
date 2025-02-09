@@ -106,7 +106,6 @@ func (svc *Auth) createAccount(ctx context.Context, req createAccountReq) (domai
 	}
 
 	_, err = svc.accCreationNotificationProv.Send(ctx, domain.SendAccountCreationNotificationDTOInput{
-		Name:  accountRes.Name,
 		Email: accountRes.Email,
 	})
 	if err != nil {

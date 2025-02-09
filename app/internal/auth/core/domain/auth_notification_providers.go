@@ -8,7 +8,6 @@ type AccountCreationNotificationProvider interface {
 }
 
 type SendAccountCreationNotificationDTOInput struct {
-	Name  string
 	Email string
 }
 type SendAccountCreationNotificationDTOOutput struct {
@@ -26,7 +25,6 @@ type EmailConfirmationsNotificationProvider interface {
 }
 
 type SendEmailConfirmationNotificationsDTOInput struct {
-	Name  string
 	Email string
 }
 type SendEmailConfirmationNotificationsDTOOutput struct {
