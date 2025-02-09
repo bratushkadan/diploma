@@ -1,5 +1,1 @@
 /.zip
-.ydb-access-token
-.env
-/auth-token-private.key
-/auth-token-public.key
