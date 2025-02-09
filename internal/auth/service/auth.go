@@ -73,11 +73,19 @@ func NewAuthBuilder() *AuthBuilder {
 	return &AuthBuilder{auth: &auth}
 }
 
-func (svc *Auth) CreateAccount(ctx context.Context, req domain.CreateAccountReq) (domain.CreateAccountRes, error) {
+type createAccountReq struct {
+	domain.CreateUserReq
+	Name     string
+	Email    string
+	Password string
+	Type     domain.AccountType
+}
+
+func (svc *Auth) createAccount(ctx context.Context, req createAccountReq) (domain.CreateUserRes, error) {
 	acc, err := domain.NewAccount(req.Name, req.Password, req.Email, req.Type)
 	if err != nil {
-		svc.l.Error("failed to create new account from provided input", zap.Error(err))
-		return domain.CreateAccountRes{}, err
+		svc.l.Info("failed to create new account from provided input", zap.Error(err))
+		return domain.CreateUserRes{}, err
 	}
 
 	out, err := svc.accProv.CreateAccount(ctx, domain.CreateAccountDTOInput{
@@ -88,14 +96,13 @@ func (svc *Auth) CreateAccount(ctx context.Context, req domain.CreateAccountReq)
 	})
 	if err != nil {
 		svc.l.Error("failed to create account via account provider", zap.Error(err))
-		return domain.CreateAccountRes{}, err
+		return domain.CreateUserRes{}, err
 	}
 
-	accountRes := domain.CreateAccountRes{
+	accountRes := domain.CreateUserRes{
 		Id:    out.Id,
 		Name:  out.Name,
 		Email: out.Email,
-		Type:  out.Type,
 	}
 
 	_, err = svc.accConfirmationProv.Send(ctx, domain.SendAccountConfirmationDTOInput{
@@ -105,10 +112,77 @@ func (svc *Auth) CreateAccount(ctx context.Context, req domain.CreateAccountReq)
 	if err != nil {
 		err = fmt.Errorf("%w: %v", domain.ErrSendAccountConfirmationFailed, err)
 		svc.l.Error("failed to send account email confirmation message", zap.Error(err))
-		return domain.CreateAccountRes{}, err
+		return domain.CreateUserRes{}, err
 	}
 
 	return accountRes, nil
+}
+
+func (svc *Auth) CreateUser(ctx context.Context, req domain.CreateUserReq) (domain.CreateUserRes, error) {
+	res, err := svc.createAccount(ctx, createAccountReq{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: req.Password,
+		Type:     domain.AccountTypeAdmin,
+	})
+	if err != nil {
+		return domain.CreateUserRes{}, err
+	}
+	return domain.CreateUserRes{
+		Name:  res.Name,
+		Email: res.Email,
+		Id:    res.Id,
+	}, nil
+}
+
+func (svc *Auth) CreateSeller(ctx context.Context, req domain.CreateSellerReq) (domain.CreateSellerRes, error) {
+	token, err := svc.tokenProv.DecodeAccess(req.AccessToken)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrInvalidRefreshToken):
+			svc.l.Info("invalid refresh token", zap.Error(err))
+			return domain.CreateSellerRes{}, err
+		case errors.Is(err, domain.ErrTokenExpired):
+			svc.l.Info("refresh token expired", zap.Any("token", token))
+			return domain.CreateSellerRes{}, err
+		case errors.Is(err, domain.ErrTokenParseFailed):
+		default:
+			svc.l.Error("failed to decode refresh token: %w", zap.Error(err))
+			return domain.CreateSellerRes{}, err
+		}
+	}
+
+	res, err := svc.createAccount(ctx, createAccountReq{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: req.Password,
+		Type:     domain.AccountTypeSeller,
+	})
+	if err != nil {
+		return domain.CreateSellerRes{}, err
+	}
+	return domain.CreateSellerRes{
+		Name:  res.Name,
+		Email: res.Email,
+		Id:    res.Id,
+	}, nil
+}
+
+func (svc *Auth) CreateAdmin(ctx context.Context, req domain.CreateAdminReq) (domain.CreateAdminRes, error) {
+	res, err := svc.createAccount(ctx, createAccountReq{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: req.Password,
+		Type:     domain.AccountTypeAdmin,
+	})
+	if err != nil {
+		return domain.CreateAdminRes{}, err
+	}
+	return domain.CreateAdminRes{
+		Name:  res.Name,
+		Email: res.Email,
+		Id:    res.Id,
+	}, nil
 }
 
 func (svc *Auth) ActivateAccounts(ctx context.Context, req domain.ActivateAccountsReq) (domain.ActivateAccountsRes, error) {

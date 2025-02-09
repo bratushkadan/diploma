@@ -17,6 +17,7 @@ import (
 	"github.com/bratushkadan/floral/pkg/cfg"
 	"github.com/bratushkadan/floral/pkg/resource/idhash"
 	ydbpkg "github.com/bratushkadan/floral/pkg/ydb"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -126,12 +127,11 @@ func main() {
 func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logger *zap.Logger, svc domain.AuthService, tokenProvider domain.TokenProvider, refreshTokenAdapter domain.RefreshTokenProvider, accAdapter domain.AccountProvider) error {
 	logger.Info("create account")
 	email := fmt.Sprintf(`someemail-%d@gmail.com`, time.Now().UnixMilli())
-	password := "ooga"
-	resp, err := svc.CreateAccount(ctx, domain.CreateAccountReq{
+	password := uuid.New().String()[:30]
+	resp, err := svc.CreateUser(ctx, domain.CreateUserReq{
 		Name:     "Danila",
 		Email:    email,
 		Password: password,
-		Type:     "user",
 	})
 	if err != nil {
 		return fmt.Errorf("error creating account: %w", err)
@@ -323,6 +323,59 @@ func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logge
 	if len(accountRefreshTokensRes.Tokens) != 0 {
 		return errors.New("there must be no refresh tokens for account")
 	}
+
+	adminEmail := fmt.Sprintf("admin-%d@admin.com", time.Now().Unix())
+	adminPassword := uuid.New().String()[:30]
+	logger.Info("create admin")
+	createAdminRes, err := svc.CreateAdmin(ctx, domain.CreateAdminReq{
+		Name:     fmt.Sprintf("Dan %d", time.Now().Unix()),
+		Password: adminPassword,
+		Email:    adminEmail,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create admin account: %v", err)
+	}
+	logger.Info("created admin", zap.Any("admin", createAdminRes))
+
+	logger.Info("activate admin account")
+	_, err = svc.ActivateAccounts(ctx, domain.ActivateAccountsReq{Emails: []string{createAdminRes.Email}})
+	if err != nil {
+		return fmt.Errorf("failed to active admin account: %v", err)
+	}
+	logger.Info("activated admin account")
+
+	logger.Info("authneticate admin")
+	authneticateAdminRes, err := svc.Authenticate(ctx, domain.AuthenticateReq{
+		Email:    adminEmail,
+		Password: adminPassword,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to authenticate admin: %v", err)
+	}
+	logger.Info("authneticated admin")
+
+	logger.Info("create access token for admin")
+	accessTokenRes, err := svc.CreateAccessToken(ctx, domain.CreateAccessTokenReq{
+		RefreshToken: authneticateAdminRes.RefreshToken,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create access token for admin: %v", err)
+	}
+	logger.Info("created access token for admin")
+
+	sellerEmail := fmt.Sprintf("seller-%d@seller.com", time.Now().Unix())
+	sellerPassword := uuid.New().String()[:30]
+	logger.Info("create seller using admin's access token")
+	createSellerRes, err := svc.CreateSeller(ctx, domain.CreateSellerReq{
+		Name:        "seller",
+		Email:       sellerEmail,
+		Password:    sellerPassword,
+		AccessToken: accessTokenRes.AccessToken,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create seller using admin's access token", err)
+	}
+	logger.Info("created seller using admin's access token", zap.Any("seller", createSellerRes))
 
 	logger.Info("all tests passed")
 	return nil

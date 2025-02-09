@@ -20,7 +20,10 @@ var (
 )
 
 type AuthService interface {
-	CreateAccount(context.Context, CreateAccountReq) (CreateAccountRes, error)
+	CreateUser(context.Context, CreateUserReq) (CreateUserRes, error)
+	CreateSeller(context.Context, CreateSellerReq) (CreateSellerRes, error)
+	// DO NOT expose this method externally.
+	CreateAdmin(context.Context, CreateAdminReq) (CreateAdminRes, error)
 	ActivateAccounts(context.Context, ActivateAccountsReq) (ActivateAccountsRes, error)
 
 	Authenticate(context.Context, AuthenticateReq) (AuthenticateRes, error)
@@ -29,17 +32,39 @@ type AuthService interface {
 	CreateAccessToken(context.Context, CreateAccessTokenReq) (CreateAccessTokenRes, error)
 }
 
-type CreateAccountReq struct {
+type CreateUserReq struct {
 	Name     string `json:"name"`
 	Password string `json:"password"`
 	Email    string `json:"email"`
-	Type     string `json:"type"`
 }
-type CreateAccountRes struct {
+type CreateUserRes struct {
 	Id    string `json:"id"`
 	Name  string `json:"name"`
 	Email string `json:"email"`
-	Type  string `json:"type"`
+}
+
+type CreateSellerReq struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
+	// Access token that belongs to the admin.
+	AccessToken string `json:"access_token"`
+}
+type CreateSellerRes struct {
+	Id    string `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+type CreateAdminReq struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
+}
+type CreateAdminRes struct {
+	Id    string `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
 type ActivateAccountsReq struct {
