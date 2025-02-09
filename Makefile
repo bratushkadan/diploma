@@ -1,9 +1,9 @@
-.PHONY: auth_run
-auth_run:
+.PHONY: auth_run_integration_tests
+auth_run_integration_tests:
 	@YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS="$$(scripts/ydb_access_token.sh)" \
 		YDB_ENDPOINT="$$(./terraform/tf output -json | jq -cMr .ydb.value.full_endpoint)" \
 		YDB_AUTH_METHOD=environ \
-		go run cmd/auth_ydb/main.go
+		go run cmd/auth/integration_tests/main.go
 
 .PHONY: migrate_auth_create_ydb
 migrate_auth_create_ydb:
