@@ -20,24 +20,25 @@
 
 ### Auth
 
-- [ ] ⏳ Add CreateSeller/CreateAdmin service methods (or make CreateAccount method polymorphic?)
+- [x] ⏳ Add CreateSeller/CreateAdmin service methods
+- [ ] Create YMQ/SQS Secondary Adapter
 - [ ] ⏳ Test YMQ/SQS AccountActivation Secondary Adapter
 - [ ] ⏳ Wire service and HTTP primary adapter
 - [ ] Create Cloud Functions Code Boilerplate
 - [ ] Create Cloud Functions Terraform Configuration Code
-- [ ] ⏳ Write Integration Tests
+- [x] ⏳ Write service/infrastructure Integration Tests
 
 #### Tests Roadmap
 
 - [ ] Integration Tests
-  - [ ] Service
-    - [x] `CreateAccount`
+  - [x] Service
+    - [x] `CreateUser`
     - [x] `ActivateAccounts`
     - [x] `Authenticate`
     - [x] `ReplaceRefreshToken`
     - [x] `CreateAccessToken`
-    - [ ] `CreateSeller`
-    - [ ] `CreateAdmin`
+    - [x] `CreateSeller`
+    - [x] `CreateAdmin`
   - [x] Secondary Adapters
     - [x] Account YDB
       - [x] `CreateAccount`
@@ -58,6 +59,7 @@
       - [x] `DecodeRefresh`
       - [x] `EncodeAccess`
       - [x] `DecodeAccess`
+ - [ ] Application-level scenarios (in cloud)
 
 
 # New workflow with Terraform + yc/aws CLI
