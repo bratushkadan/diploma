@@ -101,17 +101,3 @@ resource "yandex_iam_service_account_static_access_key" "ydb_ymq_manager_sa" {
     entry_for_secret_key = "secret_access_key"
   }
 }
-
-resource "yandex_message_queue" "email_confirmation" {
-  name = local.sqs_queues.email_confirmation
-
-  visibility_timeout_seconds = 30
-
-  redrive_policy = jsonencode({
-    deadLetterTargetArn = yandex_message_queue.email_confirmation_dmq.arn
-    maxReceiveCount     = 5
-  })
-}
-resource "yandex_message_queue" "email_confirmation_dmq" {
-  name = "${local.sqs_queues.email_confirmation}-dmq"
-}

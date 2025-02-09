@@ -2,8 +2,8 @@
 
 set -e 
 
-export YDB_API_ENDPOINT="$(./terraform/tf output -json | jq -cMr .ydb.value.api_endpoint)"
-export YDB_DATABASE_PATH="$(./terraform/tf output -json | jq -cMr .ydb.value.database_path)"
+export YDB_API_ENDPOINT="$(../terraform/tf output -json | jq -cMr .ydb.value.api_endpoint)"
+export YDB_DATABASE_PATH="$(../terraform/tf output -json | jq -cMr .ydb.value.database_path)"
 export IAM_TOKEN="$(yc iam create-token)"
 
 cd migrations/auth/ydb

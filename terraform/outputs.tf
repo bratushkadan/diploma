@@ -11,8 +11,11 @@ output "ydb" {
 output "ymq" {
   value = {
     queues = {
-      email_confirmation = {
-        url = yandex_message_queue.email_confirmation.id
+      account_creations = {
+        url = yandex_message_queue.account_creations.id
+      }
+      email_confirmations = {
+        url = yandex_message_queue.email_confirmations.id
       }
     }
   }

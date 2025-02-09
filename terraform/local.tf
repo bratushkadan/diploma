@@ -5,6 +5,7 @@ locals {
   common_name = "serverless-ymq-type-standard"
 
   sqs_queues = {
-    email_confirmation = "email-confirmations"
+    account_creations   = "account-creations"
+    email_confirmations = "email-confirmations"
   }
 }

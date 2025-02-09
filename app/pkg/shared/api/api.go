@@ -1,11 +1,11 @@
 package api
 
 type AccountCreationMessage struct {
-	Name  string `json:"name"`
+	Id    string `json:"id"`
 	Email string `json:"email"`
 }
 
 type AccountConfirmationMessage struct {
-	Name  string `json:"name"`
+	Id    string `json:"id"`
 	Email string `json:"email"`
 }

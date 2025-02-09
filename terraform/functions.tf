@@ -1,6 +1,6 @@
 locals {
   project_root        = "${path.module}/.."
-  fns_source_code_dir = "${local.project_root}/functions"
+  fns_source_code_dir = "${local.project_root}/app/functions"
   build_dir           = "${local.project_root}/.zip"
 
   function_versions = {
@@ -182,7 +182,7 @@ resource "yandex_function" "confirm_email" {
 
   environment = {
     (local.env.YDB_DOC_API_ENDPOINT) = yandex_ydb_database_serverless.this.document_api_endpoint
-    (local.env.SQS_ENDPOINT)         = yandex_message_queue.email_confirmation.id
+    (local.env.SQS_ENDPOINT)         = yandex_message_queue.email_confirmations.id
   }
 
   dynamic "secrets" {
