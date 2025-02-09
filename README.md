@@ -104,7 +104,7 @@ export YC_MESSAGE_QUEUE_SECRET_KEY=$(echo "${MANAGER_SECRET}" \
 ```sh
 TF_OUTPUT=$(./terraform/tf output -json -no-color)
 export YDB_DOC_API_ENDPOINT=$(echo $TF_OUTPUT | jq -cMr .ydb.value.document_api_endpoint)
-export SQS_ENDPOINT=$(echo $TF_OUTPUT | jq -cMr .ymq.value.queues.email_confirmation.url)
+export SQS_ENDPOINT=$(echo $TF_OUTPUT | jq -cMr .ymq.value.queues.email_confirmations.url)
 APP_SA_STATIC_KEY_SECRET_ID="$(echo $TF_OUTPUT | jq -cMr .app_sa.value.static_key_lockbox_secret_id)"
 SECRET=$(yc lockbox payload get "${APP_SA_STATIC_KEY_SECRET_ID}")
 export AWS_ACCESS_KEY_ID=$(echo $SECRET | yq -M '.entries.[] | select(.key == "access_key_id").text_value')

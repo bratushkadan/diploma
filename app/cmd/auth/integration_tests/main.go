@@ -38,14 +38,14 @@ const (
 	EnvKeyAuthTokenPublicKeyPath  = "APP_AUTH_TOKEN_PUBLIC_KEY_PATH"
 )
 
-type DummyAccountConfirmationProvider struct {
+type DummyAccountCreationNotificationProvider struct {
 }
 
-func (p DummyAccountConfirmationProvider) Send(_ context.Context, _ domain.SendAccountConfirmationDTOInput) (domain.SendAccountConfirmationDTOOutput, error) {
-	return domain.SendAccountConfirmationDTOOutput{}, nil
+func (p DummyAccountCreationNotificationProvider) Send(_ context.Context, _ domain.SendAccountCreationNotificationDTOInput) (domain.SendAccountCreationNotificationDTOOutput, error) {
+	return domain.SendAccountCreationNotificationDTOOutput{}, nil
 }
 
-var _ domain.AccountConfirmationProvider = (*DummyAccountConfirmationProvider)(nil)
+var _ domain.AccountCreationNotificationProvider = (*DummyAccountCreationNotificationProvider)(nil)
 
 func main() {
 	err := godotenv.Load()
@@ -112,7 +112,7 @@ func main() {
 		AccountProvider(accountAdapter).
 		RefreshTokenProvider(refreshTokenAdapter).
 		TokenProvider(tokenProvider).
-		AccountConfirmationProvider(DummyAccountConfirmationProvider{}).
+		AccountCreationNotificationProvider(DummyAccountCreationNotificationProvider{}).
 		Logger(zap.NewNop()).
 		Build()
 	if err != nil {

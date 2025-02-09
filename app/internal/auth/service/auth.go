@@ -12,10 +12,10 @@ import (
 )
 
 type Auth struct {
-	accProv             domain.AccountProvider
-	accConfirmationProv domain.AccountConfirmationProvider
-	refreshTokenProv    domain.RefreshTokenProvider
-	tokenProv           domain.TokenProvider
+	accProv                     domain.AccountProvider
+	accCreationNotificationProv domain.AccountCreationNotificationProvider
+	refreshTokenProv            domain.RefreshTokenProvider
+	tokenProv                   domain.TokenProvider
 
 	// token TTL for rows is also applied to the provider's refresh_tokens YDB table
 	refreshTokenDuration time.Duration
@@ -34,8 +34,8 @@ func (b *AuthBuilder) AccountProvider(prov domain.AccountProvider) *AuthBuilder 
 	b.auth.accProv = prov
 	return b
 }
-func (b *AuthBuilder) AccountConfirmationProvider(prov domain.AccountConfirmationProvider) *AuthBuilder {
-	b.auth.accConfirmationProv = prov
+func (b *AuthBuilder) AccountCreationNotificationProvider(prov domain.AccountCreationNotificationProvider) *AuthBuilder {
+	b.auth.accCreationNotificationProv = prov
 	return b
 }
 func (b *AuthBuilder) RefreshTokenProvider(prov domain.RefreshTokenProvider) *AuthBuilder {
@@ -105,7 +105,7 @@ func (svc *Auth) createAccount(ctx context.Context, req createAccountReq) (domai
 		Email: out.Email,
 	}
 
-	_, err = svc.accConfirmationProv.Send(ctx, domain.SendAccountConfirmationDTOInput{
+	_, err = svc.accCreationNotificationProv.Send(ctx, domain.SendAccountCreationNotificationDTOInput{
 		Name:  accountRes.Name,
 		Email: accountRes.Email,
 	})
