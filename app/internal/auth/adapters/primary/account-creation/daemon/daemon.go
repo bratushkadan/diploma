@@ -14,7 +14,7 @@ import (
 
 type AccountCreation struct {
 	svc     domain.AuthService
-	rcvProc *rcvproc.RcvProcessor[api.AccountConfirmationMessage]
+	rcvProc *rcvproc.RcvProcessor[api.AccountCreationMessage]
 
 	sqsQueueUrl string
 
@@ -56,8 +56,8 @@ func (b *AccountCreationBuilder) Build() (*AccountCreation, error) {
 	proc, err := rcvproc.New(
 		b.sqs,
 		b.ac.sqsQueueUrl,
-		rcvproc.WithJsonDecoder[api.AccountConfirmationMessage](),
-		rcvproc.WithLogger[api.AccountConfirmationMessage](b.ac.l),
+		rcvproc.WithJsonDecoder[api.AccountCreationMessage](),
+		rcvproc.WithLogger[api.AccountCreationMessage](b.ac.l),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set up RcvProcessor for account creation daemon sqs adapter: %v", err)
@@ -69,13 +69,14 @@ func (b *AccountCreationBuilder) Build() (*AccountCreation, error) {
 }
 
 func (a *AccountCreation) ReceiveProcessAccountCreationMessages(ctx context.Context) error {
-	proc := func(ctx context.Context, messages []api.AccountConfirmationMessage) error {
+	proc := func(ctx context.Context, messages []api.AccountCreationMessage) error {
 		a.l.Info("processing account creation messages", zap.Int("count", len(messages)))
 		emails := make([]string, 0, len(messages))
 		for _, msg := range messages {
 			emails = append(emails, msg.Email)
 		}
 
+		// FIXME: this is incorrect
 		_, err := a.svc.ActivateAccounts(ctx, domain.ActivateAccountsReq{
 			Emails: emails,
 		})

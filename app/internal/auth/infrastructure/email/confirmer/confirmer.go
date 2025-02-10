@@ -3,8 +3,9 @@ package confirmer
 import (
 	"context"
 	"fmt"
-	"fns/reg/pkg/email"
 	"net/url"
+
+	"github.com/bratushkadan/floral/pkg/email"
 )
 
 type ConfirmationUrlResolver = func(ctx context.Context) (*url.URL, error)
@@ -31,7 +32,7 @@ type Email struct {
 	bc confirmationEmailBodyCreator
 }
 
-func NewEmail(senderMail, senderPass string, resolver ConfirmationUrlResolver) *Email {
+func New(senderMail, senderPass string, resolver ConfirmationUrlResolver) *Email {
 	return &Email{
 		p:  email.NewYandexMailProvider(senderMail, senderPass),
 		bc: confirmationEmailBodyCreator{resolver: resolver},

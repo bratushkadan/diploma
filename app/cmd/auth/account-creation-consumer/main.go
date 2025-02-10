@@ -83,7 +83,7 @@ func main() {
 		Logger:   logger,
 	})
 
-	q, err := ymq.New(ctx, sqsAccessKeyId, sqsSecretAccessKey, sqsQueueUrl, logger)
+	sqsClient, err := ymq.New(ctx, sqsAccessKeyId, sqsSecretAccessKey, sqsQueueUrl, logger)
 	if err != nil {
 		logger.Fatal("failed to build new ymq", zap.Error(err))
 	}
@@ -95,8 +95,6 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to build new auth", zap.Error(err))
 	}
-
-	sqsClient := q.Cl
 
 	daemon, err := account_creation_daemon_adapter.NewBuilder().
 		AuthService(svc).

@@ -3,18 +3,16 @@ package ydynamo
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	smithyendpoints "github.com/aws/smithy-go/endpoints"
+	"github.com/bratushkadan/floral/internal/auth/core/domain"
+	ydb_dynamodb "github.com/bratushkadan/floral/pkg/ydb/dynamodb"
 	"go.uber.org/zap"
 )
 
@@ -22,60 +20,18 @@ const (
 	TableEmailConfirmationTokens = "email_confirmation_tokens"
 )
 
-type EmailConfirmationRecord struct {
-	Email     string    `dynamodbav:"email" json:"email"`
-	Token     string    `dynamodbav:"token" json:"token"`
-	ExpiresAt time.Time `dynamodbav:"expires_at" json:"expires_at"`
-}
-
-type EmailConfirmatorTokenRepo interface {
-	InsertToken(ctx context.Context, email, token string) error
-	ListTokensEmail(context context.Context, email string) ([]EmailConfirmationRecord, error)
-	FindTokenRecord(context context.Context, token string) (*EmailConfirmationRecord, error)
-}
-
-var _ EmailConfirmatorTokenRepo = (*EmailConfirmator)(nil)
+var _ domain.EmailConfirmatorTokenRepo = (*EmailConfirmator)(nil)
 
 type EmailConfirmator struct {
 	cl *dynamodb.Client
 	l  *zap.Logger
 }
 
-type ydbDocApiEndpointResolver struct {
-	endpoint string
-}
-
-func (r ydbDocApiEndpointResolver) ResolveEndpoint(ctx context.Context, _ dynamodb.EndpointParameters) (smithyendpoints.Endpoint, error) {
-	u, err := url.Parse(r.endpoint)
+func NewEmailConfirmator(ctx context.Context, accessKeyId, secretAccessKey string, ydbDocApiEndpoint string, logger *zap.Logger) (*EmailConfirmator, error) {
+	client, err := ydb_dynamodb.New(ctx, accessKeyId, secretAccessKey, ydbDocApiEndpoint)
 	if err != nil {
-		return smithyendpoints.Endpoint{}, err
+		return nil, fmt.Errorf("failed to setu dynamodb email confirmator: %v", err)
 	}
-
-	return smithyendpoints.Endpoint{
-		URI: *u,
-	}, nil
-}
-
-func newYdbDocApiEndpointResolver(endpoint string) *ydbDocApiEndpointResolver {
-	return &ydbDocApiEndpointResolver{
-		endpoint: endpoint,
-	}
-}
-
-func NewDynamoDbEmailConfirmator(ctx context.Context, accessKeyId, secretAccessKey string, ydbDocApiEndpoint string, logger *zap.Logger) (*EmailConfirmator, error) {
-	cfg, err := config.LoadDefaultConfig(
-		ctx,
-		config.WithRegion("ru-central1"),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKeyId, secretAccessKey, "")),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("unable to load AWS SDK config: %v", err)
-	}
-
-	client := dynamodb.NewFromConfig(cfg, dynamodb.WithEndpointResolverV2(
-		newYdbDocApiEndpointResolver(ydbDocApiEndpoint),
-	))
-
 	return &EmailConfirmator{cl: client, l: logger}, nil
 }
 
@@ -94,7 +50,7 @@ func (db *EmailConfirmator) InsertToken(ctx context.Context, email, token string
 		return nil
 	}
 
-	var unmarshaledItem EmailConfirmationRecord
+	var unmarshaledItem domain.EmailConfirmationRecord
 	if err := attributevalue.UnmarshalMap(output.Attributes, &unmarshaledItem); err != nil {
 		return err
 	}
@@ -103,7 +59,7 @@ func (db *EmailConfirmator) InsertToken(ctx context.Context, email, token string
 	return nil
 }
 
-func (db *EmailConfirmator) ListTokensEmail(ctx context.Context, email string) ([]EmailConfirmationRecord, error) {
+func (db *EmailConfirmator) ListTokensEmail(ctx context.Context, email string) ([]domain.EmailConfirmationRecord, error) {
 	input := &dynamodb.QueryInput{
 		TableName:              aws.String(TableEmailConfirmationTokens),
 		KeyConditionExpression: aws.String("email = :emailVal"),
@@ -117,9 +73,9 @@ func (db *EmailConfirmator) ListTokensEmail(ctx context.Context, email string) (
 		return nil, err
 	}
 
-	var tokenRecords []EmailConfirmationRecord
+	var tokenRecords []domain.EmailConfirmationRecord
 	for _, item := range result.Items {
-		var unmarshaledItem EmailConfirmationRecord
+		var unmarshaledItem domain.EmailConfirmationRecord
 		if err := attributevalue.UnmarshalMap(item, &unmarshaledItem); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal response from dynamodb: %v", err)
 		}
@@ -128,7 +84,7 @@ func (db *EmailConfirmator) ListTokensEmail(ctx context.Context, email string) (
 
 	return tokenRecords, nil
 }
-func (db *EmailConfirmator) FindTokenRecord(ctx context.Context, token string) (*EmailConfirmationRecord, error) {
+func (db *EmailConfirmator) FindTokenRecord(ctx context.Context, token string) (*domain.EmailConfirmationRecord, error) {
 	filtEx := expression.Name("token").Equal(expression.Value(token))
 	projEx := expression.NamesList(
 		expression.Name("email"),
@@ -160,7 +116,7 @@ func (db *EmailConfirmator) FindTokenRecord(ctx context.Context, token string) (
 		return nil, nil
 	}
 
-	var unmarshaledItem EmailConfirmationRecord
+	var unmarshaledItem domain.EmailConfirmationRecord
 	if err := attributevalue.UnmarshalMap(result.Items[0], &unmarshaledItem); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response from dynamodb: %v", err)
 	}

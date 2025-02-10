@@ -31,17 +31,8 @@ func (r endpointResolver) ResolveEndpoint(ctx context.Context, _ sqs.EndpointPar
 	}, nil
 }
 
-type Ymq struct {
-	Cl *sqs.Client
-
-	endpoint string
-}
-
-func (q Ymq) Endpoint() string {
-	return q.endpoint
-}
-
-func New(ctx context.Context, accessKeyId, secretAccessKey string, sqsEndpoint string, logger *zap.Logger) (*Ymq, error) {
+// Package that sets SQS endpoint to Yandex Cloud endpoint for Yandex Message Queue.
+func New(ctx context.Context, accessKeyId, secretAccessKey string, sqsEndpoint string, logger *zap.Logger) (*sqs.Client, error) {
 	cfg, err := config.LoadDefaultConfig(
 		ctx,
 		config.WithRegion("ru-central1"),
@@ -51,10 +42,7 @@ func New(ctx context.Context, accessKeyId, secretAccessKey string, sqsEndpoint s
 		return nil, fmt.Errorf("unable to load AWS SDK config: %v", err)
 	}
 
-	client := sqs.NewFromConfig(cfg, sqs.WithEndpointResolverV2(
+	return sqs.NewFromConfig(cfg, sqs.WithEndpointResolverV2(
 		newEndpointResolver(sqsEndpoint),
-	))
-
-	return &Ymq{Cl: client, endpoint: sqsEndpoint}, nil
-
+	)), nil
 }
