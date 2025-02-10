@@ -94,11 +94,6 @@ func (c *Conf) Build() *Conf {
 	return c
 }
 
-type EmailConfirmer interface {
-	Confirm(ctx context.Context, token string) error
-	Send(ctx context.Context, email string) error
-}
-
 type EmailConfirmation struct {
 	conf                      *Conf
 	l                         *zap.Logger
@@ -106,6 +101,8 @@ type EmailConfirmation struct {
 	emailConfNotificationProv domain.EmailConfirmationsNotificationProvider
 	emailConfirmer            *confirmer.Email
 }
+
+var _ domain.EmailConfirmer = (*EmailConfirmation)(nil)
 
 type EmailConfirmationOption func(context.Context, *EmailConfirmation) error
 

@@ -13,7 +13,7 @@ import (
 )
 
 type AccountCreation struct {
-	svc     domain.AuthService
+	svc     domain.EmailConfirmer
 	rcvProc *rcvproc.RcvProcessor[api.AccountCreationMessage]
 
 	sqsQueueUrl string
@@ -35,7 +35,7 @@ func NewBuilder() *AccountCreationBuilder {
 	return b
 }
 
-func (b *AccountCreationBuilder) AuthService(svc domain.AuthService) *AccountCreationBuilder {
+func (b *AccountCreationBuilder) EmailConfirmationService(svc domain.EmailConfirmer) *AccountCreationBuilder {
 	b.ac.svc = svc
 	return b
 }
@@ -76,13 +76,16 @@ func (a *AccountCreation) ReceiveProcessAccountCreationMessages(ctx context.Cont
 			emails = append(emails, msg.Email)
 		}
 
-		// FIXME: this is incorrect
-		_, err := a.svc.ActivateAccounts(ctx, domain.ActivateAccountsReq{
-			Emails: emails,
-		})
-		if err != nil {
-			return err
+		// FIXME: add partial message processing mechanics to common RcvProcess package
+		for _, message := range messages {
+			a.l.Info("send confirmation email", zap.String("email", message.Email))
+			if err := a.svc.Send(ctx, message.Email); err != nil {
+				a.l.Error("failed to send confirmation email", zap.String("email", message.Email), zap.Error(err))
+				return err
+			}
+			a.l.Info("sent confirmation email", zap.String("email", message.Email))
 		}
+
 		a.l.Info("processed account creation messages", zap.Int("count", len(messages)))
 		return nil
 	}
