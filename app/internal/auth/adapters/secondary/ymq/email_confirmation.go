@@ -16,7 +16,7 @@ type EmailConfirmation struct {
 	SqsQueueUrl string
 }
 
-var _ domain.EmailConfirmationsNotificationProvider = (*EmailConfirmation)(nil)
+var _ domain.EmailConfirmationNotifications = (*EmailConfirmation)(nil)
 
 func (q *EmailConfirmation) Send(ctx context.Context, in domain.SendEmailConfirmationNotificationsDTOInput) (domain.SendEmailConfirmationNotificationsDTOOutput, error) {
 	msg := api.AccountConfirmationMessage{

@@ -32,6 +32,14 @@ const (
 	EnvKeySqsQueueUrl        = "SQS_QUEUE_URL"
 	EnvKeySqsAccessKeyId     = "SQS_ACCESS_KEY_ID"
 	EnvKeySqsSecretAccessKey = "SQS_SECRET_ACCESS_KEY"
+
+	EnvKeyAwsAccessKeyId     = "SQS_ACCESS_KEY_ID"
+	EnvKeyAwsSecretAccessKey = "SQS_SECRET_ACCESS_KEY"
+	EnvKeyYdbDocApiEndpoint  = "YDB_DOC_API_ENDPOINT"
+
+	EnvKeySenderEmail                  = "SENDER_EMAIL"
+	EnvKeySenderPassword               = "SENDER_PASSWORD"
+	EnvKeyEmailConfirmationApiEndpoint = "EMAIL_CONFIRMATION_API_ENDPOINT"
 )
 
 type DummyAccountCreationNotificationProvider struct {

@@ -1,4 +1,4 @@
-package ydynamo
+package ydb_dynamodb_adapter
 
 import (
 	"context"
@@ -17,27 +17,27 @@ import (
 )
 
 const (
-	TableEmailConfirmationTokens = "email_confirmation_tokens"
+	tableEmailConfirmationTokens = "email_confirmation_tokens"
 )
 
-var _ domain.EmailConfirmatorTokenRepo = (*EmailConfirmator)(nil)
+var _ domain.EmailConfirmationTokens = (*EmailConfirmationTokens)(nil)
 
-type EmailConfirmator struct {
+type EmailConfirmationTokens struct {
 	cl *dynamodb.Client
 	l  *zap.Logger
 }
 
-func NewEmailConfirmator(ctx context.Context, accessKeyId, secretAccessKey string, ydbDocApiEndpoint string, logger *zap.Logger) (*EmailConfirmator, error) {
+func NewEmailConfirmationTokens(ctx context.Context, accessKeyId, secretAccessKey string, ydbDocApiEndpoint string, logger *zap.Logger) (*EmailConfirmationTokens, error) {
 	client, err := ydb_dynamodb.New(ctx, accessKeyId, secretAccessKey, ydbDocApiEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setu dynamodb email confirmator: %v", err)
 	}
-	return &EmailConfirmator{cl: client, l: logger}, nil
+	return &EmailConfirmationTokens{cl: client, l: logger}, nil
 }
 
-func (db *EmailConfirmator) InsertToken(ctx context.Context, email, token string) error {
+func (db *EmailConfirmationTokens) InsertToken(ctx context.Context, email, token string) error {
 	item := &dynamodb.PutItemInput{
-		TableName: aws.String(TableEmailConfirmationTokens),
+		TableName: aws.String(tableEmailConfirmationTokens),
 		Item: map[string]types.AttributeValue{
 			"email":      &types.AttributeValueMemberS{Value: email},
 			"token":      &types.AttributeValueMemberS{Value: token},
@@ -59,9 +59,9 @@ func (db *EmailConfirmator) InsertToken(ctx context.Context, email, token string
 	return nil
 }
 
-func (db *EmailConfirmator) ListTokensEmail(ctx context.Context, email string) ([]domain.EmailConfirmationRecord, error) {
+func (db *EmailConfirmationTokens) ListTokensEmail(ctx context.Context, email string) ([]domain.EmailConfirmationRecord, error) {
 	input := &dynamodb.QueryInput{
-		TableName:              aws.String(TableEmailConfirmationTokens),
+		TableName:              aws.String(tableEmailConfirmationTokens),
 		KeyConditionExpression: aws.String("email = :emailVal"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":emailVal": &types.AttributeValueMemberS{Value: email},
@@ -84,7 +84,7 @@ func (db *EmailConfirmator) ListTokensEmail(ctx context.Context, email string) (
 
 	return tokenRecords, nil
 }
-func (db *EmailConfirmator) FindTokenRecord(ctx context.Context, token string) (*domain.EmailConfirmationRecord, error) {
+func (db *EmailConfirmationTokens) FindTokenRecord(ctx context.Context, token string) (*domain.EmailConfirmationRecord, error) {
 	filtEx := expression.Name("token").Equal(expression.Value(token))
 	projEx := expression.NamesList(
 		expression.Name("email"),
@@ -103,7 +103,7 @@ func (db *EmailConfirmator) FindTokenRecord(ctx context.Context, token string) (
 	input := &dynamodb.ScanInput{
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
-		TableName:                 aws.String(TableEmailConfirmationTokens),
+		TableName:                 aws.String(tableEmailConfirmationTokens),
 		FilterExpression:          expr.Filter(),
 		ProjectionExpression:      expr.Projection(),
 	}

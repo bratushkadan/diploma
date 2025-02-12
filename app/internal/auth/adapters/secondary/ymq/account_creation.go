@@ -16,7 +16,7 @@ type AccountCreation struct {
 	SqsQueueUrl string
 }
 
-var _ domain.AccountCreationNotificationProvider = (*AccountCreation)(nil)
+var _ domain.AccountCreationNotifications = (*AccountCreation)(nil)
 
 func (q *AccountCreation) Send(ctx context.Context, in domain.SendAccountCreationNotificationDTOInput) (domain.SendAccountCreationNotificationDTOOutput, error) {
 	msg := api.AccountCreationMessage{

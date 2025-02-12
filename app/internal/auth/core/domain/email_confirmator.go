@@ -11,8 +11,17 @@ type EmailConfirmationRecord struct {
 	ExpiresAt time.Time `dynamodbav:"expires_at" json:"expires_at"`
 }
 
-type EmailConfirmatorTokenRepo interface {
+type EmailConfirmationTokens interface {
 	InsertToken(ctx context.Context, email, token string) error
 	ListTokensEmail(context context.Context, email string) ([]EmailConfirmationRecord, error)
 	FindTokenRecord(context context.Context, token string) (*EmailConfirmationRecord, error)
+}
+
+type EmailConfirmationSender interface {
+	Send(context.Context, EmailConfirmationSenderSendDTOInput) error
+}
+
+type EmailConfirmationSenderSendDTOInput struct {
+	RecipientEmail    string
+	ConfirmationToken string
 }

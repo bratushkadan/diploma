@@ -115,12 +115,12 @@ func main() {
 		Logger:   logger,
 	})
 
-	ymq, err := ymq.New(ctx, sqsAccessKeyId, sqsSecretAccessKey, sqsQueueUrl, logger)
+	sqsClient, err := ymq.New(ctx, sqsAccessKeyId, sqsSecretAccessKey, sqsQueueUrl, logger)
 	if err != nil {
 		logger.Fatal("failed to setup ymq")
 	}
 	accountCreationNotificationAdapter := ymq_adapter.AccountCreation{
-		Sqs:         ymq.Cl,
+		Sqs:         sqsClient,
 		SqsQueueUrl: sqsQueueUrl,
 	}
 

@@ -13,72 +13,62 @@ import (
 )
 
 type EmailConfirmations struct {
-	svc domain.AuthService
-	sqs *sqs.Client
-	l   *zap.Logger
-}
+	svc domain.AccountEmailConfirmation
 
-func New(sqs *sqs.Client, logger *zap.Logger) *EmailConfirmations {
-	return &EmailConfirmations{sqs: sqs, l: logger}
-}
-
-type AccountCreation struct {
-	svc     domain.AuthService
 	rcvProc *rcvproc.RcvProcessor[api.AccountConfirmationMessage]
-
-	sqsQueueUrl string
 
 	l *zap.Logger
 }
 
-type AccountCreationBuilder struct {
-	ac AccountCreation
+type EmailConfirmationBuilder struct {
+	ec EmailConfirmations
 
-	sqs *sqs.Client
+	sqsQueueUrl string
+	sqs         *sqs.Client
 }
 
-func NewBuilder() *AccountCreationBuilder {
-	b := &AccountCreationBuilder{
-		ac: AccountCreation{},
+func NewBuilder() *EmailConfirmationBuilder {
+	b := &EmailConfirmationBuilder{
+		ec: EmailConfirmations{},
 	}
 
 	return b
 }
 
-func (b *AccountCreationBuilder) AuthService(svc domain.AuthService) *AccountCreationBuilder {
-	b.ac.svc = svc
+func (b *EmailConfirmationBuilder) Service(svc domain.AccountEmailConfirmation) *EmailConfirmationBuilder {
+	b.ec.svc = svc
 	return b
 }
-func (b *AccountCreationBuilder) SqsClient(sqs *sqs.Client) *AccountCreationBuilder {
+func (b *EmailConfirmationBuilder) SqsClient(sqs *sqs.Client) *EmailConfirmationBuilder {
 	b.sqs = sqs
 	return b
 }
-func (b *AccountCreationBuilder) SqsQueueUrl(url string) *AccountCreationBuilder {
-	b.ac.sqsQueueUrl = url
+func (b *EmailConfirmationBuilder) SqsQueueUrl(url string) *EmailConfirmationBuilder {
+	b.sqsQueueUrl = url
 	return b
 }
-func (b *AccountCreationBuilder) Logger(logger *zap.Logger) *AccountCreationBuilder {
-	b.ac.l = logger
+func (b *EmailConfirmationBuilder) Logger(logger *zap.Logger) *EmailConfirmationBuilder {
+	b.ec.l = logger
 	return b
 }
 
-func (b *AccountCreationBuilder) Build() (*AccountCreation, error) {
+func (b *EmailConfirmationBuilder) Build() (*EmailConfirmations, error) {
 	proc, err := rcvproc.New(
 		b.sqs,
-		b.ac.sqsQueueUrl,
+		b.sqsQueueUrl,
 		rcvproc.WithJsonDecoder[api.AccountConfirmationMessage](),
-		rcvproc.WithLogger[api.AccountConfirmationMessage](b.ac.l),
+		rcvproc.WithLogger[api.AccountConfirmationMessage](b.ec.l),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set up RcvProcessor for account confirmation daemon sqs adapter: %v", err)
 	}
 
-	b.ac.rcvProc = proc
+	b.ec.rcvProc = proc
 
-	return &b.ac, nil
+	return &b.ec, nil
 }
 
-func (a *AccountCreation) ReceiveProcessAccountCreationMessages(ctx context.Context) error {
+func (a *EmailConfirmations) ReceiveProcessAccountCreationMessages(ctx context.Context) error {
 	proc := func(ctx context.Context, messages []api.AccountConfirmationMessage) error {
 		a.l.Info("processing account confirmation messages", zap.Int("count", len(messages)))
 		emails := make([]string, 0, len(messages))
@@ -86,12 +76,12 @@ func (a *AccountCreation) ReceiveProcessAccountCreationMessages(ctx context.Cont
 			emails = append(emails, msg.Email)
 		}
 
-		_, err := a.svc.ActivateAccounts(ctx, domain.ActivateAccountsReq{
-			Emails: emails,
-		})
-		if err != nil {
-			return err
+		for _, email := range emails {
+			if err := a.svc.Send(ctx, email); err != nil {
+				return err
+			}
 		}
+
 		a.l.Info("processed account confirmation messages", zap.Int("count", len(messages)))
 		return nil
 	}

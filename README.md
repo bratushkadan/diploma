@@ -15,8 +15,7 @@ TF_OUTPUT=$(../terraform/tf output -json -no-color)
 export YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS="$(scripts/ydb_access_token.sh)"
 export YDB_ENDPOINT="$(echo "${TF_OUTPUT}" | jq -cMr .ydb.value.full_endpoint)"
 export YDB_AUTH_METHOD=environ
-APP_SA_STATIC_KEY_SECRET_go run cmd/auth/email-confirmations-consumer/main.go
-ID="$(echo $TF_OUTPUT | jq -cMr .app_sa.value.static_key_lockbox_secret_id)"
+APP_SA_STATIC_KEY_SECRET_ID="$(echo $TF_OUTPUT | jq -cMr .app_sa.value.static_key_lockbox_secret_id)"
 SECRET=$(yc lockbox payload get "${APP_SA_STATIC_KEY_SECRET_ID}")
 export SQS_ACCESS_KEY_ID=$(echo $SECRET | yq -M '.entries.[] | select(.key == "access_key_id").text_value')
 export SQS_SECRET_ACCESS_KEY=$(echo $SECRET | yq -M '.entries.[] | select(.key == "secret_access_key").text_value')
@@ -36,11 +35,26 @@ export SQS_QUEUE_URL="$(echo "${TF_OUTPUT}" | jq -cMr .ymq.value.queues.account_
 go run cmd/auth/account-creation-consumer/main.go
 ```
 
+#### Run account creation producer
+
+```sh
+export SQS_QUEUE_URL="$(echo "${TF_OUTPUT}" | jq -cMr .ymq.value.queues.account_creations.url)"
+
+export TARGET_EMAIL="<target email here>"
+
+go run cmd/auth/account-creation-producer/main.go
+```
+
 #### Run email confirmation consumer
 
 ```sh
-export SQS_QUEUE_URL="$(echo "${TF_OUTPUT}" | jq -cMr .ymq.value.queues.email_confirmations.url)"
-go run cmd/auth/email-confirmations-consumer/main.go
+export AWS_ACCESS_KEY_ID=$(echo $SECRET | yq -M '.entries.[] | select(.key == "access_key_id").text_value')
+export AWS_SECRET_ACCESS_KEY=$(echo $SECRET | yq -M '.entries.[] | select(.key == "secret_access_key").text_value')
+export SQS_QUEUE_URL_EMAIL_CONFIRMATIONS="$(echo "${TF_OUTPUT}" | jq -cMr .ymq.value.queues.email_confirmations.url)"
+export SQS_QUEUE_URL_ACCOUNT_CREATIONS="$(echo "${TF_OUTPUT}" | jq -cMr .ymq.value.queues.account_creations.url)"
+source .env
+
+go run cmd/auth/email-confirmation-consumer/main.go
 ```
 
 ## Roadmap
@@ -64,26 +78,27 @@ go run cmd/auth/email-confirmations-consumer/main.go
 ### Auth
 
 - [x] ⏳ Add CreateSeller/CreateAdmin service methods
-- [ ] Create Notification Secondary Adapter
+- [x] Create Notification Secondary Adapter
   - [x] Account Creation
-  - [ ] Email Confirmation
+  - [x] Email Confirmation
 - [ ] Create Notification Primary Adapter
-  - [ ] Long Polling
+  - [x] Long Polling
     - [x] Account Creation
-    - [ ] Email Confirmation
+    - [x] Email Confirmation
   - [ ] Cloud Function (HTTP handler)
     - [ ] Account Creation
     - [ ] Email Confirmation
-- [ ] Test Notification Secondary Adapter
+- [x] Test Notification Secondary Adapter
   - [x] Account Creation
-  - [ ] Email Confirmation
+  - [x] Email Confirmation
 - [ ] Test Notification Primary Adapter
-  - [ ] Long Polling
+  - [x] Long Polling
     - [x] Account Creation
-    - [ ] Email Confirmation
+    - [x] Email Confirmation
   - [ ] Cloud Function (HTTP handler)
     - [ ] Account Creation
     - [ ] Email Confirmation
+- [x] Email Confirmation Service refactoring
 - [ ] Wire service and HTTP primary adapter
 - [ ] Create Cloud Functions Code Boilerplate
 - [ ] Create Cloud Functions Terraform Configuration Code

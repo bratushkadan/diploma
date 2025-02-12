@@ -2,7 +2,7 @@ package domain
 
 import "context"
 
-type AccountCreationNotificationProvider interface {
+type AccountCreationNotifications interface {
 	Send(context.Context, SendAccountCreationNotificationDTOInput) (SendAccountCreationNotificationDTOOutput, error)
 	// RcvProcess(context.Context, func(RcvProcessAccountCreationNotificationDTOInput) error) (RcvProcessAccountCreationNotificationDTOOutput, error)
 }
@@ -19,7 +19,7 @@ type SendAccountCreationNotificationDTOOutput struct {
 // }
 // type RcvProcessAccountCreationNotificationDTOOutput struct{}
 
-type EmailConfirmationsNotificationProvider interface {
+type EmailConfirmationNotifications interface {
 	Send(context.Context, SendEmailConfirmationNotificationsDTOInput) (SendEmailConfirmationNotificationsDTOOutput, error)
 	// RcvProcess(context.Context, func(RcvProcessEmailConfirmationNotificationsDTOInput) error) (RcvProcessEmailConfirmationNotificationsDTOOutput, error)
 }
