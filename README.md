@@ -88,9 +88,9 @@ go run cmd/auth/email-confirmation-consumer/main.go
   - [ ] Cloud Function (HTTP handler)
     - [ ] Account Creation
     - [ ] Email Confirmation
-- [x] Test Notification Secondary Adapter
+- [ ] Test Notification Secondary Adapter
   - [x] Account Creation
-  - [x] Email Confirmation
+  - [ ] Email Confirmation
 - [ ] Test Notification Primary Adapter
   - [x] Long Polling
     - [x] Account Creation
@@ -130,6 +130,8 @@ go run cmd/auth/email-confirmation-consumer/main.go
       - [x] `DeleteByAccountId`
     - [x] Account Created Notifications
       - [x] `Send`
+    - [x] Email Confirmed Notifications
+      - [ ] `Send`
     - [x] Token Provider (JWT)
       - [x] `EncodeRefresh`
       - [x] `DecodeRefresh`

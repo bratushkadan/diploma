@@ -3,11 +3,9 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 
 	ydb_dynamodb_adapter "github.com/bratushkadan/floral/internal/auth/adapters/secondary/dynamodb"
 	email_confirmer "github.com/bratushkadan/floral/internal/auth/adapters/secondary/email/confirmer"
-	ymq_adapter "github.com/bratushkadan/floral/internal/auth/adapters/secondary/ymq"
 	"github.com/bratushkadan/floral/internal/auth/service"
 	"github.com/bratushkadan/floral/pkg/cfg"
 	"github.com/joho/godotenv"
@@ -89,28 +87,29 @@ func main() {
 		logger.Fatal("failed to setup email confirmations sender", zap.Error(err))
 	}
 
-	accountCreatedSqsEndpoint := os.Getenv(EnvKeySqsQueueUrlAccountCreations)
-	accountCreatedSqsClient, err := ymq.New(ctx, accessKeyId, secretAccessKey, accountCreatedSqsEndpoint, logger)
+	accountCreationSqsEndpoint := sqsQueueUrlAccountCreations
+	accountCreationSqsClient, err := ymq.New(ctx, accessKeyId, secretAccessKey, accountCreationSqsEndpoint, logger)
 	if err != nil {
 		logger.Fatal("failed to build new ymq", zap.Error(err))
 	}
 
-	emailConfirmationSqsEndpoint := os.Getenv(EnvKeySqsQueueUrlEmailConfirmations)
-	emailConfirmationSqsClient, err := ymq.New(ctx, accessKeyId, secretAccessKey, emailConfirmationSqsEndpoint, logger)
-	if err != nil {
-		logger.Fatal("failed to setup ymq sqs client for publishing email confirmation messages", zap.Error(err))
-	}
+	// emailConfirmationSqsEndpoint := sqsQueueUrlEmailConfirmations
+	// emailConfirmationSqsClient, err := ymq.New(ctx, accessKeyId, secretAccessKey, emailConfirmationSqsEndpoint, logger)
+	// if err != nil {
+	// 	logger.Fatal("failed to setup ymq sqs client for publishing email confirmation messages", zap.Error(err))
+	// }
 
-	emailConfirmationNotifications := &ymq_adapter.EmailConfirmation{
-		Sqs:         emailConfirmationSqsClient,
-		SqsQueueUrl: emailConfirmationSqsEndpoint,
-	}
+	// emailConfirmationNotifications := &ymq_adapter.EmailConfirmation{
+	// 	Sqs:         emailConfirmationSqsClient,
+	// 	SqsQueueUrl: emailConfirmationSqsEndpoint,
+	// }
 
 	svc, err := service.NewEmailConfirmationBuilder().
 		Logger(logger).
 		Sender(sender).
 		Tokens(tokens).
-		Notifications(emailConfirmationNotifications).
+		// Not required in this example
+		// Notifications(emailConfirmationNotifications).
 		Build()
 	if err != nil {
 		logger.Fatal("failed to build new email confirmation service", zap.Error(err))
@@ -119,8 +118,8 @@ func main() {
 	daemon, err := email_confirmation_daemon_adapter.NewBuilder().
 		Service(svc).
 		Logger(logger).
-		SqsClient(accountCreatedSqsClient).
-		SqsQueueUrl(accountCreatedSqsEndpoint).
+		SqsClient(accountCreationSqsClient).
+		SqsQueueUrl(accountCreationSqsEndpoint).
 		Build()
 	if err != nil {
 		logger.Fatal("failed to build account confirmation sqs daemon adapter", zap.Error(err))
