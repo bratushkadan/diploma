@@ -10,38 +10,21 @@ import (
 	ymq_adapter "github.com/bratushkadan/floral/internal/auth/adapters/secondary/ymq"
 	"github.com/bratushkadan/floral/internal/auth/core/domain"
 	"github.com/bratushkadan/floral/internal/auth/service"
+	"github.com/bratushkadan/floral/internal/auth/setup"
 	"github.com/bratushkadan/floral/pkg/auth"
 	"github.com/bratushkadan/floral/pkg/cfg"
+	"github.com/bratushkadan/floral/pkg/logging"
 	"github.com/bratushkadan/floral/pkg/resource/idhash"
 	ydbpkg "github.com/bratushkadan/floral/pkg/ydb"
 	"github.com/bratushkadan/floral/pkg/ymq"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 )
 
-var (
-	ydbFullEndpoint string
-	authMethod      = cfg.EnvDefault("YDB_AUTH_METHOD", "metadata")
-
-	sqsQueueUrl        string
-	sqsAccessKeyId     string
-	sqsSecretAccessKey string
-
-	targetEmail string
-)
-
 const (
-	EnvKeyAccountIdHashSalt = "APP_ID_ACCOUNT_HASH_SALT"
-	EnvKeyPasswordHashSalt  = "APP_PASSWORD_HASH_SALT"
-
-	EnvKeySqsQueueUrl        = "SQS_QUEUE_URL"
-	EnvKeySqsAccessKeyId     = "SQS_ACCESS_KEY_ID"
-	EnvKeySqsSecretAccessKey = "SQS_SECRET_ACCESS_KEY"
-
 	// Email address to send confirmation to
 	EnvKeyTargetEmail = "TARGET_EMAIL"
 )
@@ -52,28 +35,26 @@ func main() {
 		log.Fatal("Error loading .env files")
 	}
 
-	ydbFullEndpoint = cfg.MustEnv("YDB_ENDPOINT")
+	ydbFullEndpoint := cfg.MustEnv(setup.EnvKeyYdbEndpoint)
 
-	sqsQueueUrl = cfg.MustEnv(EnvKeySqsQueueUrl)
-	sqsAccessKeyId = cfg.MustEnv(EnvKeySqsAccessKeyId)
-	sqsSecretAccessKey = cfg.MustEnv(EnvKeySqsSecretAccessKey)
+	authMethod := cfg.EnvDefault(setup.EnvKeyYdbAuthMethod, "metadata")
 
-	targetEmail = cfg.MustEnv(EnvKeyTargetEmail)
+	sqsQueueUrl := cfg.MustEnv(setup.EnvKeySqsQueueUrlAccountCreations)
+	sqsAccessKeyId := cfg.MustEnv(setup.EnvKeyAwsAccessKeyId)
+	sqsSecretAccessKey := cfg.MustEnv(setup.EnvKeyAwsSecretAccessKey)
 
-	// conf := zap.NewProductionConfig()
-	conf := zap.NewDevelopmentConfig()
-	conf.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	targetEmail := cfg.MustEnv(EnvKeyTargetEmail)
 
-	logger, err := conf.Build()
+	logger, err := logging.NewZapConf("dev").Build()
 	if err != nil {
 		log.Fatal("Error setting up zap")
 	}
 
-	accountIdHasher, err := idhash.New(os.Getenv(EnvKeyAccountIdHashSalt), idhash.WithPrefix("ie"))
+	accountIdHasher, err := idhash.New(os.Getenv(setup.EnvKeyAccountIdHashSalt), idhash.WithPrefix("ie"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	passwordHasher, err := auth.NewPasswordHasher(os.Getenv(EnvKeyPasswordHashSalt))
+	passwordHasher, err := auth.NewPasswordHasher(os.Getenv(setup.EnvKeyPasswordHashSalt))
 	if err != nil {
 		logger.Fatal("failed to set up password hasher", zap.Error(err))
 	}
@@ -120,12 +101,12 @@ func main() {
 		logger.Fatal("could not build auth svc", zap.Error(err))
 	}
 
-	if err := runCreateAccount(ctx, authSvc, logger); err != nil {
+	if err := runCreateAccount(ctx, authSvc, logger, targetEmail); err != nil {
 		logger.Fatal("failed to run create account", zap.Error(err))
 	}
 }
 
-func runCreateAccount(ctx context.Context, svc domain.AuthService, logger *zap.Logger) error {
+func runCreateAccount(ctx context.Context, svc domain.AuthService, logger *zap.Logger, targetEmail string) error {
 	logger.Info("create account")
 	name := uuid.New().String()[:24]
 	password := uuid.New().String()[:24]

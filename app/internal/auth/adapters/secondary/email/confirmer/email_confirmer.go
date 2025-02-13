@@ -23,13 +23,9 @@ func (c confirmationEmailBodyCreator) Body(ctx context.Context, token string) (s
 		return "", fmt.Errorf("failed to resolve email confirmation url for email body creator: %v", err)
 	}
 
-	fmt.Printf("confirmationEmailBodyCreator: url=%s, token=%s\n", url.String(), token)
-
 	q := url.Query()
 	q.Add("token", token)
 	url.RawQuery = q.Encode()
-
-	fmt.Printf("confirmationEmailBodyCreator url with added token: url=%s\n", url.String())
 
 	return fmt.Sprintf("Follow the link to confirm the email address: %s", url.String()), nil
 }

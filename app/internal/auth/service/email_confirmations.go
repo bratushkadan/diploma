@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -11,11 +10,6 @@ import (
 	"github.com/bratushkadan/floral/pkg/entity"
 
 	"go.uber.org/zap"
-)
-
-var (
-	ErrInvalidConfirmationToken = errors.New("invalid confirmation token")
-	ErrConfirmationTokenExpired = errors.New("confirmation token expired")
 )
 
 type EmailConfirmationBuilder struct {
@@ -86,11 +80,11 @@ func (c *EmailConfirmation) Confirm(ctx context.Context, token string) error {
 	}
 	if record == nil {
 		c.l.Info("invalid email confirmation token record")
-		return ErrInvalidConfirmationToken
+		return domain.ErrInvalidConfirmationToken
 	}
 	c.l.Info("retrieved email confirmation token record", zap.String("email", record.Email))
 	if time.Now().After(record.ExpiresAt) {
-		return ErrConfirmationTokenExpired
+		return domain.ErrConfirmationTokenExpired
 	}
 	c.l.Info("validated email confirmation token record", zap.String("email", record.Email))
 

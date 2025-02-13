@@ -13,7 +13,7 @@ import (
 )
 
 type EmailConfirmations struct {
-	svc domain.AccountEmailConfirmation
+	svc domain.AuthService
 
 	rcvProc *rcvproc.RcvProcessor[api.AccountConfirmationMessage]
 
@@ -35,7 +35,7 @@ func NewBuilder() *EmailConfirmationBuilder {
 	return b
 }
 
-func (b *EmailConfirmationBuilder) Service(svc domain.AccountEmailConfirmation) *EmailConfirmationBuilder {
+func (b *EmailConfirmationBuilder) Service(svc domain.AuthService) *EmailConfirmationBuilder {
 	b.ec.svc = svc
 	return b
 }
@@ -68,7 +68,7 @@ func (b *EmailConfirmationBuilder) Build() (*EmailConfirmations, error) {
 	return &b.ec, nil
 }
 
-func (a *EmailConfirmations) ReceiveProcessAccountCreationMessages(ctx context.Context) error {
+func (a *EmailConfirmations) ReceiveProcessEmailConfirmationMessages(ctx context.Context) error {
 	proc := func(ctx context.Context, messages []api.AccountConfirmationMessage) error {
 		a.l.Info("processing account confirmation messages", zap.Int("count", len(messages)))
 		emails := make([]string, 0, len(messages))
@@ -76,10 +76,11 @@ func (a *EmailConfirmations) ReceiveProcessAccountCreationMessages(ctx context.C
 			emails = append(emails, msg.Email)
 		}
 
-		for _, email := range emails {
-			if err := a.svc.Send(ctx, email); err != nil {
-				return err
-			}
+		_, err := a.svc.ActivateAccounts(ctx, domain.ActivateAccountsReq{
+			Emails: emails,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to activate accounts by email for processing email confirmation messages: %v", err)
 		}
 
 		a.l.Info("processed account confirmation messages", zap.Int("count", len(messages)))

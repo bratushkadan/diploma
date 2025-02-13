@@ -13,7 +13,7 @@ import (
 )
 
 type AccountCreation struct {
-	svc     domain.EmailConfirmer
+	svc     domain.AccountEmailConfirmation
 	rcvProc *rcvproc.RcvProcessor[api.AccountCreationMessage]
 
 	sqsQueueUrl string
@@ -35,7 +35,7 @@ func NewBuilder() *AccountCreationBuilder {
 	return b
 }
 
-func (b *AccountCreationBuilder) EmailConfirmationService(svc domain.EmailConfirmer) *AccountCreationBuilder {
+func (b *AccountCreationBuilder) Service(svc domain.AccountEmailConfirmation) *AccountCreationBuilder {
 	b.ac.svc = svc
 	return b
 }

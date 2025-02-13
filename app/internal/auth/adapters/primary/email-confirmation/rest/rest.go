@@ -1,11 +1,13 @@
-package rest
+package email_confirmation_rest_adapter
 
 import (
 	"encoding/json"
 	"errors"
-	"fns/reg/internal/service"
 	"net/http"
 
+	email_confirmer "github.com/bratushkadan/floral/internal/auth/adapters/secondary/email/confirmer"
+	"github.com/bratushkadan/floral/internal/auth/core/domain"
+	"github.com/bratushkadan/floral/internal/auth/service"
 	"go.uber.org/zap"
 )
 
@@ -24,14 +26,14 @@ type HandlerResponseFailure struct {
 }
 
 type Adapter struct {
-	l              *zap.Logger
-	emailConfirmer service.EmailConfirmer
+	l   *zap.Logger
+	svc *service.EmailConfirmation
 }
 
-func New(s service.EmailConfirmer, l *zap.Logger) *Adapter {
+func New(svc *service.EmailConfirmation, l *zap.Logger) *Adapter {
 	return &Adapter{
-		l:              l,
-		emailConfirmer: s,
+		l:   l,
+		svc: svc,
 	}
 }
 
@@ -49,9 +51,9 @@ func (s *Adapter) HandleConfirmEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	if err := s.emailConfirmer.Confirm(ctx, b.Token); err != nil {
+	if err := s.svc.Confirm(ctx, b.Token); err != nil {
 		switch {
-		case errors.Is(err, service.ErrInvalidConfirmationToken) || errors.Is(err, service.ErrConfirmationTokenExpired):
+		case errors.Is(err, domain.ErrInvalidConfirmationToken) || errors.Is(err, domain.ErrConfirmationTokenExpired):
 			w.WriteHeader(http.StatusBadRequest)
 			errs = append(errs, err.Error())
 		default:
@@ -85,10 +87,10 @@ func (s *Adapter) HandleSendConfirmation(w http.ResponseWriter, r *http.Request)
 
 	ctx := r.Context()
 	if r.Host != "" {
-		ctx = service.ContextWithEmailConfirmationHost(ctx, r.Host)
+		ctx = email_confirmer.ContextWithEmailConfirmationHost(ctx, r.Host)
 	}
 
-	if err := s.emailConfirmer.Send(ctx, b.Email); err != nil {
+	if err := s.svc.Send(ctx, b.Email); err != nil {
 		s.l.Error("failed to send confirmation email", zap.Error(err), zap.String("email", b.Email))
 		w.WriteHeader(http.StatusInternalServerError)
 		errs = append(errs, "failed to send confirmation email")

@@ -4,45 +4,29 @@ import (
 	"context"
 	"log"
 
-	ydb_dynamodb_adapter "github.com/bratushkadan/floral/internal/auth/adapters/secondary/dynamodb"
-	email_confirmer "github.com/bratushkadan/floral/internal/auth/adapters/secondary/email/confirmer"
+	email_confirmation_daemon_adapter "github.com/bratushkadan/floral/internal/auth/adapters/primary/email-confirmation/daemon"
+	ydb_adapter "github.com/bratushkadan/floral/internal/auth/adapters/secondary/ydb"
+	"github.com/bratushkadan/floral/internal/auth/core/domain"
 	"github.com/bratushkadan/floral/internal/auth/service"
+	"github.com/bratushkadan/floral/internal/auth/setup"
 	"github.com/bratushkadan/floral/pkg/cfg"
+	"github.com/bratushkadan/floral/pkg/logging"
+	ydbpkg "github.com/bratushkadan/floral/pkg/ydb"
 	"github.com/joho/godotenv"
+	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
-	email_confirmation_daemon_adapter "github.com/bratushkadan/floral/internal/auth/adapters/primary/email-confirmations/daemon"
 	"github.com/bratushkadan/floral/pkg/ymq"
 )
 
-var (
-	ydbDocApiEndpoint string
+type DummyAccountCreationNotificationProvider struct {
+}
 
-	accessKeyId     string
-	secretAccessKey string
+func (p DummyAccountCreationNotificationProvider) Send(_ context.Context, _ domain.SendAccountCreationNotificationDTOInput) (domain.SendAccountCreationNotificationDTOOutput, error) {
+	return domain.SendAccountCreationNotificationDTOOutput{}, nil
+}
 
-	sqsQueueUrlEmailConfirmations string
-	sqsQueueUrlAccountCreations   string
-
-	senderEmail                  string
-	senderPassword               string
-	emailConfirmationApiEndpoint string
-)
-
-const (
-	EnvKeyYdbDocApiEndpoint = "YDB_DOC_API_ENDPOINT"
-
-	EnvKeyAwsAccessKeyId     = "AWS_ACCESS_KEY_ID"
-	EnvKeyAwsSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
-
-	EnvKeySqsQueueUrlEmailConfirmations = "SQS_QUEUE_URL_EMAIL_CONFIRMATIONS"
-	EnvKeySqsQueueUrlAccountCreations   = "SQS_QUEUE_URL_ACCOUNT_CREATIONS"
-
-	EnvKeySenderEmail    = "SENDER_EMAIL"
-	EnvKeySenderPassword = "SENDER_PASSWORD"
-	// EnvKeyEmailConfirmationApiEndpoint = "EMAIL_CONFIRMATION_API_ENDPOINT"
-)
+var _ domain.AccountCreationNotifications = (*DummyAccountCreationNotificationProvider)(nil)
 
 func main() {
 	err := godotenv.Load()
@@ -50,82 +34,61 @@ func main() {
 		log.Fatal("Error loading .env files")
 	}
 
-	ydbDocApiEndpoint = cfg.MustEnv(EnvKeyYdbDocApiEndpoint)
+	ydbFullEndpoint := cfg.MustEnv(setup.EnvKeyYdbEndpoint)
+	authMethod := cfg.EnvDefault(setup.EnvKeyYdbAuthMethod, "metadata")
 
-	accessKeyId = cfg.MustEnv(EnvKeyAwsAccessKeyId)
-	secretAccessKey = cfg.MustEnv(EnvKeyAwsSecretAccessKey)
+	sqsQueueUrl := cfg.MustEnv(setup.EnvKeySqsQueueUrlEmailConfirmations)
+	accessKeyId := cfg.MustEnv(setup.EnvKeyAwsAccessKeyId)
+	secretAccessKey := cfg.MustEnv(setup.EnvKeyAwsSecretAccessKey)
 
-	sqsQueueUrlEmailConfirmations = cfg.MustEnv(EnvKeySqsQueueUrlEmailConfirmations)
-	sqsQueueUrlAccountCreations = cfg.MustEnv(EnvKeySqsQueueUrlAccountCreations)
-
-	senderEmail = cfg.MustEnv(EnvKeySenderEmail)
-	senderPassword = cfg.MustEnv(EnvKeySenderPassword)
-	// emailConfirmationApiEndpoint = cfg.MustEnv(EnvKeyEmailConfirmationApiEndpoint)
-
-	conf := zap.NewDevelopmentConfig()
-	conf.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-
-	logger, err := conf.Build()
+	logger, err := logging.NewZapConf("dev").Build()
 	if err != nil {
 		log.Fatal("Error setting up zap")
 	}
 
 	ctx := context.Background()
 
-	tokens, err := ydb_dynamodb_adapter.NewEmailConfirmationTokens(ctx, accessKeyId, secretAccessKey, ydbDocApiEndpoint, logger)
+	logger.Debug("setup ydb")
+	db, err := ydb.Open(ctx, ydbFullEndpoint, ydbpkg.GetYdbAuthOpts(authMethod)...)
 	if err != nil {
-		logger.Fatal("failed to setup email confirmation tokens ydb dynamodb", zap.Error(err))
+		log.Fatal(err)
 	}
+	logger.Debug("set up ydb")
+	defer func() {
+		if err := db.Close(ctx); err != nil {
+			log.Print()
+		}
+	}()
 
-	sender, err := email_confirmer.NewBuilder().
-		SenderEmail(senderEmail).
-		SenderPassword(senderPassword).
-		StaticConfirmationUrl("http://localhost:8080/confirm").
-		/*StaticConfirmationUrl(emailConfirmationApiEndpoint).*/
-		Build()
-	if err != nil {
-		logger.Fatal("failed to setup email confirmations sender", zap.Error(err))
-	}
+	accountProvider := ydb_adapter.NewAccount(ydb_adapter.AccountConf{
+		DbDriver: db,
+		Logger:   logger,
+	})
 
-	accountCreationSqsEndpoint := sqsQueueUrlAccountCreations
-	accountCreationSqsClient, err := ymq.New(ctx, accessKeyId, secretAccessKey, accountCreationSqsEndpoint, logger)
+	sqsClient, err := ymq.New(ctx, accessKeyId, secretAccessKey, sqsQueueUrl, logger)
 	if err != nil {
 		logger.Fatal("failed to build new ymq", zap.Error(err))
 	}
 
-	// emailConfirmationSqsEndpoint := sqsQueueUrlEmailConfirmations
-	// emailConfirmationSqsClient, err := ymq.New(ctx, accessKeyId, secretAccessKey, emailConfirmationSqsEndpoint, logger)
-	// if err != nil {
-	// 	logger.Fatal("failed to setup ymq sqs client for publishing email confirmation messages", zap.Error(err))
-	// }
-
-	// emailConfirmationNotifications := &ymq_adapter.EmailConfirmation{
-	// 	Sqs:         emailConfirmationSqsClient,
-	// 	SqsQueueUrl: emailConfirmationSqsEndpoint,
-	// }
-
-	svc, err := service.NewEmailConfirmationBuilder().
+	svc, err := service.NewAuthBuilder().
+		AccountProvider(accountProvider).
 		Logger(logger).
-		Sender(sender).
-		Tokens(tokens).
-		// Not required in this example
-		// Notifications(emailConfirmationNotifications).
 		Build()
 	if err != nil {
-		logger.Fatal("failed to build new email confirmation service", zap.Error(err))
+		logger.Fatal("failed to build new auth", zap.Error(err))
 	}
 
 	daemon, err := email_confirmation_daemon_adapter.NewBuilder().
 		Service(svc).
 		Logger(logger).
-		SqsClient(accountCreationSqsClient).
-		SqsQueueUrl(accountCreationSqsEndpoint).
+		SqsClient(sqsClient).
+		SqsQueueUrl(sqsQueueUrl).
 		Build()
 	if err != nil {
-		logger.Fatal("failed to build account confirmation sqs daemon adapter", zap.Error(err))
+		logger.Fatal("failed to build account creation sqs daemon adapter", zap.Error(err))
 	}
 
-	if err := daemon.ReceiveProcessAccountCreationMessages(ctx); err != nil {
-		logger.Fatal("error running process account confirmation daemon", zap.Error(err))
+	if err := daemon.ReceiveProcessEmailConfirmationMessages(ctx); err != nil {
+		logger.Fatal("error running process account creation daemon", zap.Error(err))
 	}
 }

@@ -2,7 +2,13 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"time"
+)
+
+var (
+	ErrInvalidConfirmationToken = errors.New("invalid confirmation token")
+	ErrConfirmationTokenExpired = errors.New("confirmation token expired")
 )
 
 type EmailConfirmationRecord struct {
