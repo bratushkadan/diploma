@@ -89,10 +89,11 @@ export SQS_QUEUE_URL_ACCOUNT_CREATIONS="$(echo "${TF_OUTPUT}" | jq -cMr .ymq.val
 source .env
 ```
 
-### Run integration tests
+### Run email-confirmation service locally
 
 ```sh
-go run cmd/auth/integration_tests/main.go
+export EMAIL_CONFIRMATION_API_ENDPOINT=/api/v1/auth:confirm-email
+go run cmd/auth/email-confirmation/main.go
 ```
 
 ### Account confirmation test pipeline example
@@ -107,22 +108,31 @@ go run cmd/auth/email-confirmation-consumer/main.go
 go run cmd/auth/account-creation-consumer/main.go
 ```
 
-3\. Run account creation consumer in window 3:
+3\. Run account creation producer in window 3:
 ```sh
 TARGET_EMAIL= go run cmd/auth/account-creation-producer/main.go
 ```
 
-4\. Run confirm email function in window 3
+4\. Run email confirmation service in window 3:
 ```sh
-CONFIRMATION_TOKEN= go run cmd/auth/confirm-email/main.go
+export EMAIL_CONFIRMATION_API_ENDPOINT=/api/v1/auth:confirm-email
+go run cmd/auth/email-confirmation/main.go
 ```
 
-5\. Run YQL query to cleanup created account
+5\. Go check email, click the link & confirm the account.
+
+6\. Run YQL query to cleanup created account
 
 ```sql
 DELETE FROM accounts
 WHERE email = "<TARGET_EMAIL>"
 RETURNING *;
+```
+
+### Run integration tests
+
+```sh
+go run cmd/auth/integration_tests/main.go
 ```
 
 ### Service Pieces

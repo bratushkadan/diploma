@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	account_creation_daemon_adapter "github.com/bratushkadan/floral/internal/auth/adapters/primary/account-creation/daemon"
@@ -33,6 +34,8 @@ func main() {
 	senderEmail := cfg.MustEnv(setup.EnvKeySenderEmail)
 	senderPassword := cfg.MustEnv(setup.EnvKeySenderPassword)
 
+	emailConfirmationApiEndpoint := cfg.EnvDefault(setup.EnvKeyEmailConfirmationApiEndpoint, "/api/v1/auth:confirm-email")
+
 	logger, err := logging.NewZapConf("dev").Build()
 	if err != nil {
 		log.Fatal("Error setting up zap")
@@ -48,7 +51,7 @@ func main() {
 	sender, err := email_confirmer.NewBuilder().
 		SenderEmail(senderEmail).
 		SenderPassword(senderPassword).
-		StaticConfirmationUrl("http://localhost:8080/confirm").
+		StaticConfirmationUrl(fmt.Sprintf("http://localhost:8080%s", emailConfirmationApiEndpoint)).
 		Build()
 	if err != nil {
 		logger.Fatal("failed to setup email confirmations sender", zap.Error(err))

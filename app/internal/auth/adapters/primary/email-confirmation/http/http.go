@@ -1,4 +1,4 @@
-package email_confirmation_rest_adapter
+package email_confirmation_http_adapter
 
 import (
 	"encoding/json"
@@ -7,7 +7,6 @@ import (
 
 	email_confirmer "github.com/bratushkadan/floral/internal/auth/adapters/secondary/email/confirmer"
 	"github.com/bratushkadan/floral/internal/auth/core/domain"
-	"github.com/bratushkadan/floral/internal/auth/service"
 	"go.uber.org/zap"
 )
 
@@ -27,10 +26,10 @@ type HandlerResponseFailure struct {
 
 type Adapter struct {
 	l   *zap.Logger
-	svc *service.EmailConfirmation
+	svc domain.AccountEmailConfirmation
 }
 
-func New(svc *service.EmailConfirmation, l *zap.Logger) *Adapter {
+func New(svc domain.AccountEmailConfirmation, l *zap.Logger) *Adapter {
 	return &Adapter{
 		l:   l,
 		svc: svc,
@@ -78,7 +77,7 @@ func (s *Adapter) HandleSendConfirmation(w http.ResponseWriter, r *http.Request)
 	var b HandlerSendConfirmation
 	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		errs = append(errs, "bad request body, 'email' field required.")
+		errs = append(errs, "bad request body, 'email' field is required.")
 		if err := json.NewEncoder(w).Encode(&HandlerResponseFailure{Errors: errs}); err != nil {
 			s.l.Error("failed to serialize error response", zap.Error(err))
 		}

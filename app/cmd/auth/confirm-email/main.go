@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	email_confirmation_rest_adapter "github.com/bratushkadan/floral/internal/auth/adapters/primary/email-confirmation/rest"
+	email_confirmation_http_adapter "github.com/bratushkadan/floral/internal/auth/adapters/primary/email-confirmation/http"
 	ydb_dynamodb_adapter "github.com/bratushkadan/floral/internal/auth/adapters/secondary/dynamodb"
 	ymq_adapter "github.com/bratushkadan/floral/internal/auth/adapters/secondary/ymq"
 	"github.com/bratushkadan/floral/internal/auth/service"
@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	emailConfirmationSvc *email_confirmation_rest_adapter.Adapter
+	emailConfirmationSvc *email_confirmation_http_adapter.Adapter
 	token                = os.Getenv("CONFIRMATION_TOKEN")
 )
 
@@ -79,5 +79,5 @@ func init() {
 		logger.Fatal("failed to setup auth service", zap.Error(err))
 	}
 
-	emailConfirmationSvc = email_confirmation_rest_adapter.New(svc, logger)
+	emailConfirmationSvc = email_confirmation_http_adapter.New(svc, logger)
 }
