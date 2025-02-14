@@ -89,6 +89,16 @@ resource "yandex_serverless_container" "auth_email_confirmation" {
   }
 }
 
+resource "yandex_serverless_container_iam_binding" "auth_email_confirmation" {
+  count        = local.versions.auth.email_confirmation != "" ? 1 : 0
+  container_id = yandex_serverless_container.auth_email_confirmation[0].id
+  role         = "serverless.containers.invoker"
+
+  members = [
+    "serviceAccount:${yandex_iam_service_account.auth_caller.id}",
+  ]
+}
+
 resource "yandex_function_trigger" "auth_account_creation" {
   count       = local.versions.auth.email_confirmation != "" ? 1 : 0
   name        = "auth-account-creation"

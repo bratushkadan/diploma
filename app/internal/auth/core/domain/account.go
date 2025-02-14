@@ -12,6 +12,7 @@ var (
 	ErrUserNotFound        = errors.New("user not found")
 	ErrEmailIsInUse        = errors.New("email is in use")
 	ErrAccountNotActivated = errors.New("account not activated")
+	ErrPermissionDenied    = errors.New("permission denied")
 )
 
 var (
