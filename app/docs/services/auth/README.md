@@ -172,17 +172,39 @@ CONFIRMATION_TOKEN= go run cmd/auth/confirm-email/main.go
 4\. For email-confirmation:
 
 ```sh
-docker build -f build/auth/email_confirmation.Dockerfile -t email-confirmation:0.0.1-rc .
+TAG=0.0.1-rc
+docker build -f build/auth/email_confirmation.Dockerfile -t "email-confirmation:${TAG}" .
+```
+
+### Push to Yandex Cloud Container Registry
+
+Authenticate:
+
+```sh
+yc iam create-token | docker login cr.yandex -u iam --password-stdin
+```
+
+```sh
+TARGET="cr.yandex/$(../terraform/tf output -json -no-color | jq -cMr .container_registry.value.repository.auth.email_confirmation.name):${TAG}"
+docker tag "email-confirmation:${TAG}" "${TARGET}"
+docker push "${TARGET}"
+```
+
+List of Auth service repositories
+
+```sh
+./tf output -json -no-color | jq -cMr .container_registry.value.repository.auth.account
+./tf output -json -no-color | jq -cMr .container_registry.value.repository.auth.email_confirmation.name
 ```
 
 ## Run docker image locally
 
-**NOTE: ** need to provide all env variables
-```sh
-docker run --rm -p 8080:8080 email-confirmation:0.0.1-rc
-```
+**NOTE: ** need to provide all env variables (use .env file for this purpose)
 
-### 
+```sh
+docker run --rm -p 8080:8080 "email-confirmation:${TAG}"
+
+```
 
 ## Bootstrap YDB
 

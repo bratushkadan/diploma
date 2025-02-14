@@ -101,3 +101,15 @@ resource "yandex_iam_service_account_static_access_key" "ydb_ymq_manager_sa" {
     entry_for_secret_key = "secret_access_key"
   }
 }
+
+resource "yandex_container_registry" "default" {
+  name      = "e-com-platform"
+  folder_id = local.folder_id
+}
+
+resource "yandex_container_repository" "auth_account_repository" {
+  name = "${yandex_container_registry.default.id}/auth/account"
+}
+resource "yandex_container_repository" "auth_email_confirmation_repository" {
+  name = "${yandex_container_registry.default.id}/auth/email-confirmation"
+}

@@ -33,3 +33,19 @@ output "app_sa" {
     static_key_lockbox_secret_id = yandex_lockbox_secret.app_sa_static_key.id
   }
 }
+
+output "container_registry" {
+  value = {
+    id = yandex_container_registry.default.id
+    repository = {
+      auth = {
+        account = {
+          name = yandex_container_repository.auth_account_repository.name
+        }
+        email_confirmation = {
+          name = yandex_container_repository.auth_email_confirmation_repository.name
+        }
+      }
+    }
+  }
+}
