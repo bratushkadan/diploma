@@ -172,9 +172,16 @@ CONFIRMATION_TOKEN= go run cmd/auth/confirm-email/main.go
 4\. For email-confirmation:
 
 ```sh
-TAG=0.0.1-rc
+```
+
+### Build for Yandex Cloud Container Registry
+
+```sh
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/auth/email-confirmation/main.go
+TAG=0.0.1-rc2
 docker build -f build/auth/email_confirmation.Dockerfile -t "email-confirmation:${TAG}" .
 ```
+
 
 ### Push to Yandex Cloud Container Registry
 

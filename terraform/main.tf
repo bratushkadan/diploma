@@ -1,16 +1,22 @@
 resource "yandex_ydb_database_serverless" "this" {
   name        = "${local.common_name}-db"
-  description = "serverless ydb for serverless type standard practicum course tests"
+  description = "auth service serverless ydb"
 }
 
 resource "yandex_iam_service_account" "app" {
   name        = "${local.common_name}-app"
-  description = "serverless ymq type standard practicum course tests application sa"
+  description = "application sa"
 }
 
 resource "yandex_iam_service_account" "auth_caller" {
-  name        = "${local.common_name}-auth-functions-caller"
-  description = "serverless ymq type standard practicum course tests auth functions caller sa"
+  name        = "${local.common_name}-auth-caller"
+  description = "auth service caller sa"
+}
+resource "yandex_resourcemanager_folder_iam_member" "auth_caller_container_invoker" {
+  folder_id = local.folder_id
+
+  role   = "serverless-containers.containerInvoker"
+  member = "serviceAccount:${yandex_iam_service_account.auth_caller.id}"
 }
 
 resource "yandex_resourcemanager_folder_iam_member" "app_lockbox_payload_viewer" {
@@ -43,6 +49,14 @@ resource "yandex_resourcemanager_folder_iam_member" "app_serverless_mdb_user" {
   role   = "serverless.mdbProxies.user"
   member = "serviceAccount:${yandex_iam_service_account.app.id}"
 }
+// For Serverless Containers
+resource "yandex_resourcemanager_folder_iam_member" "app_images_puller" {
+  folder_id = local.folder_id
+
+  role   = "container-registry.images.puller"
+  member = "serviceAccount:${yandex_iam_service_account.app.id}"
+}
+
 
 resource "yandex_lockbox_secret" "app_sa_static_key" {
   name        = "${local.common_name}-app-sa-static-key-secret"

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -22,6 +23,10 @@ import (
 	"github.com/bratushkadan/floral/pkg/ymq"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
+)
+
+var (
+	Port = cfg.EnvDefault("PORT", "8080")
 )
 
 func main() {
@@ -95,6 +100,14 @@ func main() {
 	r := chi.NewRouter()
 	// r.Use(middleware.Logger)
 
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			logger.Info("incoming request", zap.String("method", r.Method), zap.String("path", r.URL.Path))
+
+			next.ServeHTTP(w, r)
+		})
+	})
+
 	r.Get("/ready", handleReadiness(ctx))
 	r.Get("/health", handleReadiness(ctx))
 
@@ -117,7 +130,7 @@ func main() {
 	}
 
 	server := &http.Server{
-		Addr:         ":8080",
+		Addr:         fmt.Sprintf(":%s", Port),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
