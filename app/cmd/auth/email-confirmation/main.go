@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -30,6 +31,11 @@ func main() {
 	logger, err := logging.NewZapConf("prod").Build()
 	if err != nil {
 		log.Fatalf("Error setting up zap: %v", err)
+	}
+
+	ymqTriggerEndpointsEnabled, err := strconv.ParseBool(cfg.EnvDefault(setup.EnvKeyYmqTriggerHttpEndpointsEnabled, "0"))
+	if err != nil {
+		logger.Fatal("failed to parse ymq trigger http endpoints enabled from env", zap.String("env_key", setup.EnvKeyYmqTriggerHttpEndpointsEnabled), zap.Error(err))
 	}
 
 	ydbDocApiEndpoint := cfg.MustEnv(setup.EnvKeyYdbDocApiEndpoint)
@@ -104,6 +110,11 @@ func main() {
 	})
 	v1ApiRouter.Post("/auth:confirm-email", httpAdapter.HandleConfirmEmail)
 	v1ApiRouter.Post("/auth:send-confirmation-email", httpAdapter.HandleSendConfirmation)
+
+	if ymqTriggerEndpointsEnabled {
+		logger.Debug("Yandex Cloud YMQ Trigger endpoints enabled")
+		v1ApiRouter.Post("/auth:send-confirmation-email-trigger", httpAdapter.HandleSendConfirmationYmqTrigger)
+	}
 
 	server := &http.Server{
 		Addr:         ":8080",
