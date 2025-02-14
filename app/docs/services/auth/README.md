@@ -12,23 +12,21 @@
   - [x] Long Polling
     - [x] Account Creation
     - [x] Email Confirmation
-  - [ ] Cloud Function (HTTP handler)
+  - [ ] Serverless Containers
     - [ ] Account Creation
-    - [ ] Email Confirmation
+    - [x] Email Confirmation
 - [x] Test Notification Secondary Adapter
   - [x] Account Creation
   - [x] Email Confirmation
-- [ ] Test Notification Primary Adapter
+- [x] Test Notification Primary Adapter
   - [x] Long Polling
     - [x] Account Creation
     - [x] Email Confirmation
-  - [ ] Cloud Function (HTTP handler)
-    - [ ] Account Creation
-    - [ ] Email Confirmation
 - [x] Email Confirmation Service refactoring
 - [ ] Wire service and HTTP primary adapter
-- [ ] Create Cloud Functions Code Boilerplate
-- [ ] Create Cloud Functions Terraform Configuration Code
+  - [ ] Accounts/tokens
+  - [ ] Email Confirmation
+- [ ] Create Serverless Containers Terraform Configuration Code
 - [x] ⏳ Write service/infrastructure Integration Tests
 
 ### Tests
@@ -64,7 +62,11 @@
       - [x] `DecodeRefresh`
       - [x] `EncodeAccess`
       - [x] `DecodeAccess`
- - [ ] Application-level e2e-tests
+  - [ ] Primary Adapters
+    - [ ] Serverless Containers
+      - [ ] Account Creation
+      - [x] Email Confirmation
+  - [ ] Application-level e2e-tests
 
 ## Run
 
@@ -160,6 +162,27 @@ go run cmd/auth/email-confirmation-consumer/main.go
 ```sh
 CONFIRMATION_TOKEN= go run cmd/auth/confirm-email/main.go
 ```
+
+## Build docker image locally
+
+1\. `cd app`
+2\. `go mod tidy`
+3\. `CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o bin cmd/auth/email-confirmation/main.go`
+
+4\. For email-confirmation:
+
+```sh
+docker build -f build/auth/email_confirmation.Dockerfile -t email-confirmation:0.0.1-rc .
+```
+
+## Run docker image locally
+
+**NOTE: ** need to provide all env variables
+```sh
+docker run --rm -p 8080:8080 email-confirmation:0.0.1-rc
+```
+
+### 
 
 ## Bootstrap YDB
 
