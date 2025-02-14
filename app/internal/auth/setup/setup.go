@@ -21,6 +21,8 @@ const (
 
 	EnvKeyPasswordHashSalt = "APP_PASSWORD_HASH_SALT"
 
+	EnvKeyAuthTokenPrivateKey     = "APP_AUTH_TOKEN_PRIVATE_KEY"
+	EnvKeyAuthTokenPublicKey      = "APP_AUTH_TOKEN_PUBLIC_KEY"
 	EnvKeyAuthTokenPrivateKeyPath = "APP_AUTH_TOKEN_PRIVATE_KEY_PATH"
 	EnvKeyAuthTokenPublicKeyPath  = "APP_AUTH_TOKEN_PUBLIC_KEY_PATH"
 )

@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	http_adapter "github.com/bratushkadan/floral/internal/auth/adapters/primary/auth/http"
 	ydb_adapter "github.com/bratushkadan/floral/internal/auth/adapters/secondary/ydb"
@@ -35,32 +37,46 @@ func main() {
 
 	authMethod := cfg.EnvDefault(setup.EnvKeyYdbAuthMethod, "metadata")
 
-	ydbFullEndpoint := cfg.MustEnv(setup.EnvKeyYdbEndpoint)
-
-	sqsQueueUrl := cfg.MustEnv(setup.EnvKeySqsQueueUrlAccountCreations)
-	sqsAccessKeyId := cfg.MustEnv(setup.EnvKeyAwsAccessKeyId)
-	sqsSecretAccessKey := cfg.MustEnv(setup.EnvKeyAwsSecretAccessKey)
+	env := cfg.AssertEnv(
+		setup.EnvKeyYdbEndpoint,
+		setup.EnvKeySqsQueueUrlAccountCreations,
+		setup.EnvKeyAwsAccessKeyId,
+		setup.EnvKeyAwsSecretAccessKey,
+		setup.EnvKeyAccountIdHashSalt,
+		setup.EnvKeyTokenIdHashSalt,
+		setup.EnvKeyPasswordHashSalt,
+		setup.EnvKeyAuthTokenPublicKey,
+		setup.EnvKeyAuthTokenPrivateKey,
+	)
 
 	logger, err := logging.NewZapConf("prod").Build()
 	if err != nil {
 		log.Fatalf("Error setting up zap: %v", err)
 	}
 
-	accountIdHasher, err := idhash.New(os.Getenv(setup.EnvKeyAccountIdHashSalt), idhash.WithPrefix("ie"))
+	accountIdHasher, err := idhash.New(env[setup.EnvKeyAccountIdHashSalt], idhash.WithPrefix("ie"))
 	if err != nil {
 		logger.Fatal("failed to set up account id hasher")
 	}
-	tokenIdHasher, err := idhash.New(os.Getenv(setup.EnvKeyTokenIdHashSalt), idhash.WithPrefix("rb"))
+	tokenIdHasher, err := idhash.New(env[setup.EnvKeyTokenIdHashSalt])
 	if err != nil {
 		logger.Fatal("failed to set up token id hasher")
 	}
-	passwordHasher, err := auth.NewPasswordHasher(os.Getenv(setup.EnvKeyPasswordHashSalt))
+	passwordHasher, err := auth.NewPasswordHasher((env[setup.EnvKeyPasswordHashSalt]))
 	if err != nil {
 		logger.Fatal("failed to set up password hasher", zap.Error(err))
 	}
 
+	tokenProvider, err := authn.NewTokenProviderBuilder().
+		PublicKey([]byte(env[setup.EnvKeyAuthTokenPublicKey])).
+		PrivateKey([]byte(env[setup.EnvKeyAuthTokenPrivateKey])).
+		Build()
+	if err != nil {
+		logger.Fatal("failed to setup token provider", zap.Error(err))
+	}
+
 	logger.Debug("setup ydb")
-	db, err := ydb.Open(ctx, ydbFullEndpoint, ydbpkg.GetYdbAuthOpts(authMethod)...)
+	db, err := ydb.Open(ctx, env[setup.EnvKeyYdbEndpoint], ydbpkg.GetYdbAuthOpts(authMethod)...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,13 +87,6 @@ func main() {
 		}
 	}()
 
-	tokenProvider, err := authn.NewTokenProviderBuilder().
-		PrivateKeyPath(os.Getenv(setup.EnvKeyAuthTokenPrivateKeyPath)).
-		PublicKeyPath(os.Getenv(setup.EnvKeyAuthTokenPublicKeyPath)).
-		Build()
-	if err != nil {
-		logger.Fatal("failed to setup token provider", zap.Error(err))
-	}
 	accountAdapter := ydb_adapter.NewAccount(ydb_adapter.AccountConf{
 		DbDriver:       db,
 		IdHasher:       accountIdHasher,
@@ -90,13 +99,19 @@ func main() {
 		Logger:   logger,
 	})
 
-	sqsClient, err := ymq.New(ctx, sqsAccessKeyId, sqsSecretAccessKey, sqsQueueUrl, logger)
+	sqsClient, err := ymq.New(
+		ctx,
+		env[setup.EnvKeyAwsAccessKeyId],
+		env[setup.EnvKeyAwsSecretAccessKey],
+		env[setup.EnvKeySqsQueueUrlAccountCreations],
+		logger,
+	)
 	if err != nil {
-		logger.Fatal("failed to setup ymq")
+		logger.Fatal("failed to setup ymq", zap.Error(err))
 	}
 	accountCreationNotificationAdapter := ymq_adapter.AccountCreation{
 		Sqs:         sqsClient,
-		SqsQueueUrl: sqsQueueUrl,
+		SqsQueueUrl: env[setup.EnvKeySqsQueueUrlAccountCreations],
 	}
 
 	svc, err := service.NewAuthBuilder().
@@ -132,9 +147,34 @@ func main() {
 	rUsers.Post("/:registerSeller", http.HandlerFunc(httpAdapter.RegisterSellerHandler))
 	rUsers.Post("/:registerAdmin", http.HandlerFunc(httpAdapter.RegisterAdminHandler))
 	rUsers.Post("/:authenticate", http.HandlerFunc(httpAdapter.AuthenticateHandler))
-	rUsers.Post("/:renewRefreshToken", http.HandlerFunc(httpAdapter.RenewRefreshTokenHandler))
+	rUsers.Post("/:renewRefreshToken", http.HandlerFunc(httpAdapter.ReplaceRefreshTokenHandler))
 	rUsers.Post("/:createAccessToken", http.HandlerFunc(httpAdapter.CreateAccessToken))
 
-	http.ListenAndServe(":8080", r)
+	server := &http.Server{
+		Addr:         fmt.Sprintf(":%s", Port),
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
+		Handler:      r,
+	}
+	server.RegisterOnShutdown(func() {})
 
+	go func() {
+		<-ctx.Done()
+
+		logger.Info("got shutdown signal")
+
+		// TODO: add this to the "if env == EnvProduction { ... }"
+		// <-time.After(5 * time.Second)
+
+		if err := server.Shutdown(context.Background()); err != nil {
+			logger.Error("error while stopping http listener", zap.Error(err))
+		}
+	}()
+
+	if err := server.ListenAndServe(); err != nil {
+		if !errors.Is(http.ErrServerClosed, err) {
+			logger.Fatal("failed to listen and serve", zap.Error(err))
+		}
+	}
 }

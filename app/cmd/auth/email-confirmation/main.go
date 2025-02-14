@@ -20,6 +20,7 @@ import (
 	"github.com/bratushkadan/floral/internal/auth/setup"
 	"github.com/bratushkadan/floral/pkg/cfg"
 	"github.com/bratushkadan/floral/pkg/logging"
+	"github.com/bratushkadan/floral/pkg/xhttp"
 	"github.com/bratushkadan/floral/pkg/ymq"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -108,8 +109,8 @@ func main() {
 		})
 	})
 
-	r.Get("/ready", handleReadiness(ctx))
-	r.Get("/health", handleReadiness(ctx))
+	r.Get("/ready", xhttp.HandleReadiness(ctx))
+	r.Get("/health", xhttp.HandleReadiness(ctx))
 
 	v1ApiRouter := chi.NewRouter()
 
@@ -156,19 +157,6 @@ func main() {
 			logger.Fatal("failed to listen and serve", zap.Error(err))
 		}
 	}
-}
-
-func handleReadiness(ctx context.Context) http.HandlerFunc {
-	f := func(w http.ResponseWriter, r *http.Request) {
-		select {
-		case <-ctx.Done():
-			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte(`{"message": "shutting down"}`))
-		default:
-			w.Write([]byte(`{"message": "ok"}`))
-		}
-	}
-	return http.HandlerFunc(f)
 }
 
 func doCleanup() {}
