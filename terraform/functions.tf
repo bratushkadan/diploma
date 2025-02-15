@@ -35,6 +35,10 @@ data "yandex_lockbox_secret" "app_sa_static_key" {
 data "yandex_lockbox_secret" "email_provider" {
   name = "yandex-mail-provider"
 }
+data "yandex_lockbox_secret" "token_infra" {
+  name = "token-ids-infra"
+}
+
 
 locals {
   env = tomap({ for _, v in [
@@ -47,11 +51,12 @@ locals {
     "SENDER_EMAIL",
     "SENDER_PASSWORD",
     "EMAIL_CONFIRMATION_API_ENDPOINT",
+    "EMAIL_CONFIRMATION_ORIGIN",
     "APP_ID_ACCOUNT_HASH_SALT",
     "APP_ID_TOKEN_HASH_SALT",
     "APP_PASSWORD_HASH_SALT",
-    "APP_AUTH_TOKEN_PRIVATE_KEY_PATH",
-    "APP_AUTH_TOKEN_PUBLIC_KEY_PATH",
+    "APP_AUTH_TOKEN_PRIVATE_KEY",
+    "APP_AUTH_TOKEN_PUBLIC_KEY",
 
     "YMQ_TRIGGER_HTTP_ENDPOINTS_ENABLED",
 

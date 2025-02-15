@@ -15,6 +15,7 @@ const (
 	EnvKeySenderEmail                  = "SENDER_EMAIL"
 	EnvKeySenderPassword               = "SENDER_PASSWORD"
 	EnvKeyEmailConfirmationApiEndpoint = "EMAIL_CONFIRMATION_API_ENDPOINT"
+	EnvKeyEmailConfirmationOrigin      = "EMAIL_CONFIRMATION_ORIGIN"
 
 	EnvKeyAccountIdHashSalt = "APP_ID_ACCOUNT_HASH_SALT"
 	EnvKeyTokenIdHashSalt   = "APP_ID_TOKEN_HASH_SALT"

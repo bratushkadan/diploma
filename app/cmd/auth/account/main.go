@@ -36,7 +36,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer cancel()
 
-	authMethod := cfg.EnvDefault(setup.EnvKeyYdbAuthMethod, "metadata")
+	authMethod := cfg.EnvDefault(setup.EnvKeyYdbAuthMethod, ydbpkg.YdbAuthMethodMetadata)
 
 	env := cfg.AssertEnv(
 		setup.EnvKeyYdbEndpoint,
@@ -150,7 +150,7 @@ func main() {
 	// Expose this endpoint ONLY internally
 	rUsers.Post("/:createAdminAccount", http.HandlerFunc(httpAdapter.RegisterAdminHandler))
 	// Expose this endpoint ONLY internally
-	rUsers.Post("/:activateAccount", http.HandlerFunc(httpAdapter.ActivateAccountHandler))
+	rUsers.Post("/:activateAccounts", http.HandlerFunc(httpAdapter.ActivateAccountsHandler))
 	rUsers.Post("/:authenticate", http.HandlerFunc(httpAdapter.AuthenticateHandler))
 	rUsers.Post("/:replaceRefreshToken", http.HandlerFunc(httpAdapter.ReplaceRefreshTokenHandler))
 	rUsers.Post("/:createAccessToken", http.HandlerFunc(httpAdapter.CreateAccessToken))
@@ -162,6 +162,7 @@ func main() {
 
 	r.Get("/ready", xhttp.HandleReadiness(ctx))
 	r.Get("/health", xhttp.HandleReadiness(ctx))
+	r.NotFound(xhttp.HandleNotFound())
 
 	rApi := chi.NewRouter()
 	rV1 := chi.NewRouter()

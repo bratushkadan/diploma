@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -78,11 +79,19 @@ func main() {
 		senderEmail := cfg.MustEnv(setup.EnvKeySenderEmail)
 		senderPassword := cfg.MustEnv(setup.EnvKeySenderPassword)
 		endpoint := cfg.MustEnv(setup.EnvKeyEmailConfirmationApiEndpoint)
+		origin := os.Getenv(setup.EnvKeyEmailConfirmationOrigin)
 
-		sender, err := email_confirmer.NewBuilder().
+		senderB := email_confirmer.NewBuilder()
+
+		if origin == "" {
+			senderB = senderB.ConfirmationHostCtxResolver(endpoint)
+		} else {
+			senderB = senderB.StaticConfirmationUrl(fmt.Sprintf("%s/%s", origin, strings.TrimPrefix(endpoint, "/")))
+		}
+
+		sender, err := senderB.
 			SenderEmail(senderEmail).
 			SenderPassword(senderPassword).
-			ConfirmationHostCtxResolver(endpoint).
 			Build()
 		if err != nil {
 			logger.Fatal("failed to setup email confirmations sender", zap.Error(err))
@@ -129,6 +138,8 @@ func main() {
 		logger.Debug("Yandex Cloud YMQ Trigger endpoints enabled")
 		v1ApiRouter.Post("/auth:send-confirmation-email-trigger", httpAdapter.HandleSendConfirmationYmqTrigger)
 	}
+
+	r.NotFound(xhttp.HandleNotFound())
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%s", Port),

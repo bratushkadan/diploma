@@ -28,6 +28,8 @@
 
 ### The very initial setup
 
+#### Email provider credentials
+
 Create Lockbox secret to send emails with the following fields:
 - `email` (sender);
 - `password`.
@@ -36,6 +38,34 @@ Paste it's id to `data.yandex_lockbox_secret.email_provider` Terraform resource:
 
 ```terraform
 data "yandex_lockbox_secret" "email_provider" {
+  secret_id = ""
+}
+```
+
+#### JWT public/private keys & id hash salts
+
+Generate JWT signing/verifying keys first:
+
+```sh
+openssl ecparam -genkey -name prime256v1 -noout -out private_key.pem
+```
+
+```sh
+openssl ec -in private_key.pem -pubout -out public_key.pem
+```
+
+Create Lockbox secret `token-ids-infra` with the following fields:
+
+- `auth_token_private.key`;
+- `auth_token_public.key`;
+- `auth_password_hash_salt`;
+- `auth_token_id_hash_salt`;
+- `auth_account_id_hash_salt`.
+
+Paste it's id to `data.yandex_lockbox_secret.token_infra` Terraform resource:
+
+```terraform
+data "yandex_lockbox_secret" "token_infra" {
   secret_id = ""
 }
 ```

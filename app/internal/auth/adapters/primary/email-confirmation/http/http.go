@@ -84,7 +84,12 @@ func (s *Adapter) HandleSendConfirmation(w http.ResponseWriter, r *http.Request)
 	}
 
 	ctx := r.Context()
-	if r.Host != "" {
+
+	host := r.Header.Get("Host")
+	if host == "" {
+		host = r.Host
+	}
+	if host != "" {
 		ctx = email_confirmer.ContextWithEmailConfirmationHost(ctx, r.Host)
 	}
 
@@ -117,7 +122,12 @@ func (s *Adapter) HandleSendConfirmationYmqTrigger(w http.ResponseWriter, r *htt
 	}
 
 	ctx := r.Context()
-	if r.Host != "" {
+
+	host := r.Header.Get("Host")
+	if host == "" {
+		host = r.Host
+	}
+	if host != "" {
 		ctx = email_confirmer.ContextWithEmailConfirmationHost(ctx, r.Host)
 	}
 

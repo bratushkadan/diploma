@@ -11,7 +11,7 @@ paths:
         function_id: "${functions.test_ydb.function_id}"
         tag: "${functions.test_ydb.version_tag}"
         service_account_id: "${functions.test_ydb.sa_id}"
-%{ if containers.auth.account.id != "" ~}
+  %{~ if containers.auth.account.id != "" }
   /api/v1/users/:createAccount:
     post:
       description: Create user account
@@ -43,7 +43,128 @@ paths:
         type: serverless_containers
         container_id: ${containers.auth.account.id}
         service_account_id: ${containers.auth.account.sa_id}
-%{ endif ~}
+  /api/v1/users/:createSellerAccount:
+    post:
+      description: Create seller account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSellerAccountReq"
+      responses:
+        200:
+          description: Data of created user account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateSellerAccountRes"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-rate-limit:
+        allRequests:
+          rpm: 5
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: ${containers.auth.account.id}
+        service_account_id: ${containers.auth.account.sa_id}
+  /api/v1/users/:authenticate:
+    post:
+      description: Authenticate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthenticateReq"
+      responses:
+        200:
+          description: Data of created user account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticateRes"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-rate-limit:
+        allRequests:
+          rpm: 50
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: ${containers.auth.account.id}
+        service_account_id: ${containers.auth.account.sa_id}
+  /api/v1/users/:replaceRefreshToken:
+    post:
+      description: Authenticate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplaceRefreshTokenReq"
+      responses:
+        200:
+          description: Data of created user account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReplaceRefreshTokenRes"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-rate-limit:
+        allRequests:
+          rpm: 50
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: ${containers.auth.account.id}
+        service_account_id: ${containers.auth.account.sa_id}
+  /api/v1/users/:createAccessToken:
+    post:
+      description: Authenticate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAccessTokenReq"
+      responses:
+        200:
+          description: Data of created user account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateAccessTokenRes"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: ${containers.auth.account.id}
+        service_account_id: ${containers.auth.account.sa_id}
+  %{~ endif }
   "/auth:send-confirmation-email":
     post:
       requestBody:
@@ -154,10 +275,9 @@ paths:
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-integration:
-        type: cloud-functions
-        function_id: "${functions.confirm_email.function_id}"
-        tag: "${functions.confirm_email.version_tag}"
-        service_account_id: "${functions.confirm_email.sa_id}"
+        type: serverless_containers
+        container_id: ${containers.auth.email_confirmation.id}
+        service_account_id: ${containers.auth.email_confirmation.sa_id}
 
 components:
   schemas:
@@ -183,6 +303,87 @@ components:
         email:
           type: string
         name:
+          type: string
+    CreateSellerAccountReq:
+      type: object
+      required:
+        - seller
+        - access_token
+      properties:
+        seller:
+          type: object
+          properties:
+            email:
+              type: string
+            name:
+              type: string
+            password:
+              type: string
+        access_token:
+          type: string
+    CreateSellerAccountRes:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+    AuthenticateReq:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    AuthenticateRes:
+      type: object
+      required:
+        - refresh_token
+        - expires_at
+      properties:
+        refresh_token:
+          type: string
+        expires_at:
+          type: string
+    ReplaceRefreshTokenReq:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+    ReplaceRefreshTokenRes:
+      type: object
+      required:
+        - refresh_token
+        - expires_at
+      properties:
+        refresh_token:
+          type: string
+        expires_at:
+          type: string
+    CreateAccessTokenReq:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+    CreateAccessTokenRes:
+      type: object
+      required:
+        - access_token
+        - expires_at
+      properties:
+        access_token:
+          type: string
+        expires_at:
           type: string
     Error:
       type: object

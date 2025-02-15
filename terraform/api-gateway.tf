@@ -1,5 +1,5 @@
 locals {
-  auth_email_confirmation_api_endpoint = "/auth:confirm-email"
+  auth_email_confirmation_api_endpoint = "/api/v1/auth:confirm-email"
 
   api_gateway = {
     spec_options = {
@@ -8,7 +8,7 @@ locals {
       containers = {
         auth = {
           account = {
-            id    = local.containers.auth.account.count > 0 ? yandex_serverless_container.auth_account[0].id : ""
+            id    = local.containers.auth.account.count > 0 ? yandex_serverless_container.auth_account[0].id : "wt"
             sa_id = yandex_iam_service_account.auth_caller.id
           }
           email_confirmation = {

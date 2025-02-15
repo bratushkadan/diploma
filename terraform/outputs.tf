@@ -34,6 +34,11 @@ output "app_sa" {
   }
 }
 
+output "infra_tokens_lockbox_secret_id" {
+  value = data.yandex_lockbox_secret.token_infra.id
+}
+
+
 output "container_registry" {
   value = {
     id = yandex_container_registry.default.id

@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/bratushkadan/floral/internal/auth/core/domain"
+	"github.com/bratushkadan/floral/pkg/shared/api"
+	"github.com/bratushkadan/floral/pkg/yc/serverless/ymq"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 )
@@ -319,15 +321,14 @@ func (f *Http) RegisterSellerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type ActivateAccountHandlerReq struct {
-	Email string `json:"email" validate:"required,email"`
-}
+type ActivateAccountHandlerReq = ymq.YMQRequest
 type ActivateAccountHandlerRes struct {
 	Ok bool `json:"ok"`
 }
 
-func (f *Http) ActivateAccountHandler(w http.ResponseWriter, r *http.Request) {
+func (f *Http) ActivateAccountsHandler(w http.ResponseWriter, r *http.Request) {
 	var reqData ActivateAccountHandlerReq
+
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
 		f.l.Info("failed to decode request body for handler ActivateAccountHandler", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
@@ -336,8 +337,30 @@ func (f *Http) ActivateAccountHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if err := f.validateJson.Struct(reqData); err != nil {
-		f.l.Info("invalid request struct", zap.String("handler", "ActivateAccountHandler"), zap.Error(err))
+
+	messages := make([]api.AccountConfirmationMessage, 0, len(reqData.Messages))
+
+	for _, msg := range reqData.Messages {
+		var message api.AccountConfirmationMessage
+		if err := json.Unmarshal([]byte(msg.Details.Message.Body), &message); err != nil {
+			f.l.Info("failed to decode YMQ message body to json for handler ActivateAccountHandler", zap.Error(err))
+			w.WriteHeader(http.StatusBadRequest)
+			if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
+				f.l.Error("failed to encode error response", zap.Error(err))
+			}
+			return
+		}
+		messages = append(messages, message)
+	}
+
+	emails := make([]string, 0, len(messages))
+
+	for _, m := range messages {
+		emails = append(emails, m.Email)
+	}
+
+	if len(emails) == 0 {
+		f.l.Info("bad request for activating account - no emails provided in request", zap.String("handler", "ActivateAccountHandler"))
 		w.WriteHeader(http.StatusBadRequest)
 		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
 			f.l.Error("failed to encode error response", zap.Error(err))
@@ -345,8 +368,9 @@ func (f *Http) ActivateAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	f.l.Info("activate accounts", zap.Any("emails", emails))
 	_, err := f.svc.ActivateAccounts(r.Context(), domain.ActivateAccountsReq{
-		Emails: []string{reqData.Email},
+		Emails: emails,
 	})
 	if err != nil {
 		f.l.Error("unexpected error occurred in handler ActivateAccountHandler", zap.Error(err))
@@ -356,6 +380,7 @@ func (f *Http) ActivateAccountHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	f.l.Info("activated accounts", zap.Any("emails", emails))
 
 	if err := json.NewEncoder(w).Encode(&ActivateAccountHandlerRes{Ok: true}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

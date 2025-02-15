@@ -17,3 +17,9 @@ func HandleReadiness(ctx context.Context) http.HandlerFunc {
 	}
 	return http.HandlerFunc(f)
 }
+func HandleNotFound() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{"errors":[{"code": 0, "message": "handler not found"}]}`))
+	})
+}

@@ -84,15 +84,17 @@ export YDB_DOC_API_ENDPOINT="$(echo "${TF_OUTPUT}" | jq -cMr .ydb.value.document
 export YDB_AUTH_METHOD=environ
 APP_SA_STATIC_KEY_SECRET_ID="$(echo $TF_OUTPUT | jq -cMr .app_sa.value.static_key_lockbox_secret_id)"
 SECRET=$(yc lockbox payload get "${APP_SA_STATIC_KEY_SECRET_ID}")
-export AWS_ACCESS_KEY_ID=$(echo $SECRET | yq -M '.entries.[] | select(.key == "access_key_id").text_value')
-export AWS_SECRET_ACCESS_KEY=$(echo $SECRET | yq -M '.entries.[] | select(.key == "secret_access_key").text_value')
+export AWS_ACCESS_KEY_ID="$(echo $SECRET | yq -M '.entries.[] | select(.key == "access_key_id").text_value')"
+export AWS_SECRET_ACCESS_KEY="$(echo $SECRET | yq -M '.entries.[] | select(.key == "secret_access_key").text_value')"
 export SQS_QUEUE_URL_EMAIL_CONFIRMATIONS="$(echo "${TF_OUTPUT}" | jq -cMr .ymq.value.queues.email_confirmations.url)"
 export SQS_QUEUE_URL_ACCOUNT_CREATIONS="$(echo "${TF_OUTPUT}" | jq -cMr .ymq.value.queues.account_creations.url)"
-export APP_AUTH_TOKEN_PUBLIC_KEY="$(cat auth-token-public.key)"
-export APP_AUTH_TOKEN_PRIVATE_KEY="$(cat auth-token-private.key)"
-set -a
-source .env
-set +a
+INFRA_TOKENS_SECRET_ID="$(echo $TF_OUTPUT | jq -cMr .infra_tokens_lockbox_secret_id.value)"
+INFRA_TOKENS_SECRET="$(yc lockbox payload get "${INFRA_TOKENS_SECRET_ID}")"
+export APP_AUTH_TOKEN_PUBLIC_KEY="$(echo $INFRA_TOKENS_SECRET | yq -M '.entries.[] | select(.key == "auth_token_public.key").text_value')"
+export APP_AUTH_TOKEN_PRIVATE_KEY="$(echo $INFRA_TOKENS_SECRET | yq -M '.entries.[] | select(.key == "auth_token_private.key").text_value')"
+export APP_ID_ACCOUNT_HASH_SALT="$(echo $INFRA_TOKENS_SECRET | yq -M '.entries.[] | select(.key == "auth_account_id_hash_salt").text_value')"
+export APP_ID_TOKEN_HASH_SALT="$(echo $INFRA_TOKENS_SECRET | yq -M '.entries.[] | select(.key == "auth_token_id_hash_salt").text_value')"
+export APP_PASSWORD_HASH_SALT="$(echo $INFRA_TOKENS_SECRET | yq -M '.entries.[] | select(.key == "auth_password_hash_salt").text_value')"
 ```
 
 ### Run email-confirmation service locally
@@ -184,7 +186,7 @@ Account:
 
 ```sh
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/auth/account/main.go
-TAG=0.0.1
+TAG=0.0.3
 docker build -f build/auth/email_confirmation.Dockerfile -t "account:${TAG}" .
 rm bin
 ```

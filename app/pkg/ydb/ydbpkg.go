@@ -24,6 +24,7 @@ func GetYdbAuthOpts(ydbAuthMethod string) []ydb.Option {
 	case YdbAuthMethodEnviron:
 		opts = append(opts, environ.WithEnvironCredentials())
 	case YdbAuthMethodMetadata:
+		fallthrough
 	default:
 		opts = append(opts, yc.WithMetadataCredentials())
 	}
