@@ -174,15 +174,18 @@ func (f *Http) RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type RegisterAdminHandlerReq struct {
+	Name     string `json:"name" validate:"required,min=2,max=40"`
+	Password string `json:"password" validate:"required,min=8,max=24"`
+	Email    string `json:"email" validate:"required,email"`
+}
+type RegisterAdminHandlerRes struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}
+
 func (f *Http) RegisterAdminHandler(w http.ResponseWriter, r *http.Request) {
-	var reqData struct {
-		Admin struct {
-			Name     string `json:"name"`
-			Password string `json:"password"`
-			Email    string `json:"email"`
-		} `json:"admin"`
-		SecretToken string `json:"secret_token"`
-	}
+	var reqData RegisterAdminHandlerReq
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
 		f.l.Info("failed to decode request body for handler RegisterAdminHandler", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
@@ -192,23 +195,15 @@ func (f *Http) RegisterAdminHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if reqData.SecretToken == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
-			f.l.Error("failed to encode error response", zap.Error(err))
-		}
-		return
-	}
-
 	user, err := f.svc.CreateAdmin(r.Context(), domain.CreateAdminReq{
-		Name:     reqData.Admin.Name,
-		Password: reqData.Admin.Password,
-		Email:    reqData.Admin.Email,
+		Name:     reqData.Name,
+		Password: reqData.Password,
+		Email:    reqData.Email,
 	})
 	if err != nil {
 		if errors.Is(err, domain.ErrEmailIsInUse) {
 			w.WriteHeader(http.StatusConflict)
-			if err := json.NewEncoder(w).Encode(NewHttpErrors(NewErrHttpEmailIsInUse(reqData.Admin.Email))); err != nil {
+			if err := json.NewEncoder(w).Encode(NewHttpErrors(NewErrHttpEmailIsInUse(reqData.Email))); err != nil {
 				f.l.Error("failed to encode error response", zap.Error(err))
 			}
 			return
@@ -221,10 +216,7 @@ func (f *Http) RegisterAdminHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(&struct {
-		Id   string `json:"id"`
-		Name string `json:"name"`
-	}{
+	if err := json.NewEncoder(w).Encode(&RegisterAdminHandlerRes{
 		Id:   user.Id,
 		Name: user.Name,
 	}); err != nil {
@@ -236,15 +228,21 @@ func (f *Http) RegisterAdminHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type RegisterSellerHandlerReq struct {
+	Seller struct {
+		Name     string `json:"name" validate:"required,min=2,max=40"`
+		Password string `json:"password" validate:"required,min=8,max=24"`
+		Email    string `json:"email" validate:"required,email"`
+	} `json:"seller" validate:"required"`
+	AccessToken string `json:"access_token"`
+}
+type RegisterSellerHandlerRes struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}
+
 func (f *Http) RegisterSellerHandler(w http.ResponseWriter, r *http.Request) {
-	var reqData struct {
-		Seller struct {
-			Name     string `json:"name"`
-			Password string `json:"password"`
-			Email    string `json:"email"`
-		} `json:"seller"`
-		AccessToken string `json:"access_token"`
-	}
+	var reqData RegisterSellerHandlerReq
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
 		f.l.Info("failed to decode request body for handler RegisterSellerHandler", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
@@ -290,10 +288,7 @@ func (f *Http) RegisterSellerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(&struct {
-		Id   string `json:"id"`
-		Name string `json:"name"`
-	}{
+	if err := json.NewEncoder(w).Encode(&RegisterSellerHandlerRes{
 		Id:   user.Id,
 		Name: user.Name,
 	}); err != nil {
@@ -305,11 +300,55 @@ func (f *Http) RegisterSellerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (f *Http) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
-	var reqData struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+type ActivateAccountHandlerReq struct {
+	Email string `json:"email" validate:"required,email"`
+}
+type ActivateAccountHandlerRes struct {
+	Ok bool `json:"ok"`
+}
+
+func (f *Http) ActivateAccountHandler(w http.ResponseWriter, r *http.Request) {
+	var reqData ActivateAccountHandlerReq
+	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+		f.l.Info("failed to decode request body for handler ActivateAccountHandler", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
+			f.l.Error("failed to encode error response", zap.Error(err))
+		}
+		return
 	}
+
+	_, err := f.svc.ActivateAccounts(r.Context(), domain.ActivateAccountsReq{
+		Emails: []string{reqData.Email},
+	})
+	if err != nil {
+		f.l.Error("unexpected error occurred in handler ActivateAccountHandler", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpInternalServerError)); err != nil {
+			f.l.Error("unexpected error occurred in handler ActivateAccountHandler", zap.Error(err))
+		}
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(&ActivateAccountHandlerRes{Ok: true}); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpInternalServerError)); err != nil {
+			f.l.Error("unexpected error occurred in handler ActivateAccountHandler", zap.Error(err))
+		}
+		return
+	}
+}
+
+type AuthenticateHandlerReq struct {
+	Password string `json:"password" validate:"required,min=8,max=24"`
+	Email    string `json:"email" validate:"required,email"`
+}
+type AuthenticateHandlerRes struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+func (f *Http) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
+	var reqData AuthenticateHandlerReq
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
 		f.l.Info("failed to decode request body for handler AuthenticateHandler", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
@@ -346,9 +385,7 @@ func (f *Http) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(&struct {
-		RefreshToken string `json:"refresh_token"`
-	}{
+	if err := json.NewEncoder(w).Encode(&AuthenticateHandlerRes{
 		RefreshToken: res.RefreshToken,
 	}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

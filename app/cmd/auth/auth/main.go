@@ -120,7 +120,7 @@ func main() {
 		RefreshTokenProvider(refreshTokenAdapter).
 		TokenProvider(tokenProvider).
 		AccountCreationNotificationProvider(&accountCreationNotificationAdapter).
-		Logger(zap.NewNop()).
+		Logger(logger).
 		Build()
 	if err != nil {
 		logger.Fatal("failed to setup auth service", zap.Error(err))
@@ -147,7 +147,10 @@ func main() {
 
 	rUsers.Post("/:createAccount", http.HandlerFunc(httpAdapter.RegisterUserHandler))
 	rUsers.Post("/:createSellerAccount", http.HandlerFunc(httpAdapter.RegisterSellerHandler))
+	// Expose this endpoint ONLY internally
 	rUsers.Post("/:createAdminAccount", http.HandlerFunc(httpAdapter.RegisterAdminHandler))
+	// Expose this endpoint ONLY internally
+	rUsers.Post("/:activateAccount", http.HandlerFunc(httpAdapter.ActivateAccountHandler))
 	rUsers.Post("/:authenticate", http.HandlerFunc(httpAdapter.AuthenticateHandler))
 	rUsers.Post("/:renewRefreshToken", http.HandlerFunc(httpAdapter.ReplaceRefreshTokenHandler))
 	rUsers.Post("/:createAccessToken", http.HandlerFunc(httpAdapter.CreateAccessToken))

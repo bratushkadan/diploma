@@ -75,9 +75,6 @@ func (a *Account) CreateAccount(ctx context.Context, in domain.CreateAccountDTOI
 			table.ValueParam("$created_at", types.DatetimeValueFromTime(time.Now())),
 		))
 		if err != nil {
-			if ydb.IsOperationError(err, Ydb.StatusIds_PRECONDITION_FAILED) {
-				return fmt.Errorf("%w: %w", domain.ErrEmailIsInUse, err)
-			}
 			return err
 		}
 		if err := res.Err(); err != nil {
@@ -114,6 +111,9 @@ func (a *Account) CreateAccount(ctx context.Context, in domain.CreateAccountDTOI
 		// return res.Close() // <---- If I do not require RETURNING values when executing query
 	})
 	if err != nil {
+		if ydb.IsOperationError(err, Ydb.StatusIds_PRECONDITION_FAILED) {
+			return out, domain.ErrEmailIsInUse
+		}
 		return out, fmt.Errorf("failed to run create account ydb query: %w", err)
 	}
 
