@@ -20,6 +20,7 @@ import (
 	"github.com/bratushkadan/floral/pkg/cfg"
 	"github.com/bratushkadan/floral/pkg/logging"
 	"github.com/bratushkadan/floral/pkg/resource/idhash"
+	"github.com/bratushkadan/floral/pkg/xhttp"
 	ydbpkg "github.com/bratushkadan/floral/pkg/ydb"
 	"github.com/bratushkadan/floral/pkg/ymq"
 	"github.com/go-chi/chi/v5"
@@ -134,21 +135,31 @@ func main() {
 	}
 
 	r := chi.NewRouter()
-
-	rApi := chi.NewRouter()
-	rV1 := chi.NewRouter()
 	rUsers := chi.NewRouter()
 
-	r.Mount("/api", rApi)
-	rApi.Mount("/v1", rV1)
-	rV1.Mount("/users", rUsers)
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			logger.Info("incoming request", zap.String("method", r.Method), zap.String("path", r.URL.Path))
 
-	rUsers.Post("/:register", http.HandlerFunc(httpAdapter.RegisterUserHandler))
-	rUsers.Post("/:registerSeller", http.HandlerFunc(httpAdapter.RegisterSellerHandler))
-	rUsers.Post("/:registerAdmin", http.HandlerFunc(httpAdapter.RegisterAdminHandler))
+			next.ServeHTTP(w, r)
+		})
+	})
+
+	rUsers.Post("/:createAccount", http.HandlerFunc(httpAdapter.RegisterUserHandler))
+	rUsers.Post("/:createSellerAccount", http.HandlerFunc(httpAdapter.RegisterSellerHandler))
+	rUsers.Post("/:createAdminAccount", http.HandlerFunc(httpAdapter.RegisterAdminHandler))
 	rUsers.Post("/:authenticate", http.HandlerFunc(httpAdapter.AuthenticateHandler))
 	rUsers.Post("/:renewRefreshToken", http.HandlerFunc(httpAdapter.ReplaceRefreshTokenHandler))
 	rUsers.Post("/:createAccessToken", http.HandlerFunc(httpAdapter.CreateAccessToken))
+
+	r.Get("/ready", xhttp.HandleReadiness(ctx))
+	r.Get("/health", xhttp.HandleReadiness(ctx))
+
+	rApi := chi.NewRouter()
+	rV1 := chi.NewRouter()
+	r.Mount("/api", rApi)
+	rApi.Mount("/v1", rV1)
+	rV1.Mount("/users", rUsers)
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%s", Port),

@@ -8,12 +8,12 @@
 - [x] Create Notification Secondary Adapter
   - [x] Account Creation
   - [x] Email Confirmation
-- [ ] Create Notification Primary Adapter
+- [x] Create Notification Primary Adapter
   - [x] Long Polling
     - [x] Account Creation
     - [x] Email Confirmation
-  - [ ] Serverless Containers
-    - [ ] Account Creation
+  - [x] Serverless Containers
+    - [x] Account Creation
     - [x] Email Confirmation
 - [x] Test Notification Secondary Adapter
   - [x] Account Creation
@@ -23,9 +23,9 @@
     - [x] Account Creation
     - [x] Email Confirmation
 - [x] Email Confirmation Service refactoring
-- [ ] Wire service and HTTP primary adapter
-  - [ ] Accounts/tokens
-  - [ ] Email Confirmation
+- [x] Wire service and HTTP primary adapter
+  - [x] Accounts/tokens
+  - [x] Email Confirmation
 - [ ] Create Serverless Containers Terraform Configuration Code
 - [x] ⏳ Write service/infrastructure Integration Tests
 
@@ -88,7 +88,11 @@ export AWS_ACCESS_KEY_ID=$(echo $SECRET | yq -M '.entries.[] | select(.key == "a
 export AWS_SECRET_ACCESS_KEY=$(echo $SECRET | yq -M '.entries.[] | select(.key == "secret_access_key").text_value')
 export SQS_QUEUE_URL_EMAIL_CONFIRMATIONS="$(echo "${TF_OUTPUT}" | jq -cMr .ymq.value.queues.email_confirmations.url)"
 export SQS_QUEUE_URL_ACCOUNT_CREATIONS="$(echo "${TF_OUTPUT}" | jq -cMr .ymq.value.queues.account_creations.url)"
+export APP_AUTH_TOKEN_PUBLIC_KEY="$(cat auth-token-public.key)"
+export APP_AUTH_TOKEN_PRIVATE_KEY="$(cat auth-token-private.key)"
+set -a
 source .env
+set +a
 ```
 
 ### Run email-confirmation service locally

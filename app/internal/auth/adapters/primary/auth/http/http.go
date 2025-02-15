@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bratushkadan/floral/internal/auth/core/domain"
+	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 )
 
@@ -74,6 +75,8 @@ var (
 type Http struct {
 	svc domain.AuthService
 	l   *zap.Logger
+
+	validateJson *validator.Validate
 }
 
 type HttpBuilder struct {
@@ -102,17 +105,34 @@ func (b *HttpBuilder) Build() (*Http, error) {
 		b.http.l = zap.NewNop()
 	}
 
+	b.http.validateJson = validator.New(validator.WithRequiredStructEnabled())
+
 	return &b.http, nil
 }
 
+type RegisterUserHandlerReq struct {
+	Name     string `json:"name" validate:"required,min=2,max=40"`
+	Password string `json:"password" validate:"required,min=8,max=24"`
+	Email    string `json:"email" validate:"required,email"`
+}
+type RegisterUserHandlerRes struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}
+
 func (f *Http) RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
-	var reqData struct {
-		Name     string `json:"name"`
-		Password string `json:"password"`
-		Email    string `json:"email"`
-	}
+	var reqData RegisterUserHandlerReq
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
-		f.l.Info("failed to decode request body for handler RegisterUserHandler", zap.Error(err))
+		f.l.Info("failed to decode request body", zap.String("handler", "RegisterUser"), zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
+			f.l.Error("failed to encode error response", zap.Error(err))
+		}
+		return
+	}
+	if err := f.validateJson.Struct(reqData); err != nil {
+		f.l.Info("invalid request struct", zap.String("handler", "RegisterUser"), zap.Error(err))
+		f.l.Info(err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
 			f.l.Error("failed to encode error response", zap.Error(err))
@@ -142,10 +162,7 @@ func (f *Http) RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(&struct {
-		Id   string `json:"id"`
-		Name string `json:"name"`
-	}{
+	if err := json.NewEncoder(w).Encode(&RegisterUserHandlerRes{
 		Id:   user.Id,
 		Name: user.Name,
 	}); err != nil {

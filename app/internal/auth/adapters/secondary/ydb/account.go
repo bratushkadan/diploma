@@ -114,7 +114,7 @@ func (a *Account) CreateAccount(ctx context.Context, in domain.CreateAccountDTOI
 		// return res.Close() // <---- If I do not require RETURNING values when executing query
 	})
 	if err != nil {
-		return out, fmt.Errorf("failed to run create account ydb query: %v", err)
+		return out, fmt.Errorf("failed to run create account ydb query: %w", err)
 	}
 
 	return out, nil

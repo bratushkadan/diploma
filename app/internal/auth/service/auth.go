@@ -122,7 +122,7 @@ func (svc *Auth) CreateUser(ctx context.Context, req domain.CreateUserReq) (doma
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: req.Password,
-		Type:     domain.AccountTypeAdmin,
+		Type:     domain.AccountTypeUser,
 	})
 	if err != nil {
 		return domain.CreateUserRes{}, err
