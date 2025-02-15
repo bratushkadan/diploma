@@ -11,6 +11,39 @@ paths:
         function_id: "${functions.test_ydb.function_id}"
         tag: "${functions.test_ydb.version_tag}"
         service_account_id: "${functions.test_ydb.sa_id}"
+%{ if containers.auth.account.id != "" ~}
+  /api/v1/users/:createAccount:
+    post:
+      description: Create user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserAccountReq"
+      responses:
+        200:
+          description: Data of created user account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateUserAccountRes"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-rate-limit:
+        allRequests:
+          rpm: 10
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: ${containers.auth.account.id}
+        service_account_id: ${containers.auth.account.sa_id}
+%{ endif ~}
   "/auth:send-confirmation-email":
     post:
       requestBody:
@@ -126,3 +159,45 @@ paths:
         tag: "${functions.confirm_email.version_tag}"
         service_account_id: "${functions.confirm_email.sa_id}"
 
+components:
+  schemas:
+    CreateUserAccountReq:
+      type: object
+      required:
+        - email
+        - name
+        - password
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        password:
+          type: string
+    CreateUserAccountRes:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+    Error:
+      type: object
+      required:
+        - errors
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+              - code
+              - message
+            properties:
+              code:
+                type: integer
+              message:
+                type: string

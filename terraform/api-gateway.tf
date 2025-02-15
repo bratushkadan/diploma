@@ -4,6 +4,20 @@ locals {
   api_gateway = {
     spec_options = {
       auth_email_confirmation_api_endpoint = local.auth_email_confirmation_api_endpoint
+
+      containers = {
+        auth = {
+          account = {
+            id    = local.containers.auth.account.count > 0 ? yandex_serverless_container.auth_account[0].id : ""
+            sa_id = yandex_iam_service_account.auth_caller.id
+          }
+          email_confirmation = {
+            id    = local.containers.auth.email_confirmation.count > 0 ? yandex_serverless_container.auth_email_confirmation[0].id : ""
+            sa_id = yandex_iam_service_account.auth_caller.id
+          }
+        }
+      }
+
       functions = {
         send_confirmation_email = {
           function_id = yandex_function.send_confirmation_email.id
