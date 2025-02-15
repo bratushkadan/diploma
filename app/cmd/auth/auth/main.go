@@ -152,7 +152,7 @@ func main() {
 	// Expose this endpoint ONLY internally
 	rUsers.Post("/:activateAccount", http.HandlerFunc(httpAdapter.ActivateAccountHandler))
 	rUsers.Post("/:authenticate", http.HandlerFunc(httpAdapter.AuthenticateHandler))
-	rUsers.Post("/:renewRefreshToken", http.HandlerFunc(httpAdapter.ReplaceRefreshTokenHandler))
+	rUsers.Post("/:replaceRefreshToken", http.HandlerFunc(httpAdapter.ReplaceRefreshTokenHandler))
 	rUsers.Post("/:createAccessToken", http.HandlerFunc(httpAdapter.CreateAccessToken))
 
 	r.Get("/ready", xhttp.HandleReadiness(ctx))

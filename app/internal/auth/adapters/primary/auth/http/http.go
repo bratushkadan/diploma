@@ -70,6 +70,10 @@ var (
 		Code:    9,
 		Message: "bad email confirmation id",
 	}
+	ErrHttpRefreshTokenToReplaceNotFound = HttpError{
+		Code:    10,
+		Message: "refresh token to replace not found",
+	}
 )
 
 type Http struct {
@@ -132,7 +136,6 @@ func (f *Http) RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := f.validateJson.Struct(reqData); err != nil {
 		f.l.Info("invalid request struct", zap.String("handler", "RegisterUser"), zap.Error(err))
-		f.l.Info(err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
 			f.l.Error("failed to encode error response", zap.Error(err))
@@ -194,6 +197,14 @@ func (f *Http) RegisterAdminHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if err := f.validateJson.Struct(reqData); err != nil {
+		f.l.Info("invalid request struct", zap.String("handler", "RegisterAdminHandler"), zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
+			f.l.Error("failed to encode error response", zap.Error(err))
+		}
+		return
+	}
 
 	user, err := f.svc.CreateAdmin(r.Context(), domain.CreateAdminReq{
 		Name:     reqData.Name,
@@ -234,7 +245,7 @@ type RegisterSellerHandlerReq struct {
 		Password string `json:"password" validate:"required,min=8,max=24"`
 		Email    string `json:"email" validate:"required,email"`
 	} `json:"seller" validate:"required"`
-	AccessToken string `json:"access_token"`
+	AccessToken string `json:"access_token" validate:"required"`
 }
 type RegisterSellerHandlerRes struct {
 	Id   string `json:"id"`
@@ -245,6 +256,14 @@ func (f *Http) RegisterSellerHandler(w http.ResponseWriter, r *http.Request) {
 	var reqData RegisterSellerHandlerReq
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
 		f.l.Info("failed to decode request body for handler RegisterSellerHandler", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
+			f.l.Error("failed to encode error response", zap.Error(err))
+		}
+		return
+	}
+	if err := f.validateJson.Struct(reqData); err != nil {
+		f.l.Info("invalid request struct", zap.String("handler", "RegisterSellerHandler"), zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
 		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
 			f.l.Error("failed to encode error response", zap.Error(err))
@@ -317,6 +336,14 @@ func (f *Http) ActivateAccountHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if err := f.validateJson.Struct(reqData); err != nil {
+		f.l.Info("invalid request struct", zap.String("handler", "ActivateAccountHandler"), zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
+			f.l.Error("failed to encode error response", zap.Error(err))
+		}
+		return
+	}
 
 	_, err := f.svc.ActivateAccounts(r.Context(), domain.ActivateAccountsReq{
 		Emails: []string{reqData.Email},
@@ -344,13 +371,22 @@ type AuthenticateHandlerReq struct {
 	Email    string `json:"email" validate:"required,email"`
 }
 type AuthenticateHandlerRes struct {
-	RefreshToken string `json:"refresh_token"`
+	RefreshToken string    `json:"refresh_token"`
+	ExpiresAt    time.Time `json:"expires_at"`
 }
 
 func (f *Http) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 	var reqData AuthenticateHandlerReq
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
 		f.l.Info("failed to decode request body for handler AuthenticateHandler", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
+			f.l.Error("failed to encode error response", zap.Error(err))
+		}
+		return
+	}
+	if err := f.validateJson.Struct(reqData); err != nil {
+		f.l.Info("invalid request struct", zap.String("handler", "AuthenticateHandler"), zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
 		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
 			f.l.Error("failed to encode error response", zap.Error(err))
@@ -387,6 +423,7 @@ func (f *Http) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewEncoder(w).Encode(&AuthenticateHandlerRes{
 		RefreshToken: res.RefreshToken,
+		ExpiresAt:    res.ExpiresAt,
 	}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpInternalServerError)); err != nil {
@@ -396,13 +433,27 @@ func (f *Http) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type ReplaceRefreshTokenHandlerReq struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
+}
+type ReplaceRefreshTokenHandlerRes struct {
+	RefreshToken string    `json:"refresh_token"`
+	ExpiresAt    time.Time `json:"expires_at"`
+}
+
 func (f *Http) ReplaceRefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
-	var reqData struct {
-		RefreshToken string `json:"refresh_token"`
-	}
+	var reqData ReplaceRefreshTokenHandlerReq
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil || reqData.RefreshToken == "" {
 		f.l.Info("failed to decode request body for handler CreateAccessToken", zap.Error(err))
 		w.WriteHeader(http.StatusUnauthorized)
+		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
+			f.l.Error("failed to encode error response", zap.Error(err))
+		}
+		return
+	}
+	if err := f.validateJson.Struct(reqData); err != nil {
+		f.l.Info("invalid request struct", zap.String("handler", "ReplaceRefreshTokenHandler"), zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
 		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
 			f.l.Error("failed to encode error response", zap.Error(err))
 		}
@@ -420,6 +471,13 @@ func (f *Http) ReplaceRefreshTokenHandler(w http.ResponseWriter, r *http.Request
 			}
 			return
 		}
+		if errors.Is(err, domain.ErrRefreshTokenToReplaceNotFound) {
+			w.WriteHeader(http.StatusNotFound)
+			if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpRefreshTokenToReplaceNotFound)); err != nil {
+				f.l.Error("failed to encode internal server error response", zap.Error(err))
+			}
+			return
+		}
 		f.l.Error("unexpected error occurred in handler ReplaceRefreshTokenHandler", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpInternalServerError)); err != nil {
@@ -428,10 +486,9 @@ func (f *Http) ReplaceRefreshTokenHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(&struct {
-		RefreshToken string `json:"refresh_token"`
-	}{
+	if err := json.NewEncoder(w).Encode(&ReplaceRefreshTokenHandlerRes{
 		RefreshToken: res.RefreshToken,
+		ExpiresAt:    res.ExpiresAt,
 	}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpInternalServerError)); err != nil {
@@ -441,15 +498,29 @@ func (f *Http) ReplaceRefreshTokenHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
+type CreateAccessTokenReq struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
+}
+type CreateAccessTokenRes struct {
+	AccessToken string    `json:"access_token"`
+	ExpiresAt   time.Time `json:"expires_at"`
+}
+
 func (f *Http) CreateAccessToken(w http.ResponseWriter, r *http.Request) {
-	var reqData struct {
-		RefreshToken string `json:"refresh_token"`
-	}
+	var reqData CreateAccessTokenReq
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil || reqData.RefreshToken == "" {
 		f.l.Info("failed to decode request body for handler CreateAccessToken", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
 		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
 			f.l.Error("failed to encode internal server error response", zap.Error(err))
+		}
+		return
+	}
+	if err := f.validateJson.Struct(reqData); err != nil {
+		f.l.Info("invalid request struct", zap.String("handler", "CreateAccessToken"), zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
+			f.l.Error("failed to encode error response", zap.Error(err))
 		}
 		return
 	}
