@@ -1,3 +1,14 @@
+data "yandex_lockbox_secret" "app_sa_static_key" {
+  secret_id = resource.yandex_lockbox_secret.app_sa_static_key.id
+}
+data "yandex_lockbox_secret" "email_provider" {
+  name = "yandex-mail-provider"
+}
+data "yandex_lockbox_secret" "token_infra" {
+  name = "token-ids-infra"
+}
+
+
 locals {
   versions = {
     auth = {
@@ -17,11 +28,32 @@ locals {
     }
   }
 
+  env = tomap({ for _, v in [
+    "YDB_ENDPOINT",
+    "YDB_DOC_API_ENDPOINT",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "SQS_QUEUE_URL_EMAIL_CONFIRMATIONS",
+    "SQS_QUEUE_URL_ACCOUNT_CREATIONS",
+    "SENDER_EMAIL",
+    "SENDER_PASSWORD",
+    "EMAIL_CONFIRMATION_API_ENDPOINT",
+    "EMAIL_CONFIRMATION_ORIGIN",
+    "APP_ID_ACCOUNT_HASH_SALT",
+    "APP_ID_TOKEN_HASH_SALT",
+    "APP_PASSWORD_HASH_SALT",
+    "APP_AUTH_TOKEN_PRIVATE_KEY",
+    "APP_AUTH_TOKEN_PUBLIC_KEY",
+
+    "YMQ_TRIGGER_HTTP_ENDPOINTS_ENABLED",
+
+    // LEGACY
+    "SQS_ENDPOINT",
+  ] : v => v })
+
   // No way to get around circular dependencies with YMQ Trigger :(
   email_confirmation_origin = "https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net"
-}
 
-locals {
   lockbox = {
     auth = {
       account = [
