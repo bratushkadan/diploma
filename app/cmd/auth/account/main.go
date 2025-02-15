@@ -155,6 +155,11 @@ func main() {
 	rUsers.Post("/:replaceRefreshToken", http.HandlerFunc(httpAdapter.ReplaceRefreshTokenHandler))
 	rUsers.Post("/:createAccessToken", http.HandlerFunc(httpAdapter.CreateAccessToken))
 
+	// Get
+	// rUsers.Get("/{id}")
+	// List
+	// rUsers.Get("/")
+
 	r.Get("/ready", xhttp.HandleReadiness(ctx))
 	r.Get("/health", xhttp.HandleReadiness(ctx))
 

@@ -1,15 +1,15 @@
 package auth
 
 import (
-	"crypto/rsa"
+	"crypto/ecdsa"
 	"fmt"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type JwtProvider struct {
-	privateKey *rsa.PrivateKey
-	publicKey  *rsa.PublicKey
+	privateKey *ecdsa.PrivateKey
+	publicKey  *ecdsa.PublicKey
 	parserOpts []jwt.ParserOption
 }
 
@@ -42,31 +42,31 @@ func (b *JwtProviderBuilder) Build() (*JwtProvider, error) {
 	if len(b.publicKey) == 0 {
 		return nil, fmt.Errorf("public key can't be empty")
 	}
-	publicKey, err := jwt.ParseRSAPublicKeyFromPEM(b.publicKey)
+	publicKey, err := jwt.ParseECPublicKeyFromPEM(b.publicKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse RSA public key from PEM for asymmetric JWT validation: %w", err)
+		return nil, fmt.Errorf("failed to parse ECC public key from PEM for asymmetric JWT validation: %w", err)
 	}
 
-	var privateKey *rsa.PrivateKey
-	if b.privateKey != nil {
-		if len(b.privateKey) == 0 {
-			return nil, fmt.Errorf("private key can't be empty bytes")
-		}
-		privateKey, err = jwt.ParseRSAPrivateKeyFromPEM(b.privateKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse RSA private key from PEM for asymmetric JWT signing: %w", err)
-		}
-	}
+	// var privateKey *ecdsa.PrivateKey
+	// if b.privateKey != nil {
+	// 	if len(b.privateKey) == 0 {
+	// 		return nil, fmt.Errorf("private key can't be empty bytes")
+	// 	}
+	// 	var err error
+	// 	privateKey, err = jwt.ParseECPrivateKeyFromPEM(b.privateKey)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed to parse ECC private key from PEM for asymmetric JWT signing: %w", err)
+	// 	}
+	// }
 
 	b.prov.publicKey = publicKey
-	b.prov.privateKey = privateKey
+	// b.prov.privateKey = privateKey
 
 	return &b.prov, nil
 }
 
 func (p *JwtProvider) Create(claims jwt.Claims) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
 
 	tokenString, err := token.SignedString(p.privateKey)
 	if err != nil {
@@ -78,7 +78,7 @@ func (p *JwtProvider) Create(claims jwt.Claims) (string, error) {
 
 func (p *JwtProvider) Parse(token string, claims jwt.Claims) error {
 	parsedToken, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method for token")
 		}
 		return p.publicKey, nil

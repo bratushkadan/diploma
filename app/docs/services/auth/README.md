@@ -62,9 +62,9 @@
       - [x] `DecodeRefresh`
       - [x] `EncodeAccess`
       - [x] `DecodeAccess`
-  - [ ] Primary Adapters
-    - [ ] Serverless Containers
-      - [ ] Account Creation
+  - [x] Primary Adapters
+    - [x] Serverless Containers
+      - [x] Account Creation
       - [x] Email Confirmation
   - [ ] Application-level e2e-tests
 
@@ -180,12 +180,23 @@ CONFIRMATION_TOKEN= go run cmd/auth/confirm-email/main.go
 
 ### Build for Yandex Cloud Container Registry
 
+Account:
+
+```sh
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/auth/account/main.go
+TAG=0.0.1
+docker build -f build/auth/email_confirmation.Dockerfile -t "account:${TAG}" .
+rm bin
+```
+
+Email confirmation:
+
 ```sh
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/auth/email-confirmation/main.go
 TAG=0.0.1-rc2
 docker build -f build/auth/email_confirmation.Dockerfile -t "email-confirmation:${TAG}" .
+rm bin
 ```
-
 
 ### Push to Yandex Cloud Container Registry
 
@@ -195,11 +206,22 @@ Authenticate:
 yc iam create-token | docker login cr.yandex -u iam --password-stdin
 ```
 
+Account:
+
+```sh
+TARGET="cr.yandex/$(../terraform/tf output -json -no-color | jq -cMr .container_registry.value.repository.auth.account.name):${TAG}"
+docker tag "account:${TAG}" "${TARGET}"
+docker push "${TARGET}"
+```
+
+Email confirmation:
+
 ```sh
 TARGET="cr.yandex/$(../terraform/tf output -json -no-color | jq -cMr .container_registry.value.repository.auth.email_confirmation.name):${TAG}"
 docker tag "email-confirmation:${TAG}" "${TARGET}"
 docker push "${TARGET}"
 ```
+
 
 List of Auth service repositories
 
