@@ -4,13 +4,6 @@ info:
   title: Floral Auth API
 
 paths:
-  /test-ydb:
-    get:
-      x-yc-apigateway-integration:
-        type: cloud-functions
-        function_id: "${functions.test_ydb.function_id}"
-        tag: "${functions.test_ydb.version_tag}"
-        service_account_id: "${functions.test_ydb.sa_id}"
   %{~ if containers.auth.account.id != "" }
   /api/v1/users/:createAccount:
     post:
@@ -165,29 +158,6 @@ paths:
         container_id: ${containers.auth.account.id}
         service_account_id: ${containers.auth.account.sa_id}
   %{~ endif }
-  "/auth:send-confirmation-email":
-    post:
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - email
-              properties:
-                email:
-                  type: string
-      x-yc-apigateway-validator:
-        validateRequestBody: true
-      x-yc-apigateway-rate-limit:
-        allRequests:
-          rpm: 10
-      x-yc-apigateway-integration:
-        type: cloud-functions
-        function_id: "${functions.send_confirmation_email.function_id}"
-        tag: "${functions.send_confirmation_email.version_tag}"
-        service_account_id: "${functions.send_confirmation_email.sa_id}"
-
   "${auth_email_confirmation_api_endpoint}":
     x-yc-apigateway-cors:
       origin: true

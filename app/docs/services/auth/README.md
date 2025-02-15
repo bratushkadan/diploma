@@ -26,12 +26,12 @@
 - [x] Wire service and HTTP primary adapter
   - [x] Accounts/tokens
   - [x] Email Confirmation
-- [ ] Create Serverless Containers Terraform Configuration Code
+- [x] Create Serverless Containers Terraform Configuration Code
 - [x] ⏳ Write service/infrastructure Integration Tests
 
 ### Tests
 
-- [ ] Integration Tests
+- [x] Integration Tests
   - [x] Service
     - [x] `CreateUser`
     - [x] `ActivateAccounts`
@@ -66,7 +66,7 @@
     - [x] Serverless Containers
       - [x] Account Creation
       - [x] Email Confirmation
-  - [ ] Application-level e2e-tests
+  - [x] Application-level e2e-tests
 
 ## Run
 
@@ -174,11 +174,6 @@ CONFIRMATION_TOKEN= go run cmd/auth/confirm-email/main.go
 1\. `cd app`
 2\. `go mod tidy`
 3\. `CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o bin cmd/auth/email-confirmation/main.go`
-
-4\. For email-confirmation:
-
-```sh
-```
 
 ### Build for Yandex Cloud Container Registry
 
