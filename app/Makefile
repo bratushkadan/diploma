@@ -7,17 +7,40 @@ auth_run_integration_tests:
 
 .PHONY: migrate_auth_create_ydb
 migrate_auth_create_ydb:
-	@sh -c "if [ -z "$$MIGRATION_NAME" ]; then echo 'Error: provide the \"MIGRATION_NAME\" env variable like MIGRATION_NAME=\"00001_create_first_table\"' >&2 && exit 1; else :; fi" && \
-		echo scripts/migrate create "$${MIGRATION_NAME}" sql
+	@export SERVICE=auth && \
+		sh -c "if [ -z "$$MIGRATION_NAME" ]; then echo 'Error: provide the \"MIGRATION_NAME\" env variable like MIGRATION_NAME=\"00001_create_first_table\"' >&2 && exit 1; else :; fi" && \
+		scripts/migrate create "$${MIGRATION_NAME}" sql
 .PHONY: migrate_auth_DANGER_DOWN_ydb
 migrate_auth_DANGER_DOWN_ydb:
-	@scripts/migrate down
+	@export SERVICE=auth && \
+		scripts/migrate down
 .PHONY: migrate_auth_up_ydb
 migrate_auth_up_ydb:
-	@scripts/migrate up
+	@export SERVICE=auth && \
+		scripts/migrate up
 .PHONY: migrate_auth_up_by_one_ydb
 migrate_auth_up_by_one_ydb:
-	@scripts/migrate up-by-one
+	@export SERVICE=auth && \
+		scripts/migrate up-by-one
+
+.PHONY: migrate_products_create
+migrate_products_create:
+	@export SERVICE=products && \
+		sh -c "if [ -z "$$MIGRATION_NAME" ]; then echo 'Error: provide the \"MIGRATION_NAME\" env variable like MIGRATION_NAME=\"00001_create_first_table\"' >&2 && exit 1; else :; fi" && \
+		scripts/migrate create "$${MIGRATION_NAME}" sql
+.PHONY: migrate_products_DANGER_DOWN
+migrate_products_DANGER_DOWN:
+	@export SERVICE=products && \
+		scripts/migrate down
+.PHONY: migrate_products_up
+migrate_products_up:
+	@export SERVICE=products && \
+		scripts/migrate up
+.PHONY: migrate_products_up_by_one
+migrate_products_up_by_one:
+	@export SERVICE=products && \ scripts/migrate up-by-one
+
+
 
 .PHONY: migrate_auth_create_pg
 migrate_auth_create_pg:
