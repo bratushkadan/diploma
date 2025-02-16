@@ -1,0 +1,9 @@
+package: oapi_codegen
+# import-mapping: []
+output-options:
+  include-tags:
+    - products
+output: generated/server.gen.go
+generate:
+  gin-server: true
+  models: true

@@ -306,6 +306,10 @@ components:
       properties:
         seller:
           type: object
+          required:
+          - name
+          - email
+          - password
           properties:
             email:
               type: string

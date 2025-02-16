@@ -40,7 +40,10 @@ migrate_products_up:
 migrate_products_up_by_one:
 	@export SERVICE=products && \ scripts/migrate up-by-one
 
-
+.PHONY: generate_api_products
+generate_api_products:
+	@yc serverless api-gateway get-spec auth-service-api-gw > ./internal/products/presentation/oapi/api.yaml && \
+		go generate ./internal/products/...
 
 .PHONY: migrate_auth_create_pg
 migrate_auth_create_pg:
