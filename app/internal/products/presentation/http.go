@@ -29,6 +29,27 @@ func (*ApiImpl) ProductsList(c *gin.Context, params oapi_codegen.ProductsListPar
 	})
 }
 
+func (*ApiImpl) ProductsGet(c *gin.Context, id string) {
+	c.JSON(http.StatusInternalServerError, oapi_codegen.Error{
+		Errors: []oapi_codegen.Err{{Code: 0, Message: "not implemented"}},
+	})
+}
+func (*ApiImpl) ProductsUpdate(c *gin.Context, id string) {
+	c.JSON(http.StatusInternalServerError, oapi_codegen.Error{
+		Errors: []oapi_codegen.Err{{Code: 0, Message: "not implemented"}},
+	})
+}
+func (*ApiImpl) ProductsCreate(c *gin.Context, id string) {
+	c.JSON(http.StatusInternalServerError, oapi_codegen.Error{
+		Errors: []oapi_codegen.Err{{Code: 0, Message: "not implemented"}},
+	})
+}
+func (*ApiImpl) ProductsDelete(c *gin.Context, id string) {
+	c.JSON(http.StatusInternalServerError, oapi_codegen.Error{
+		Errors: []oapi_codegen.Err{{Code: 0, Message: "not implemented"}},
+	})
+}
+
 func (*ApiImpl) ErrorHandler(c *gin.Context, err error, code int) {
 	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: err.Error()}))
 }

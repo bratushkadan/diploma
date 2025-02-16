@@ -35,11 +35,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CreateUserAccountRes"
         default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+          $ref: "#/components/responses/Error"
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-rate-limit:
@@ -68,11 +64,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CreateSellerAccountRes"
         default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+          $ref: "#/components/responses/Error"
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-rate-limit:
@@ -101,11 +93,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AuthenticateRes"
         default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+          $ref: "#/components/responses/Error"
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-rate-limit:
@@ -134,11 +122,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ReplaceRefreshTokenRes"
         default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+          $ref: "#/components/responses/Error"
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-rate-limit:
@@ -167,11 +151,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CreateAccessTokenRes"
         default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+          $ref: "#/components/responses/Error"
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-integration:
@@ -299,23 +279,136 @@ paths:
               schema:
                 $ref: "#/components/schemas/ListProductsRes"
         default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+          $ref: "#/components/responses/Error"
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-integration:
         type: serverless_containers
         container_id: "${containers.products.id}"
         service_account_id: "${containers.products.sa_id}"
-  # /api/v1/products/{id}:
-  #   get:
-  #   post:
-  #   patch:
-  #   delete:
+  /api/v1/products/{id}:
+    get:
+      summary: Get product
+      description: Get product
+      tags:
+        - products
+      operationId: products_get
+      parameters:
+        - name: id
+          description: product id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Product data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetProductRes"
+        default:
+          $ref: "#/components/responses/Error"
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: "${containers.products.id}"
+        service_account_id: "${containers.products.sa_id}"
+    post:
+      summary: "Create product"
+      description: ""
+      tags:
+        - products
+      operationId: products_create
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          description: product id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Product data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetProductRes"
+        default:
+          $ref: "#/components/responses/Error"
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: "${containers.products.id}"
+        service_account_id: "${containers.products.sa_id}"
+    patch:
+      summary: ""
+      description: ""
+      tags:
+        - products
+      operationId: products_update
+      parameters:
+        - name: id
+          description: product id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Product data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetProductRes"
+        default:
+          $ref: "#/components/responses/Error"
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: "${containers.products.id}"
+        service_account_id: "${containers.products.sa_id}"
+    delete:
+      summary: ""
+      description: ""
+      tags:
+        - products
+      operationId: products_delete
+      parameters:
+        - name: id
+          description: product id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Product data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetProductRes"
+        default:
+          $ref: "#/components/responses/Error"
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: "${containers.products.id}"
+        service_account_id: "${containers.products.sa_id}"
+
 components:
+  securitySchemes:
+    # TODO: jwtHeaderAuth
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     # Auth (Users/Email)
     CreateUserAccountReq:
@@ -455,24 +548,61 @@ components:
           type: string
         picture_url:
           type: string
-
-
-
-    # Common
-    Error:
+    GetProductRes:
       type: object
       required:
-        - errors
+        - id
+        - seller_id
+        - name
+        - description
+        - stock
+        - metadata
+        - picture_urls
+        - created_at
+        - updated_at
       properties:
-        errors:
-          type: array
-          items:
+        id:
+          type: string
+        seller_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        stock:
+          type: integer
+        metadata:
+          type: object
+        picture_urls:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    # Errors
+    Err:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+
+  responses:
+    # Common
+    Error:
+      description: "error"
+      content:
+        application/json:
+          schema:
             type: object
             required:
-              - code
-              - message
+              - errors
             properties:
-              code:
-                type: integer
-              message:
-                type: string
+              errors:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Err"

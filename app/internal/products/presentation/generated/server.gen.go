@@ -11,12 +11,27 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// Error defines model for Error.
-type Error struct {
-	Errors []struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	} `json:"errors"`
+const (
+	BearerAuthScopes = "bearerAuth.Scopes"
+)
+
+// Err defines model for Err.
+type Err struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+// GetProductRes defines model for GetProductRes.
+type GetProductRes struct {
+	CreatedAt   string                 `json:"created_at"`
+	Description string                 `json:"description"`
+	Id          string                 `json:"id"`
+	Metadata    map[string]interface{} `json:"metadata"`
+	Name        string                 `json:"name"`
+	PictureUrls string                 `json:"picture_urls"`
+	SellerId    string                 `json:"seller_id"`
+	Stock       int                    `json:"stock"`
+	UpdatedAt   string                 `json:"updated_at"`
 }
 
 // ListProductsRes defines model for ListProductsRes.
@@ -33,6 +48,11 @@ type ListProductsResProduct struct {
 	SellerId   string `json:"seller_id"`
 }
 
+// Error defines model for Error.
+type Error struct {
+	Errors []Err `json:"errors"`
+}
+
 // ProductsListParams defines parameters for ProductsList.
 type ProductsListParams struct {
 	// Filter Filter, such as "seller.id=foo" or "seller.id=foo&name=bar&in_stock=*"
@@ -45,6 +65,18 @@ type ServerInterface interface {
 	// List products
 	// (GET /api/v1/products)
 	ProductsList(c *gin.Context, params ProductsListParams)
+
+	// (DELETE /api/v1/products/{id})
+	ProductsDelete(c *gin.Context, id string)
+	// Get product
+	// (GET /api/v1/products/{id})
+	ProductsGet(c *gin.Context, id string)
+
+	// (PATCH /api/v1/products/{id})
+	ProductsUpdate(c *gin.Context, id string)
+	// Create product
+	// (POST /api/v1/products/{id})
+	ProductsCreate(c *gin.Context, id string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -97,6 +129,104 @@ func (siw *ServerInterfaceWrapper) ProductsList(c *gin.Context) {
 	siw.Handler.ProductsList(c, params)
 }
 
+// ProductsDelete operation middleware
+func (siw *ServerInterfaceWrapper) ProductsDelete(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ProductsDelete(c, id)
+}
+
+// ProductsGet operation middleware
+func (siw *ServerInterfaceWrapper) ProductsGet(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ProductsGet(c, id)
+}
+
+// ProductsUpdate operation middleware
+func (siw *ServerInterfaceWrapper) ProductsUpdate(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ProductsUpdate(c, id)
+}
+
+// ProductsCreate operation middleware
+func (siw *ServerInterfaceWrapper) ProductsCreate(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ProductsCreate(c, id)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -125,4 +255,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	}
 
 	router.GET(options.BaseURL+"/api/v1/products", wrapper.ProductsList)
+	router.DELETE(options.BaseURL+"/api/v1/products/:id", wrapper.ProductsDelete)
+	router.GET(options.BaseURL+"/api/v1/products/:id", wrapper.ProductsGet)
+	router.PATCH(options.BaseURL+"/api/v1/products/:id", wrapper.ProductsUpdate)
+	router.POST(options.BaseURL+"/api/v1/products/:id", wrapper.ProductsCreate)
 }
