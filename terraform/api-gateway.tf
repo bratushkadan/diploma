@@ -16,6 +16,10 @@ locals {
             sa_id = yandex_iam_service_account.auth_caller.id
           }
         }
+        products = {
+          id    = ""
+          sa_id = yandex_iam_service_account.auth_caller.id
+        }
       }
     }
   }

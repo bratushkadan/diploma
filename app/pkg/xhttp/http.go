@@ -23,3 +23,18 @@ func HandleNotFound() http.HandlerFunc {
 		w.Write([]byte(`{"errors":[{"code": 0, "message": "handler not found"}]}`))
 	})
 }
+
+func NewErrorResponse(errs ...ErrorResponseErr) ErrorResponse {
+	return ErrorResponse{
+		Errors: errs,
+	}
+}
+
+type ErrorResponse struct {
+	Errors []ErrorResponseErr `json:"errors"`
+}
+
+type ErrorResponseErr struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}

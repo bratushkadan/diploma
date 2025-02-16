@@ -11,58 +11,6 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// AuthenticateReq defines model for AuthenticateReq.
-type AuthenticateReq struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-// AuthenticateRes defines model for AuthenticateRes.
-type AuthenticateRes struct {
-	ExpiresAt    string `json:"expires_at"`
-	RefreshToken string `json:"refresh_token"`
-}
-
-// CreateAccessTokenReq defines model for CreateAccessTokenReq.
-type CreateAccessTokenReq struct {
-	RefreshToken string `json:"refresh_token"`
-}
-
-// CreateAccessTokenRes defines model for CreateAccessTokenRes.
-type CreateAccessTokenRes struct {
-	AccessToken string `json:"access_token"`
-	ExpiresAt   string `json:"expires_at"`
-}
-
-// CreateSellerAccountReq defines model for CreateSellerAccountReq.
-type CreateSellerAccountReq struct {
-	AccessToken string `json:"access_token"`
-	Seller      struct {
-		Email    *string `json:"email,omitempty"`
-		Name     *string `json:"name,omitempty"`
-		Password *string `json:"password,omitempty"`
-	} `json:"seller"`
-}
-
-// CreateSellerAccountRes defines model for CreateSellerAccountRes.
-type CreateSellerAccountRes struct {
-	Email *string `json:"email,omitempty"`
-	Name  string  `json:"name"`
-}
-
-// CreateUserAccountReq defines model for CreateUserAccountReq.
-type CreateUserAccountReq struct {
-	Email    string `json:"email"`
-	Name     string `json:"name"`
-	Password string `json:"password"`
-}
-
-// CreateUserAccountRes defines model for CreateUserAccountRes.
-type CreateUserAccountRes struct {
-	Email *string `json:"email,omitempty"`
-	Name  string  `json:"name"`
-}
-
 // Error defines model for Error.
 type Error struct {
 	Errors []struct {
@@ -71,68 +19,32 @@ type Error struct {
 	} `json:"errors"`
 }
 
-// ReplaceRefreshTokenReq defines model for ReplaceRefreshTokenReq.
-type ReplaceRefreshTokenReq struct {
-	RefreshToken string `json:"refresh_token"`
+// ListProductsRes defines model for ListProductsRes.
+type ListProductsRes struct {
+	NextPageToken string                   `json:"next_page_token"`
+	Products      []ListProductsResProduct `json:"products"`
 }
 
-// ReplaceRefreshTokenRes defines model for ReplaceRefreshTokenRes.
-type ReplaceRefreshTokenRes struct {
-	ExpiresAt    string `json:"expires_at"`
-	RefreshToken string `json:"refresh_token"`
+// ListProductsResProduct defines model for ListProductsResProduct.
+type ListProductsResProduct struct {
+	Id         string `json:"id"`
+	Name       string `json:"name"`
+	PictureUrl string `json:"picture_url"`
+	SellerId   string `json:"seller_id"`
 }
 
-// ConfirmEmailParams defines parameters for ConfirmEmail.
-type ConfirmEmailParams struct {
-	Token string `form:"token" json:"token"`
+// ProductsListParams defines parameters for ProductsList.
+type ProductsListParams struct {
+	// Filter Filter, such as "seller.id=foo" or "seller.id=foo&name=bar&in_stock=*"
+	Filter        string  `form:"filter" json:"filter"`
+	NextPageToken *string `form:"nextPageToken,omitempty" json:"nextPageToken,omitempty"`
 }
-
-// PostApiV1AuthConfirmEmailJSONBody defines parameters for PostApiV1AuthConfirmEmail.
-type PostApiV1AuthConfirmEmailJSONBody struct {
-	Token string `json:"token"`
-}
-
-// PostApiV1AuthConfirmEmailJSONRequestBody defines body for PostApiV1AuthConfirmEmail for application/json ContentType.
-type PostApiV1AuthConfirmEmailJSONRequestBody PostApiV1AuthConfirmEmailJSONBody
-
-// PostApiV1UsersAuthenticateJSONRequestBody defines body for PostApiV1UsersAuthenticate for application/json ContentType.
-type PostApiV1UsersAuthenticateJSONRequestBody = AuthenticateReq
-
-// PostApiV1UsersCreateAccessTokenJSONRequestBody defines body for PostApiV1UsersCreateAccessToken for application/json ContentType.
-type PostApiV1UsersCreateAccessTokenJSONRequestBody = CreateAccessTokenReq
-
-// PostApiV1UsersCreateAccountJSONRequestBody defines body for PostApiV1UsersCreateAccount for application/json ContentType.
-type PostApiV1UsersCreateAccountJSONRequestBody = CreateUserAccountReq
-
-// PostApiV1UsersCreateSellerAccountJSONRequestBody defines body for PostApiV1UsersCreateSellerAccount for application/json ContentType.
-type PostApiV1UsersCreateSellerAccountJSONRequestBody = CreateSellerAccountReq
-
-// PostApiV1UsersReplaceRefreshTokenJSONRequestBody defines body for PostApiV1UsersReplaceRefreshToken for application/json ContentType.
-type PostApiV1UsersReplaceRefreshTokenJSONRequestBody = ReplaceRefreshTokenReq
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// Confirm account email via token
-	// (GET /api/v1/auth:confirm-email)
-	ConfirmEmail(c *gin.Context, params ConfirmEmailParams)
-	// Confirm email via token
-	// (POST /api/v1/auth:confirm-email)
-	PostApiV1AuthConfirmEmail(c *gin.Context)
-
-	// (POST /api/v1/users/:authenticate)
-	PostApiV1UsersAuthenticate(c *gin.Context)
-
-	// (POST /api/v1/users/:createAccessToken)
-	PostApiV1UsersCreateAccessToken(c *gin.Context)
-	// Create user account
-	// (POST /api/v1/users/:createAccount)
-	PostApiV1UsersCreateAccount(c *gin.Context)
-
-	// (POST /api/v1/users/:createSellerAccount)
-	PostApiV1UsersCreateSellerAccount(c *gin.Context)
-
-	// (POST /api/v1/users/:replaceRefreshToken)
-	PostApiV1UsersReplaceRefreshToken(c *gin.Context)
+	// List products
+	// (GET /api/v1/products)
+	ProductsList(c *gin.Context, params ProductsListParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -144,26 +56,34 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(c *gin.Context)
 
-// ConfirmEmail operation middleware
-func (siw *ServerInterfaceWrapper) ConfirmEmail(c *gin.Context) {
+// ProductsList operation middleware
+func (siw *ServerInterfaceWrapper) ProductsList(c *gin.Context) {
 
 	var err error
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params ConfirmEmailParams
+	var params ProductsListParams
 
-	// ------------- Required query parameter "token" -------------
+	// ------------- Required query parameter "filter" -------------
 
-	if paramValue := c.Query("token"); paramValue != "" {
+	if paramValue := c.Query("filter"); paramValue != "" {
 
 	} else {
-		siw.ErrorHandler(c, fmt.Errorf("Query argument token is required, but not found"), http.StatusBadRequest)
+		siw.ErrorHandler(c, fmt.Errorf("Query argument filter is required, but not found"), http.StatusBadRequest)
 		return
 	}
 
-	err = runtime.BindQueryParameter("form", true, true, "token", c.Request.URL.Query(), &params.Token)
+	err = runtime.BindQueryParameter("form", true, true, "filter", c.Request.URL.Query(), &params.Filter)
 	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter token: %w", err), http.StatusBadRequest)
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter filter: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "nextPageToken" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "nextPageToken", c.Request.URL.Query(), &params.NextPageToken)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter nextPageToken: %w", err), http.StatusBadRequest)
 		return
 	}
 
@@ -174,85 +94,7 @@ func (siw *ServerInterfaceWrapper) ConfirmEmail(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.ConfirmEmail(c, params)
-}
-
-// PostApiV1AuthConfirmEmail operation middleware
-func (siw *ServerInterfaceWrapper) PostApiV1AuthConfirmEmail(c *gin.Context) {
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.PostApiV1AuthConfirmEmail(c)
-}
-
-// PostApiV1UsersAuthenticate operation middleware
-func (siw *ServerInterfaceWrapper) PostApiV1UsersAuthenticate(c *gin.Context) {
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.PostApiV1UsersAuthenticate(c)
-}
-
-// PostApiV1UsersCreateAccessToken operation middleware
-func (siw *ServerInterfaceWrapper) PostApiV1UsersCreateAccessToken(c *gin.Context) {
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.PostApiV1UsersCreateAccessToken(c)
-}
-
-// PostApiV1UsersCreateAccount operation middleware
-func (siw *ServerInterfaceWrapper) PostApiV1UsersCreateAccount(c *gin.Context) {
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.PostApiV1UsersCreateAccount(c)
-}
-
-// PostApiV1UsersCreateSellerAccount operation middleware
-func (siw *ServerInterfaceWrapper) PostApiV1UsersCreateSellerAccount(c *gin.Context) {
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.PostApiV1UsersCreateSellerAccount(c)
-}
-
-// PostApiV1UsersReplaceRefreshToken operation middleware
-func (siw *ServerInterfaceWrapper) PostApiV1UsersReplaceRefreshToken(c *gin.Context) {
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.PostApiV1UsersReplaceRefreshToken(c)
+	siw.Handler.ProductsList(c, params)
 }
 
 // GinServerOptions provides options for the Gin server.
@@ -282,11 +124,5 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
-	router.GET(options.BaseURL+"/api/v1/auth:confirm-email", wrapper.ConfirmEmail)
-	router.POST(options.BaseURL+"/api/v1/auth:confirm-email", wrapper.PostApiV1AuthConfirmEmail)
-	router.POST(options.BaseURL+"/api/v1/users/:authenticate", wrapper.PostApiV1UsersAuthenticate)
-	router.POST(options.BaseURL+"/api/v1/users/:createAccessToken", wrapper.PostApiV1UsersCreateAccessToken)
-	router.POST(options.BaseURL+"/api/v1/users/:createAccount", wrapper.PostApiV1UsersCreateAccount)
-	router.POST(options.BaseURL+"/api/v1/users/:createSellerAccount", wrapper.PostApiV1UsersCreateSellerAccount)
-	router.POST(options.BaseURL+"/api/v1/users/:replaceRefreshToken", wrapper.PostApiV1UsersReplaceRefreshToken)
+	router.GET(options.BaseURL+"/api/v1/products", wrapper.ProductsList)
 }

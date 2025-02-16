@@ -2,6 +2,7 @@ openapi: 3.0.0
 info:
   version: 1.0.0
   title: Floral Auth API
+
 tags:
   - name: auth
     description: "Service for authentication"
@@ -272,9 +273,51 @@ paths:
         type: serverless_containers
         container_id: "${containers.auth.email_confirmation.id}"
         service_account_id: "${containers.auth.email_confirmation.sa_id}"
-
+  /api/v1/products:
+    get:
+      summary: List products
+      description: List products
+      tags:
+        - products
+      operationId: products_list
+      parameters:
+        - name: filter
+          description: Filter, such as "seller.id=foo" or "seller.id=foo&name=bar&in_stock=*"
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: nextPageToken
+          in: query
+          schema:
+            type: string
+      responses:
+        200:
+          description: Products data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListProductsRes"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: "${containers.products.id}"
+        service_account_id: "${containers.products.sa_id}"
+  # /api/v1/products/{id}:
+  #   get:
+  #   post:
+  #   patch:
+  #   delete:
 components:
   schemas:
+    # Auth (Users/Email)
     CreateUserAccountReq:
       type: object
       required:
@@ -307,9 +350,9 @@ components:
         seller:
           type: object
           required:
-          - name
-          - email
-          - password
+            - name
+            - email
+            - password
           properties:
             email:
               type: string
@@ -383,6 +426,39 @@ components:
           type: string
         expires_at:
           type: string
+    # Products
+    ListProductsRes:
+      type: object
+      required:
+        - products
+        - next_page_token
+      properties:
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/ListProductsResProduct"
+        next_page_token:
+          type: string
+    ListProductsResProduct:
+      type: object
+      required:
+        - id
+        - name
+        - seller_id
+        - picture_url
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        seller_id:
+          type: string
+        picture_url:
+          type: string
+
+
+
+    # Common
     Error:
       type: object
       required:

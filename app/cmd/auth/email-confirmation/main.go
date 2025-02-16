@@ -155,10 +155,10 @@ func main() {
 
 		logger.Info("got shutdown signal")
 
-		// TODO: add this to the "if env == EnvProduction { ... }"
-		// <-time.After(5 * time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
-		if err := server.Shutdown(context.Background()); err != nil {
+		if err := server.Shutdown(ctx); err != nil {
 			logger.Error("error while stopping http listener", zap.Error(err))
 		}
 	}()
