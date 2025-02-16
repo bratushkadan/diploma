@@ -52,9 +52,11 @@ func main() {
 	r.GET("/ready", readinessHandler)
 	r.GET("/health", readinessHandler)
 
-	apiImpl := &presentation.ApiImpl{}
+	apiImpl := &presentation.ApiImpl{Logger: logger}
+
 	oapi_codegen.RegisterHandlersWithOptions(r, apiImpl, oapi_codegen.GinServerOptions{
 		ErrorHandler: apiImpl.ErrorHandler,
+		Middlewares:  []oapi_codegen.MiddlewareFunc{apiImpl.AuthMiddleware},
 	})
 
 	r.NoRoute(xgin.HandleNotFound())

@@ -60,11 +60,33 @@ type ProductsListParams struct {
 	NextPageToken *string `form:"nextPageToken,omitempty" json:"nextPageToken,omitempty"`
 }
 
+// Method & Path constants for routes.
+// List products
+const ProductsListMethod = "GET"
+const ProductsListPath = "/api/v1/products"
+
+// Create product
+const ProductsCreateMethod = "POST"
+const ProductsCreatePath = "/api/v1/products"
+
+const ProductsDeleteMethod = "DELETE"
+const ProductsDeletePath = "/api/v1/products/:id"
+
+// Get product
+const ProductsGetMethod = "GET"
+const ProductsGetPath = "/api/v1/products/:id"
+
+const ProductsUpdateMethod = "PATCH"
+const ProductsUpdatePath = "/api/v1/products/:id"
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// List products
 	// (GET /api/v1/products)
 	ProductsList(c *gin.Context, params ProductsListParams)
+	// Create product
+	// (POST /api/v1/products)
+	ProductsCreate(c *gin.Context)
 
 	// (DELETE /api/v1/products/{id})
 	ProductsDelete(c *gin.Context, id string)
@@ -74,9 +96,6 @@ type ServerInterface interface {
 
 	// (PATCH /api/v1/products/{id})
 	ProductsUpdate(c *gin.Context, id string)
-	// Create product
-	// (POST /api/v1/products/{id})
-	ProductsCreate(c *gin.Context, id string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -127,6 +146,21 @@ func (siw *ServerInterfaceWrapper) ProductsList(c *gin.Context) {
 	}
 
 	siw.Handler.ProductsList(c, params)
+}
+
+// ProductsCreate operation middleware
+func (siw *ServerInterfaceWrapper) ProductsCreate(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ProductsCreate(c)
 }
 
 // ProductsDelete operation middleware
@@ -201,32 +235,6 @@ func (siw *ServerInterfaceWrapper) ProductsUpdate(c *gin.Context) {
 	siw.Handler.ProductsUpdate(c, id)
 }
 
-// ProductsCreate operation middleware
-func (siw *ServerInterfaceWrapper) ProductsCreate(c *gin.Context) {
-
-	var err error
-
-	// ------------- Path parameter "id" -------------
-	var id string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	c.Set(BearerAuthScopes, []string{})
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.ProductsCreate(c, id)
-}
-
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -255,8 +263,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	}
 
 	router.GET(options.BaseURL+"/api/v1/products", wrapper.ProductsList)
+	router.POST(options.BaseURL+"/api/v1/products", wrapper.ProductsCreate)
 	router.DELETE(options.BaseURL+"/api/v1/products/:id", wrapper.ProductsDelete)
 	router.GET(options.BaseURL+"/api/v1/products/:id", wrapper.ProductsGet)
 	router.PATCH(options.BaseURL+"/api/v1/products/:id", wrapper.ProductsUpdate)
-	router.POST(options.BaseURL+"/api/v1/products/:id", wrapper.ProductsCreate)
 }

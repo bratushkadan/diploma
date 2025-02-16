@@ -286,20 +286,14 @@ paths:
         type: serverless_containers
         container_id: "${containers.products.id}"
         service_account_id: "${containers.products.sa_id}"
-  /api/v1/products/{id}:
-    get:
-      summary: Get product
-      description: Get product
+    post:
+      summary: "Create product"
+      description: ""
       tags:
         - products
-      operationId: products_get
-      parameters:
-        - name: id
-          description: product id
-          in: path
-          required: true
-          schema:
-            type: string
+      operationId: products_create
+      security:
+        - bearerAuth: []
       responses:
         200:
           description: Product data
@@ -315,14 +309,13 @@ paths:
         type: serverless_containers
         container_id: "${containers.products.id}"
         service_account_id: "${containers.products.sa_id}"
-    post:
-      summary: "Create product"
-      description: ""
+  /api/v1/products/{id}:
+    get:
+      summary: Get product
+      description: Get product
       tags:
         - products
-      operationId: products_create
-      security:
-        - bearerAuth: []
+      operationId: products_get
       parameters:
         - name: id
           description: product id
