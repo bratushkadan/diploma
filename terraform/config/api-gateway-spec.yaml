@@ -2,12 +2,24 @@ openapi: 3.0.0
 info:
   version: 1.0.0
   title: Floral Auth API
+tags:
+  - name: auth
+    description: "Service for authentication"
+  - name: products
+    description: "Products service"
+  - name: orders
+  - name: cart
+  - name: catalog
+  - name: payments
+  - name: feedback
 
 paths:
-  %{~ if containers.auth.account.id != "" }
   /api/v1/users/:createAccount:
     post:
+      summary: Create user account
       description: Create user account
+      tags:
+        - auth
       requestBody:
         required: true
         content:
@@ -34,11 +46,13 @@ paths:
           rpm: 10
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: ${containers.auth.account.id}
-        service_account_id: ${containers.auth.account.sa_id}
+        container_id: "${containers.auth.account.id}"
+        service_account_id: "${containers.auth.account.sa_id}"
   /api/v1/users/:createSellerAccount:
     post:
       description: Create seller account
+      tags:
+        - auth
       requestBody:
         required: true
         content:
@@ -65,11 +79,13 @@ paths:
           rpm: 5
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: ${containers.auth.account.id}
-        service_account_id: ${containers.auth.account.sa_id}
+        container_id: "${containers.auth.account.id}"
+        service_account_id: "${containers.auth.account.sa_id}"
   /api/v1/users/:authenticate:
     post:
       description: Authenticate
+      tags:
+        - auth
       requestBody:
         required: true
         content:
@@ -96,11 +112,13 @@ paths:
           rpm: 50
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: ${containers.auth.account.id}
-        service_account_id: ${containers.auth.account.sa_id}
+        container_id: "${containers.auth.account.id}"
+        service_account_id: "${containers.auth.account.sa_id}"
   /api/v1/users/:replaceRefreshToken:
     post:
       description: Authenticate
+      tags:
+        - auth
       requestBody:
         required: true
         content:
@@ -127,11 +145,13 @@ paths:
           rpm: 50
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: ${containers.auth.account.id}
-        service_account_id: ${containers.auth.account.sa_id}
+        container_id: "${containers.auth.account.id}"
+        service_account_id: "${containers.auth.account.sa_id}"
   /api/v1/users/:createAccessToken:
     post:
       description: Authenticate
+      tags:
+        - auth
       requestBody:
         required: true
         content:
@@ -155,19 +175,20 @@ paths:
         validateRequestBody: true
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: ${containers.auth.account.id}
-        service_account_id: ${containers.auth.account.sa_id}
-  %{~ endif }
+        container_id: "${containers.auth.email_confirmation.id}"
+        service_account_id: "${containers.auth.email_confirmation.sa_id}"
   "${auth_email_confirmation_api_endpoint}":
     x-yc-apigateway-cors:
       origin: true
       methods: POST
     get:
       summary: Confirm account email via token
+      tags:
+        - auth
       operationId: confirm_email
       parameters:
         - name: token
-          in: path
+          in: query
           required: true
           schema:
             type: string
@@ -232,6 +253,9 @@ paths:
             </html>
 
     post:
+      summary: Confirm email via token
+      tags:
+        - auth
       requestBody:
         content:
           application/json:
@@ -246,8 +270,8 @@ paths:
         validateRequestBody: true
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: ${containers.auth.email_confirmation.id}
-        service_account_id: ${containers.auth.email_confirmation.sa_id}
+        container_id: "${containers.auth.email_confirmation.id}"
+        service_account_id: "${containers.auth.email_confirmation.sa_id}"
 
 components:
   schemas:

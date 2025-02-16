@@ -17,6 +17,9 @@ locals {
     }
   }
 
+  // No way to get around circular dependencies with YMQ Trigger :(
+  email_confirmation_origin = "https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net"
+
   containers = {
     auth = {
       account = {
@@ -50,9 +53,6 @@ locals {
     // LEGACY
     "SQS_ENDPOINT",
   ] : v => v })
-
-  // No way to get around circular dependencies with YMQ Trigger :(
-  email_confirmation_origin = "https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net"
 
   lockbox = {
     auth = {
