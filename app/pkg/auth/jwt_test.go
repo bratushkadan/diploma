@@ -10,10 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//go:embed test_fixtures/private.key
+//go:embed test_fixtures/private_key.pem
 var privateKey []byte
 
-//go:embed test_fixtures/public.key
+//go:embed test_fixtures/public_key.pem
 var publicKey []byte
 
 type testClaims struct {
