@@ -49,6 +49,18 @@ resource "yandex_resourcemanager_folder_iam_member" "app_serverless_mdb_user" {
   role   = "serverless.mdbProxies.user"
   member = "serviceAccount:${yandex_iam_service_account.app.id}"
 }
+resource "yandex_resourcemanager_folder_iam_member" "app_yds_viewer" {
+  folder_id = local.folder_id
+
+  role   = "yds.viewer"
+  member = "serviceAccount:${yandex_iam_service_account.app.id}"
+}
+resource "yandex_resourcemanager_folder_iam_member" "app_yds_writer" {
+  folder_id = local.folder_id
+
+  role   = "yds.writer"
+  member = "serviceAccount:${yandex_iam_service_account.app.id}"
+}
 // For Serverless Containers
 resource "yandex_resourcemanager_folder_iam_member" "app_images_puller" {
   folder_id = local.folder_id
