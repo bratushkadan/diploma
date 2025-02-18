@@ -3,6 +3,20 @@ resource "yandex_ydb_database_serverless" "this" {
   description = "auth service serverless ydb"
 }
 
+resource "yandex_ydb_topic" "test_topic" {
+  database_endpoint = yandex_ydb_database_serverless.this.ydb_full_endpoint
+  name              = "test-topic"
+
+  supported_codecs       = ["raw", "gzip"]
+  partitions_count       = 1
+  retention_period_hours = 1
+
+  consumer {
+    name             = "test-topic-consumer-1"
+    supported_codecs = ["raw", "gzip"]
+  }
+}
+
 resource "yandex_iam_service_account" "app" {
   name        = "${local.common_name}-app"
   description = "application sa"
@@ -47,6 +61,12 @@ resource "yandex_resourcemanager_folder_iam_member" "app_serverless_mdb_user" {
   folder_id = local.folder_id
 
   role   = "serverless.mdbProxies.user"
+  member = "serviceAccount:${yandex_iam_service_account.app.id}"
+}
+resource "yandex_resourcemanager_folder_iam_member" "app_kafka_api_client" {
+  folder_id = local.folder_id
+
+  role   = "ydb.kafkaApi.client"
   member = "serviceAccount:${yandex_iam_service_account.app.id}"
 }
 resource "yandex_resourcemanager_folder_iam_member" "app_yds_viewer" {
