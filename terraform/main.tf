@@ -166,12 +166,6 @@ resource "yandex_resourcemanager_folder_iam_member" "app_serverless_mdb_user" {
   role   = "serverless.mdbProxies.user"
   member = "serviceAccount:${yandex_iam_service_account.app.id}"
 }
-resource "yandex_resourcemanager_folder_iam_member" "app_kafka_api_client" {
-  folder_id = local.folder_id
-
-  role   = "ydb.kafkaApi.client"
-  member = "serviceAccount:${yandex_iam_service_account.app.id}"
-}
 resource "yandex_resourcemanager_folder_iam_member" "app_yds_viewer" {
   folder_id = local.folder_id
 
