@@ -25,26 +25,26 @@ resource "yandex_ydb_table" "test_cdc_table" {
   primary_key = ["id"]
 }
 
-/* Here's an another way to setup CDC for ydb table 
+// TODO: create a Terraform module for this scenario
 
-   However, I think it's cursed: no way to change throughput or to change retention period (the latter is possible, I just couldn't get my mind around that)
-*/
-// resource "yandex_ydb_table_changefeed" "ydb_changefeed" {
-//   /* table_id here is like:
-//   grpcs://ydb.serverless.yandexcloud.net:2135/?database=/ru-central1/<cloud_name>/<ydb_database_id>?path=<table_name>
-//   */
-//   table_id = yandex_ydb_table.test_cdc_table.id
-//   name     = "changefeed"
-//   mode     = "NEW_IMAGE"
-//   format   = "JSON"
-// 
-//   consumer {
-//     name = "app_a"
-//   }
-//   consumer {
-//     name = "app_b"
-//   }
-// }
+// See for Data Transfer endpoints configuration https://yandex.cloud/ru/docs/data-transfer/operations/endpoint/source/ydb#endpoint-settings
+resource "yandex_ydb_table_changefeed" "ydb_changefeed" {
+  /* table_id here is like:
+  grpcs://ydb.serverless.yandexcloud.net:2135/?database=/ru-central1/<cloud_name>/<ydb_database_id>?path=<table_name>
+  */
+  table_id = yandex_ydb_table.test_cdc_table.id
+  name     = "changefeed"
+  mode     = "NEW_IMAGE"
+  format   = "JSON"
+
+  retention_period = "PT1H"
+
+  consumer {
+    // See for Data Transfer endpoints configuration https://yandex.cloud/ru/docs/data-transfer/operations/endpoint/source/ydb#endpoint-settings
+    // (this particular setting)
+    name = "__data_transfer_consumer"
+  }
+}
 
 resource "yandex_datatransfer_endpoint" "test_cdc_source" {
   name = "test-cdc-source"
@@ -55,7 +55,7 @@ resource "yandex_datatransfer_endpoint" "test_cdc_source" {
       paths = [
         yandex_ydb_table.test_cdc_table.path
       ]
-      changefeed_custom_name = yandex_ydb_topic.test_topic_changefeed.name
+      changefeed_custom_name = yandex_ydb_table_changefeed.ydb_changefeed.name
     }
   }
 }
@@ -101,21 +101,6 @@ resource "yandex_ydb_topic" "test_topic" {
 
   consumer {
     name             = "test-topic-consumer"
-    supported_codecs = ["raw", "gzip"]
-  }
-}
-resource "yandex_ydb_topic" "test_topic_changefeed" {
-  database_endpoint = yandex_ydb_database_serverless.this.ydb_full_endpoint
-  name              = "test-topic-changefeed"
-
-  supported_codecs       = ["raw", "gzip"]
-  partitions_count       = 1
-  retention_period_hours = 1
-
-  partition_write_speed_kbps = 128
-
-  consumer {
-    name             = "test-topic-changefeed-consumer"
     supported_codecs = ["raw", "gzip"]
   }
 }
