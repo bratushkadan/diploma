@@ -25,6 +25,26 @@ resource "yandex_ydb_table" "test_cdc_table" {
   primary_key = ["id"]
 }
 
+/* Here's an another way to setup CDC for ydb table 
+
+   However, I think it's cursed: no way to change throughput or to change retention period (the latter is possible, I just couldn't get my mind around that)
+*/
+// resource "yandex_ydb_table_changefeed" "ydb_changefeed" {
+//   /* table_id here is like:
+//   grpcs://ydb.serverless.yandexcloud.net:2135/?database=/ru-central1/<cloud_name>/<ydb_database_id>?path=<table_name>
+//   */
+//   table_id = yandex_ydb_table.test_cdc_table.id
+//   name     = "changefeed"
+//   mode     = "NEW_IMAGE"
+//   format   = "JSON"
+// 
+//   consumer {
+//     name = "app_a"
+//   }
+//   consumer {
+//     name = "app_b"
+//   }
+// }
 
 resource "yandex_datatransfer_endpoint" "test_cdc_source" {
   name = "test-cdc-source"
