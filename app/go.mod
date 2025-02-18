@@ -25,6 +25,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/oapi-codegen/oapi-codegen/v2 v2.4.1
 	github.com/oapi-codegen/runtime v1.1.1
+	github.com/segmentio/kafka-go v0.4.47
 	github.com/speps/go-hashids/v2 v2.0.1
 	github.com/stretchr/testify v1.10.0
 	github.com/twmb/franz-go v1.18.1

@@ -2,37 +2,107 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/kinesis"
-	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"github.com/bratushkadan/floral/internal/auth/setup"
 	"github.com/bratushkadan/floral/pkg/cfg"
-	"github.com/bratushkadan/floral/pkg/yds"
+	ydbpkg "github.com/bratushkadan/floral/pkg/ydb"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
+	"github.com/ydb-platform/ydb-go-sdk/v3"
+	"github.com/ydb-platform/ydb-go-sdk/v3/topic/topicoptions"
+	"github.com/ydb-platform/ydb-go-sdk/v3/topic/topicreader"
 )
 
-func GeneratePartitionKey(payload []byte) string {
-	hash := sha256.New()
-	hash.Write(payload)
-	hashSum := hash.Sum(nil)
+func consumeYdbClient(ctx context.Context, reader *topicreader.Reader) {
+	for {
+		log.Print("reading message batch")
+		batch, err := reader.ReadMessagesBatch(ctx)
+		if err != nil {
+			log.Fatalf("failed to read message batch: %v", err)
+		}
+		log.Print("read message batch")
 
-	return hex.EncodeToString(hashSum)
+		for _, msg := range batch.Messages {
+			content, _ := io.ReadAll(msg)
+			log.Print(string(content))
+			_ = reader.Commit(msg.Context(), msg)
+		}
+	}
+}
+
+func newYdbTopicReader(ctx context.Context) *topicreader.Reader {
+	endpoint := cfg.MustEnv(setup.EnvKeyYdbEndpoint)
+
+	log.Print("setup ydb")
+	db, err := ydb.Open(ctx, endpoint, ydbpkg.GetYdbAuthOpts(ydbpkg.YdbAuthMethodEnviron)...)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Print("set up ydb")
+
+	consumerAndGroupId := "test-topic-consumer-1"
+
+	reader, err := db.Topic().StartReader(consumerAndGroupId, topicoptions.ReadTopic("test-topic"))
+	if err != nil {
+		log.Fatalf("failed to read topic: %v", err)
+	}
+
+	return reader
 }
 
 func main() {
 
-	// for range 5 {
-	// 	amazonKinesisApiPublish()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	// topicreader := newYdbTopicReader(context.Background())
+	// consumeYdbClient(context.Background(), topicreader)
+
+	// m := plain.Mechanism{
+	// 	Username: "",
+	// 	// key id aje8r19oomdd4j3rbu1q,
+	// 	// api key is below,
+	// 	Password: "",
 	// }
 
-	// return
+	// d := kafka.Dialer{
+	// 	SASLMechanism: m,
+	// 	TLS: &tls.Config{
+	// 		InsecureSkipVerify: true,
+	// 	},
+	// }
+
+	// conn, err := d.Dial("tcp", "ydb-03.serverless.yandexcloud.net:9093")
+	// if err != nil {
+	// 	log.Fatalf("Failed to ping Kafka broker: %v", err)
+	// }
+	// defer conn.Close()
+
+	// reader := kafka.NewReader(kafka.ReaderConfig{
+	// 	Brokers:           []string{"ydb-03.serverless.yandexcloud.net:9093"},
+	// 	Dialer:            &d,
+	// 	Topic:             "test-topic",
+	// 	SessionTimeout:    10 * time.Second,
+	// 	HeartbeatInterval: 3 * time.Second,
+	// 	CommitInterval:    0,
+	// 	GroupID:           "test-topic-consumer-1",
+	// })
+	// defer reader.Close()
+
+	// for {
+	// 	log.Print("read message")
+	// 	msg, err := reader.ReadMessage(context.Background())
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	if err := reader.CommitMessages(context.Background(), msg); err != nil {
+	// 		log.Fatalf("failed to commit messages: %v", err)
+	// 	}
+	// 	log.Printf("value: %s", string(msg.Value))
+	// }
 
 	auth := plain.Auth{
 		User: "@/ru-central1/b1ge5gt845ec0q6sflsv/etnqf4dnapbeccm06epl",
@@ -45,8 +115,8 @@ func main() {
 	// Consuming can either be direct (no consumer group), or through a group. Below, we use a group.
 	cl, err := kgo.NewClient(
 		kgo.SeedBrokers("ydb-03.serverless.yandexcloud.net:9093"),
+		kgo.ConsumeTopics("test-topic"),
 		kgo.ConsumerGroup("test-topic-consumer-1"),
-		kgo.ConsumeTopics("/ru-central1/b1ge5gt845ec0q6sflsv/etnqf4dnapbeccm06epl/test-topic"),
 		kgo.DialTLS(),
 		kgo.SASL(auth.AsMechanism()),
 		kgo.DisableAutoCommit(),
@@ -60,7 +130,7 @@ func main() {
 	}
 	defer cl.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	if err := cl.Ping(ctx); err != nil {
 		log.Fatal(fmt.Errorf("failed to ping brokers: %w", err))
@@ -121,110 +191,4 @@ func main() {
 			log.Printf("failed to commit offsets: %v", err)
 		}
 	}
-}
-
-func amazonKinesisApiPublish() {
-	m := cfg.AssertEnv(setup.EnvKeyAwsAccessKeyId, setup.EnvKeyAwsSecretAccessKey)
-
-	ctx := context.Background()
-
-	streamName := "test-topic"
-	endpoint := "https://yds.serverless.yandexcloud.net"
-	endpointPath := "/ru-central1/b1ge5gt845ec0q6sflsv/etnqf4dnapbeccm06epl/" + streamName
-	kinesisClient, err := yds.New(ctx, m[setup.EnvKeyAwsAccessKeyId], m[setup.EnvKeyAwsSecretAccessKey], endpoint)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	data := []byte(`{"message": "you're cool!"}`)
-
-	_, err = kinesisClient.PutRecords(ctx, &kinesis.PutRecordsInput{
-		Records: []types.PutRecordsRequestEntry{
-			{
-				Data:         []byte(data),
-				PartitionKey: aws.String(GeneratePartitionKey(data)),
-			},
-		},
-		StreamName: aws.String(endpointPath),
-	})
-	if err != nil {
-		log.Fatalf("failed to put kinesis records: %v", err)
-	}
-	log.Print("Succesfully put kinesis records to a stream!")
-}
-
-func amazonKinesisApiPublishAndReadFromShards() {
-	m := cfg.AssertEnv(setup.EnvKeyAwsAccessKeyId, setup.EnvKeyAwsSecretAccessKey)
-
-	ctx := context.Background()
-
-	streamName := "test-stream"
-	endpoint := "https://yds.serverless.yandexcloud.net"
-	endpointPath := "/ru-central1/b1ge5gt845ec0q6sflsv/etnqf4dnapbeccm06epl/" + streamName
-	kinesisClient, err := yds.New(ctx, m[setup.EnvKeyAwsAccessKeyId], m[setup.EnvKeyAwsSecretAccessKey], endpoint)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	amazonKinesisApiPublish()
-
-	describeStreamOut, err := kinesisClient.DescribeStream(ctx, &kinesis.DescribeStreamInput{
-		StreamName: aws.String(endpointPath),
-	})
-	if err != nil {
-		log.Fatalf("failed to describe stream: %v", err)
-	}
-
-	var shards []*string
-	for _, v := range describeStreamOut.StreamDescription.Shards {
-		shards = append(shards, v.ShardId)
-	}
-
-	// Yandex Data Streams не поддерживает (https://yandex.cloud/ru/docs/data-streams/kinesisapi/api-ref)
-	// методы API RegisterStreamConsumer и ListStreamConsumers, поэтому для того, чтобы имитировать поведение Consumer,
-	// необходимо разработать механизм назначения отдельных потребителей сегментам (Partitions/Kinesis API Shard) и
-	// необходимо самостоятельно вести наблюдение за отступом (sequence number)
-	// Это большое ограничение и неудобство.
-
-	for _, shardId := range shards {
-		log.Printf(`iterate over shardId "%s"`, *shardId)
-		shardIteratorOut, err := kinesisClient.GetShardIterator(ctx, &kinesis.GetShardIteratorInput{
-			StreamName: aws.String(endpointPath),
-			ShardId:    shardId,
-			// Option 1. ShardIteratorTypeAtSequenceNumber if you want to read all available records starting at a certain position.
-			// ShardIteratorType:      types.ShardIteratorTypeAtSequenceNumber,
-			// StartingSequenceNumber: aws.String("0"),
-			// Option 2. ShardIteratorTypeAfterSequenceNumber  if you want to read all available records starting after a certain position.
-			// ShardIteratorType:      types.ShardIteratorTypeAfterSequenceNumber,
-			// StartingSequenceNumber: aws.String("0"),
-			// Option 3. ShardIteratorTypeLatest  if you want to read all available records starting after a certain position.
-			// ShardIteratorType: types.ShardIteratorTypeLatest,
-			// Option 4. ShardIteratorTypeTrimHorizon if you want to read all available records starting from the oldest record.
-			ShardIteratorType: types.ShardIteratorTypeTrimHorizon,
-		})
-		if err != nil {
-			log.Fatalf("failed to prepare kinesis shard iterator: %v", err)
-		}
-
-		log.Printf(`shard iterator "%s"`, *shardIteratorOut.ShardIterator)
-
-		out, err := kinesisClient.GetRecords(ctx, &kinesis.GetRecordsInput{
-			ShardIterator: shardIteratorOut.ShardIterator,
-		})
-		if err != nil {
-			log.Fatalf("failed to get records from kinesis shard iterator: %v", err)
-		}
-
-		for _, r := range out.Records {
-			log.Printf(`record: "%s"`, r.Data)
-		}
-
-		// stream is closed if it's null !
-		if out.NextShardIterator != nil {
-			log.Printf("next shard iterator %s", *out.NextShardIterator)
-		}
-	}
-
-	log.Print("Successfully read records from the kinesis stream")
-
 }
