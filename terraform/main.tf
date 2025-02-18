@@ -3,6 +3,72 @@ resource "yandex_ydb_database_serverless" "this" {
   description = "auth service serverless ydb"
 }
 
+resource "yandex_ydb_table" "test_cdc_table" {
+  path              = "test_cdc_table"
+  connection_string = yandex_ydb_database_serverless.this.ydb_full_endpoint
+
+  column {
+    name     = "id"
+    type     = "Bigserial"
+    not_null = true
+  }
+  column {
+    name     = "meta"
+    type     = "Json"
+    not_null = true
+  }
+  column {
+    name     = "created_at"
+    type     = "Timestamp"
+    not_null = true
+  }
+  primary_key = ["id"]
+}
+
+
+resource "yandex_datatransfer_endpoint" "test_cdc_source" {
+  name = "test-cdc-source"
+  settings {
+    ydb_source {
+      database           = yandex_ydb_database_serverless.this.database_path
+      service_account_id = yandex_iam_service_account.app.id
+      paths = [
+        yandex_ydb_table.test_cdc_table.path
+      ]
+      changefeed_custom_name = yandex_ydb_topic.test_topic_changefeed.name
+    }
+  }
+}
+resource "yandex_datatransfer_endpoint" "test_cdc_target" {
+  name = "test-cdc-target"
+  settings {
+    yds_target {
+      database           = yandex_ydb_database_serverless.this.database_path
+      service_account_id = yandex_iam_service_account.app.id
+      stream             = yandex_ydb_topic.test_topic.name
+      serializer {
+        serializer_auto {}
+      }
+    }
+  }
+}
+
+resource "yandex_datatransfer_transfer" "test_cdc_transfer" {
+  name      = "test-cdc-transfer"
+  source_id = yandex_datatransfer_endpoint.test_cdc_source.id
+  target_id = yandex_datatransfer_endpoint.test_cdc_target.id
+  type      = "SNAPSHOT_AND_INCREMENT"
+  runtime {
+    yc_runtime {
+      job_count = 1
+      upload_shard_params {
+        process_count = 1
+        job_count     = 1
+      }
+    }
+  }
+}
+
 resource "yandex_ydb_topic" "test_topic" {
   database_endpoint = yandex_ydb_database_serverless.this.ydb_full_endpoint
   name              = "test-topic"
@@ -11,8 +77,25 @@ resource "yandex_ydb_topic" "test_topic" {
   partitions_count       = 1
   retention_period_hours = 1
 
+  partition_write_speed_kbps = 128
+
   consumer {
-    name             = "test-topic-consumer-1"
+    name             = "test-topic-consumer"
+    supported_codecs = ["raw", "gzip"]
+  }
+}
+resource "yandex_ydb_topic" "test_topic_changefeed" {
+  database_endpoint = yandex_ydb_database_serverless.this.ydb_full_endpoint
+  name              = "test-topic-changefeed"
+
+  supported_codecs       = ["raw", "gzip"]
+  partitions_count       = 1
+  retention_period_hours = 1
+
+  partition_write_speed_kbps = 128
+
+  consumer {
+    name             = "test-topic-changefeed-consumer"
     supported_codecs = ["raw", "gzip"]
   }
 }
