@@ -1,12 +1,10 @@
 output "ydb" {
   value = {
-    auth = {
-      id                    = yandex_ydb_database_serverless.this.id
-      document_api_endpoint = yandex_ydb_database_serverless.this.document_api_endpoint
-      full_endpoint         = yandex_ydb_database_serverless.this.ydb_full_endpoint
-      api_endpoint          = yandex_ydb_database_serverless.this.ydb_api_endpoint
-      database_path         = yandex_ydb_database_serverless.this.database_path
-    }
+    id                    = yandex_ydb_database_serverless.this.id
+    document_api_endpoint = yandex_ydb_database_serverless.this.document_api_endpoint
+    full_endpoint         = yandex_ydb_database_serverless.this.ydb_full_endpoint
+    api_endpoint          = yandex_ydb_database_serverless.this.ydb_api_endpoint
+    database_path         = yandex_ydb_database_serverless.this.database_path
   }
 }
 
