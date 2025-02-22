@@ -1,6 +1,6 @@
 resource "yandex_ydb_database_serverless" "this" {
   name        = "${local.common_name}-db"
-  description = "auth service serverless ydb"
+  description = "ecom services serverless ydb"
 }
 
 resource "yandex_ydb_table" "test_cdc_table" {
