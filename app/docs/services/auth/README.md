@@ -1,5 +1,39 @@
 # Auth service
 
+## Data Model
+
+YDB Schema:
+
+```sql
+CREATE TABLE `auth/accounts` (
+    id BigSerial,
+    name Utf8 NOT NULL,
+    password Utf8 NOT NULL,
+    email Utf8 NOT NULL,
+    type String NOT NULL,
+    created_at Datetime NOT NULL,
+    activated_at Datetime,
+    PRIMARY KEY (id),
+    INDEX idx_email_uniq GLOBAL UNIQUE SYNC ON (email),
+);
+CREATE TABLE `auth/refresh_tokens` (
+    id BigSerial,
+    account_id Utf8 NOT NULL,
+    created_at Datetime NOT NULL,
+    expires_at Datetime NOT NULL,
+    PRIMARY KEY (id),
+    INDEX idx_account_id GLOBAL SYNC ON (account_id)
+) WITH (
+    TTL = Interval("P30D") ON expires_at
+);
+```
+
+YDB Document API (Amazon DynamoDB) Schema:
+
+```
+
+```
+
 ## Roadmap
 
 ### Application
@@ -79,8 +113,8 @@ cd app
 ```sh
 TF_OUTPUT=$(../terraform/tf output -json -no-color)
 export YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS="$(scripts/ydb_access_token.sh)"
-export YDB_ENDPOINT="$(echo "${TF_OUTPUT}" | jq -cMr .ydb.value.auth.full_endpoint)"
-export YDB_DOC_API_ENDPOINT="$(echo "${TF_OUTPUT}" | jq -cMr .ydb.value.auth.document_api_endpoint)"
+export YDB_ENDPOINT="$(echo "${TF_OUTPUT}" | jq -cMr .ydb.value.full_endpoint)"
+export YDB_DOC_API_ENDPOINT="$(echo "${TF_OUTPUT}" | jq -cMr .ydb.value.document_api_endpoint)"
 export YDB_AUTH_METHOD=environ
 APP_SA_STATIC_KEY_SECRET_ID="$(echo $TF_OUTPUT | jq -cMr .app_sa.value.static_key_lockbox_secret_id)"
 SECRET=$(yc lockbox payload get "${APP_SA_STATIC_KEY_SECRET_ID}")
@@ -238,12 +272,13 @@ docker run --rm -p 8080:8080 "email-confirmation:${TAG}"
 
 ## Bootstrap YDB
 
-### Create `email_confirmation_tokens` database
+### Create `auth/email_confirmation_tokens` database
 
 In DynamoDB, you can define a composite primary key by specifying both a partition key (`HASH` key) and a sort key (`RANGE` key). This allows you to uniquely identify items in the table using a combination of these two attributes, which also facilitates more complex query patterns by allowing operations on sets of items with the same partition key.
 
 ```bash
-export TABLE_CONF_TOKENS_NAME=email_confirmation_tokens
+export AWS_DEFAULT_REGION=ru-central1
+export TABLE_CONF_TOKENS_NAME="auth/email_confirmation_tokens"
 aws dynamodb create-table \
   --table-name "${TABLE_CONF_TOKENS_NAME}" \
   --attribute-definitions \

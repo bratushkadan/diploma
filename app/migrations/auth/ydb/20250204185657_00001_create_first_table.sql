@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE accounts (
+CREATE TABLE `auth/accounts` (
     id BigSerial,
     name Utf8 NOT NULL,
     password Utf8 NOT NULL,
@@ -9,15 +9,15 @@ CREATE TABLE accounts (
     created_at Datetime NOT NULL,
     activated_at Datetime,
     PRIMARY KEY (id),
-    INDEX idx_email_uniq GLOBAL UNIQUE SYNC on(email),
+    INDEX idx_email_uniq GLOBAL UNIQUE SYNC ON (email),
 );
-CREATE TABLE refresh_tokens (
+CREATE TABLE `auth/refresh_tokens` (
     id BigSerial,
     account_id Utf8 NOT NULL,
     created_at Datetime NOT NULL,
     expires_at Datetime NOT NULL,
     PRIMARY KEY (id),
-    INDEX idx_account_id GLOBAL SYNC on(account_id)
+    INDEX idx_account_id GLOBAL SYNC ON (account_id)
 ) WITH (
     TTL = Interval("P30D") ON expires_at
 );
@@ -25,6 +25,6 @@ CREATE TABLE refresh_tokens (
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE accounts;
-DROP TABLE refresh_tokens;
+DROP TABLE `auth/accounts` ;
+DROP TABLE `auth/refresh_tokens` ;
 -- +goose StatementEnd

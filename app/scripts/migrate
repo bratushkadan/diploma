@@ -2,6 +2,10 @@
 
 set -e 
 
+source "$(dirname $0)/.helpers.sh"
+
+assert_env SERVICE
+
 export YDB_API_ENDPOINT="$(../terraform/tf output -json | jq -cMr .ydb.value.api_endpoint)"
 export YDB_DATABASE_PATH="$(../terraform/tf output -json | jq -cMr .ydb.value.database_path)"
 export IAM_TOKEN="$(yc iam create-token)"
@@ -9,5 +13,4 @@ export IAM_TOKEN="$(yc iam create-token)"
 cd "migrations/${SERVICE}/ydb"
 
 goose ydb "grpcs://${YDB_API_ENDPOINT}${YDB_DATABASE_PATH}?token=${IAM_TOKEN}&go_query_mode=scripting&go_fake_tx=scripting&go_query_bind=declare,numeric" \
-    $@  
-
+    $@ -table "\`${SERVICE}/goose_db_version\`"
