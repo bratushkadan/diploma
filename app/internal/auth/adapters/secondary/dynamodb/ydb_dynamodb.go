@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	tableEmailConfirmationTokens = "email_confirmation_tokens"
+	tableEmailConfirmationTokens = "auth/email_confirmation_tokens"
 )
 
 var _ domain.EmailConfirmationTokens = (*EmailConfirmationTokens)(nil)
@@ -30,7 +30,7 @@ type EmailConfirmationTokens struct {
 func NewEmailConfirmationTokens(ctx context.Context, accessKeyId, secretAccessKey string, ydbDocApiEndpoint string, logger *zap.Logger) (*EmailConfirmationTokens, error) {
 	client, err := ydb_dynamodb.New(ctx, accessKeyId, secretAccessKey, ydbDocApiEndpoint)
 	if err != nil {
-		return nil, fmt.Errorf("failed to setu dynamodb email confirmator: %v", err)
+		return nil, fmt.Errorf("failed to setup dynamodb email confirmator: %v", err)
 	}
 	return &EmailConfirmationTokens{cl: client, l: logger}, nil
 }

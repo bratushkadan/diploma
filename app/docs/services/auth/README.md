@@ -30,8 +30,11 @@ CREATE TABLE `auth/refresh_tokens` (
 
 YDB Document API (Amazon DynamoDB) Schema:
 
-```
-
+```typescript
+type EmailConfirmationTokens = {
+  email: string;
+  token: string;
+}
 ```
 
 ## Roadmap
@@ -215,7 +218,7 @@ Account:
 
 ```sh
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/auth/account/main.go
-TAG=0.0.3
+TAG=0.0.6
 docker build -f build/auth/email_confirmation.Dockerfile -t "account:${TAG}" .
 rm bin
 ```

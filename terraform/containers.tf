@@ -12,8 +12,8 @@ data "yandex_lockbox_secret" "token_infra" {
 locals {
   versions = {
     auth = {
-      account            = "0.0.5"
-      email_confirmation = "0.0.5"
+      account            = "0.0.6"
+      email_confirmation = "0.0.6"
     }
   }
 
