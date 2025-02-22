@@ -5,9 +5,9 @@ info:
 
 tags:
   - name: auth
-    description: "Service for authentication"
+    description: 'Service for authentication'
   - name: products
-    description: "Products service"
+    description: 'Products service'
   - name: orders
   - name: cart
   - name: catalog
@@ -26,16 +26,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateUserAccountReq"
+              $ref: '#/components/schemas/CreateUserAccountReq'
       responses:
         200:
           description: Data of created user account
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateUserAccountRes"
+                $ref: '#/components/schemas/CreateUserAccountRes'
         default:
-          $ref: "#/components/responses/Error"
+          $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-rate-limit:
@@ -43,8 +43,8 @@ paths:
           rpm: 10
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: "${containers.auth.account.id}"
-        service_account_id: "${containers.auth.account.sa_id}"
+        container_id: '${containers.auth.account.id}'
+        service_account_id: '${containers.auth.account.sa_id}'
   /api/v1/users/:createSellerAccount:
     post:
       description: Create seller account
@@ -55,16 +55,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateSellerAccountReq"
+              $ref: '#/components/schemas/CreateSellerAccountReq'
       responses:
         200:
           description: Data of created user account
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateSellerAccountRes"
+                $ref: '#/components/schemas/CreateSellerAccountRes'
         default:
-          $ref: "#/components/responses/Error"
+          $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-rate-limit:
@@ -72,8 +72,8 @@ paths:
           rpm: 5
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: "${containers.auth.account.id}"
-        service_account_id: "${containers.auth.account.sa_id}"
+        container_id: '${containers.auth.account.id}'
+        service_account_id: '${containers.auth.account.sa_id}'
   /api/v1/users/:authenticate:
     post:
       description: Authenticate
@@ -84,16 +84,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AuthenticateReq"
+              $ref: '#/components/schemas/AuthenticateReq'
       responses:
         200:
           description: Data of created user account
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthenticateRes"
+                $ref: '#/components/schemas/AuthenticateRes'
         default:
-          $ref: "#/components/responses/Error"
+          $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-rate-limit:
@@ -101,8 +101,8 @@ paths:
           rpm: 50
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: "${containers.auth.account.id}"
-        service_account_id: "${containers.auth.account.sa_id}"
+        container_id: '${containers.auth.account.id}'
+        service_account_id: '${containers.auth.account.sa_id}'
   /api/v1/users/:replaceRefreshToken:
     post:
       description: Authenticate
@@ -113,16 +113,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ReplaceRefreshTokenReq"
+              $ref: '#/components/schemas/ReplaceRefreshTokenReq'
       responses:
         200:
           description: Data of created user account
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReplaceRefreshTokenRes"
+                $ref: '#/components/schemas/ReplaceRefreshTokenRes'
         default:
-          $ref: "#/components/responses/Error"
+          $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-rate-limit:
@@ -130,8 +130,8 @@ paths:
           rpm: 50
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: "${containers.auth.account.id}"
-        service_account_id: "${containers.auth.account.sa_id}"
+        container_id: '${containers.auth.account.id}'
+        service_account_id: '${containers.auth.account.sa_id}'
   /api/v1/users/:createAccessToken:
     post:
       description: Authenticate
@@ -142,23 +142,23 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateAccessTokenReq"
+              $ref: '#/components/schemas/CreateAccessTokenReq'
       responses:
         200:
           description: Data of created user account
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateAccessTokenRes"
+                $ref: '#/components/schemas/CreateAccessTokenRes'
         default:
-          $ref: "#/components/responses/Error"
+          $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: "${containers.auth.email_confirmation.id}"
-        service_account_id: "${containers.auth.email_confirmation.sa_id}"
-  "${auth_email_confirmation_api_endpoint}":
+        container_id: '${containers.auth.email_confirmation.id}'
+        service_account_id: '${containers.auth.email_confirmation.sa_id}'
+  '${auth_email_confirmation_api_endpoint}':
     x-yc-apigateway-cors:
       origin: true
       methods: POST
@@ -251,8 +251,8 @@ paths:
         validateRequestBody: true
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: "${containers.auth.email_confirmation.id}"
-        service_account_id: "${containers.auth.email_confirmation.sa_id}"
+        container_id: '${containers.auth.email_confirmation.id}'
+        service_account_id: '${containers.auth.email_confirmation.sa_id}'
   /api/v1/products:
     get:
       summary: List products
@@ -277,18 +277,18 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListProductsRes"
+                $ref: '#/components/schemas/ListProductsRes'
         default:
-          $ref: "#/components/responses/Error"
+          $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: "${containers.products.id}"
-        service_account_id: "${containers.products.sa_id}"
+        container_id: '${containers.products.id}'
+        service_account_id: '${containers.products.sa_id}'
     post:
-      summary: "Create product"
-      description: ""
+      summary: 'Create product'
+      description: ''
       tags:
         - products
       operationId: products_create
@@ -300,19 +300,23 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetProductRes"
+                $ref: '#/components/schemas/GetProductRes'
         default:
-          $ref: "#/components/responses/Error"
+          $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: "${containers.products.id}"
-        service_account_id: "${containers.products.sa_id}"
+        container_id: '${containers.products.id}'
+        service_account_id: '${containers.products.sa_id}'
   /api/v1/products/{id}:
     get:
       summary: Get product
-      description: Get product
+      description: |
+        Example requestBody:
+        ```
+        GET /api/v1/products/{id}
+        ```
       tags:
         - products
       operationId: products_get
@@ -329,18 +333,18 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetProductRes"
+                $ref: '#/components/schemas/GetProductRes'
         default:
-          $ref: "#/components/responses/Error"
+          $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: "${containers.products.id}"
-        service_account_id: "${containers.products.sa_id}"
+        container_id: '${containers.products.id}'
+        service_account_id: '${containers.products.sa_id}'
     patch:
-      summary: ""
-      description: ""
+      summary: ''
+      description: ''
       tags:
         - products
       operationId: products_update
@@ -357,18 +361,18 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetProductRes"
+                $ref: '#/components/schemas/GetProductRes'
         default:
-          $ref: "#/components/responses/Error"
+          $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: "${containers.products.id}"
-        service_account_id: "${containers.products.sa_id}"
+        container_id: '${containers.products.id}'
+        service_account_id: '${containers.products.sa_id}'
     delete:
-      summary: ""
-      description: ""
+      summary: ''
+      description: ''
       tags:
         - products
       operationId: products_delete
@@ -385,15 +389,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetProductRes"
+                $ref: '#/components/schemas/GetProductRes'
         default:
-          $ref: "#/components/responses/Error"
+          $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
         validateRequestBody: true
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: "${containers.products.id}"
-        service_account_id: "${containers.products.sa_id}"
+        container_id: '${containers.products.id}'
+        service_account_id: '${containers.products.sa_id}'
 
 components:
   securitySchemes:
@@ -522,7 +526,7 @@ components:
         products:
           type: array
           items:
-            $ref: "#/components/schemas/ListProductsResProduct"
+            $ref: '#/components/schemas/ListProductsResProduct'
         next_page_token:
           type: string
     ListProductsResProduct:
@@ -587,7 +591,7 @@ components:
   responses:
     # Common
     Error:
-      description: "error"
+      description: 'error'
       content:
         application/json:
           schema:
@@ -598,4 +602,4 @@ components:
               errors:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Err"
+                  $ref: '#/components/schemas/Err'
