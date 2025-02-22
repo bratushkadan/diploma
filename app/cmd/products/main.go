@@ -19,6 +19,7 @@ import (
 	"github.com/bratushkadan/floral/pkg/cfg"
 	"github.com/bratushkadan/floral/pkg/logging"
 	xgin "github.com/bratushkadan/floral/pkg/xhttp/gin"
+	"github.com/bratushkadan/floral/pkg/xhttp/gin/middleware/auth"
 	ginzap "github.com/gin-contrib/zap"
 )
 
@@ -54,9 +55,36 @@ func main() {
 
 	apiImpl := &presentation.ApiImpl{Logger: logger}
 
+	jwtPublicKey := cfg.MustEnv("APP_AUTH_TOKEN_PUBLIC_KEY")
+	bearerAuthenticator, err := auth.NewJwtBearerAuthenticator(jwtPublicKey)
+	if err != nil {
+		logger.Fatal("failed to setup jwt bearer authenticator", zap.Error(err))
+	}
+
+	authMiddleware, err := auth.NewBuilder().
+		Authenticator(bearerAuthenticator).
+		Routes(
+			auth.NewRequiredRoute(
+				oapi_codegen.ProductsCreateMethod,
+				oapi_codegen.ProductsCreatePath,
+			),
+			auth.NewRequiredRoute(
+				oapi_codegen.ProductsUpdateMethod,
+				oapi_codegen.ProductsUpdatePath,
+			),
+			auth.NewRequiredRoute(
+				oapi_codegen.ProductsDeleteMethod,
+				oapi_codegen.ProductsDeletePath,
+			),
+		).
+		Build()
+	if err != nil {
+		logger.Fatal("failed to setup auth middleware", zap.Error(err))
+	}
+
 	oapi_codegen.RegisterHandlersWithOptions(r, apiImpl, oapi_codegen.GinServerOptions{
 		ErrorHandler: apiImpl.ErrorHandler,
-		Middlewares:  []oapi_codegen.MiddlewareFunc{apiImpl.AuthMiddleware},
+		Middlewares:  []oapi_codegen.MiddlewareFunc{authMiddleware},
 	})
 
 	r.NoRoute(xgin.HandleNotFound())

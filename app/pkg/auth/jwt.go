@@ -3,7 +3,6 @@ package auth
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"log"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -69,7 +68,6 @@ func (b *JwtProviderBuilder) Build() (*JwtProvider, error) {
 func (p *JwtProvider) Create(claims jwt.Claims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
 
-	log.Print("private key", p.privateKey)
 	tokenString, err := token.SignedString(p.privateKey)
 	if err != nil {
 		return "", fmt.Errorf("failed to create refresh token: %w", err)

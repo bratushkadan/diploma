@@ -8,6 +8,7 @@ import (
 
 	"github.com/bratushkadan/floral/internal/auth/core/domain"
 	"github.com/bratushkadan/floral/pkg/auth"
+	"github.com/bratushkadan/floral/pkg/shared/api"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -22,12 +23,7 @@ type RefreshTokenJwtClaims struct {
 	jwt.RegisteredClaims
 }
 
-type AccessTokenJwtClaims struct {
-	TokenType   domain.TokenType `json:"token_type"`
-	SubjectId   string           `json:"subject_id"`
-	SubjectType string           `json:"subject_type"`
-	jwt.RegisteredClaims
-}
+type AccessTokenJwtClaims = api.AccessTokenJwtClaims
 
 type TokenProvider struct {
 	jwt *auth.JwtProvider
