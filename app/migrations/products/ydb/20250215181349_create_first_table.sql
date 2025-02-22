@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE products (
+CREATE TABLE `products/products` (
     id Uuid,
     seller_id Utf8,
     name Utf8 NOT NULL,
@@ -16,5 +16,5 @@ CREATE TABLE products (
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE products;
+DROP TABLE `products/products`;
 -- +goose StatementEnd
