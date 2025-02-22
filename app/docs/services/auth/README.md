@@ -79,8 +79,8 @@ cd app
 ```sh
 TF_OUTPUT=$(../terraform/tf output -json -no-color)
 export YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS="$(scripts/ydb_access_token.sh)"
-export YDB_ENDPOINT="$(echo "${TF_OUTPUT}" | jq -cMr .ydb.value.full_endpoint)"
-export YDB_DOC_API_ENDPOINT="$(echo "${TF_OUTPUT}" | jq -cMr .ydb.value.document_api_endpoint)"
+export YDB_ENDPOINT="$(echo "${TF_OUTPUT}" | jq -cMr .ydb.value.auth.full_endpoint)"
+export YDB_DOC_API_ENDPOINT="$(echo "${TF_OUTPUT}" | jq -cMr .ydb.value.auth.document_api_endpoint)"
 export YDB_AUTH_METHOD=environ
 APP_SA_STATIC_KEY_SECRET_ID="$(echo $TF_OUTPUT | jq -cMr .app_sa.value.static_key_lockbox_secret_id)"
 SECRET=$(yc lockbox payload get "${APP_SA_STATIC_KEY_SECRET_ID}")
