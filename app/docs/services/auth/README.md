@@ -2,6 +2,8 @@
 
 ## Data Model
 
+[DB Diagram](https://dbdiagram.io/d/ecom-67b96d09263d6cf9a01083b2)
+
 YDB Schema:
 
 ```sql
@@ -227,7 +229,7 @@ Email confirmation:
 
 ```sh
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/auth/email-confirmation/main.go
-TAG=0.0.1-rc2
+TAG=0.0.6
 docker build -f build/auth/email_confirmation.Dockerfile -t "email-confirmation:${TAG}" .
 rm bin
 ```
