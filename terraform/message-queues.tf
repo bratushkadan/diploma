@@ -1,3 +1,10 @@
+locals {
+  sqs_queues = {
+    account_creations   = "account-creations"
+    email_confirmations = "email-confirmations"
+  }
+}
+
 resource "yandex_message_queue" "email_confirmations" {
   name = local.sqs_queues.email_confirmations
 

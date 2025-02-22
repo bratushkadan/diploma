@@ -2,8 +2,12 @@
 
 set -e 
 
-export YDB_API_ENDPOINT="$(../terraform/tf output -json | jq -cMr .ydb.value.api_endpoint)"
-export YDB_DATABASE_PATH="$(../terraform/tf output -json | jq -cMr .ydb.value.database_path)"
+source "$(dirname $0)"/.helpers.sh
+
+assert_env SERVICE
+
+export YDB_API_ENDPOINT="$(../terraform/tf output -json | jq -cMr ".ydb.value.${SERVICE}.api_endpoint")"
+export YDB_DATABASE_PATH="$(../terraform/tf output -json | jq -cMr  ".ydb.value.${SERVICE}.database_path")"
 export IAM_TOKEN="$(yc iam create-token)"
 
 cd "migrations/${SERVICE}/ydb"
