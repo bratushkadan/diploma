@@ -156,8 +156,8 @@ paths:
         validateRequestBody: true
       x-yc-apigateway-integration:
         type: serverless_containers
-        container_id: '${containers.auth.email_confirmation.id}'
-        service_account_id: '${containers.auth.email_confirmation.sa_id}'
+        container_id: '${containers.auth.account.id}'
+        service_account_id: '${containers.auth.account.sa_id}'
   '${auth_email_confirmation_api_endpoint}':
     x-yc-apigateway-cors:
       origin: true
@@ -316,7 +316,7 @@ paths:
         Example requestBody:
         ```
         GET /api/v1/products/{id}
-        ```
+        ```z
       tags:
         - products
       operationId: products_get
