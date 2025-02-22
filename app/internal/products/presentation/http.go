@@ -52,7 +52,7 @@ func (a *ApiImpl) ProductsCreate(c *gin.Context) {
 		})
 	}
 
-	a.Logger.Info("access token parsed", zap.Any("jwt_claims", accessToken))
+	_ = accessToken
 
 	c.JSON(http.StatusInternalServerError, oapi_codegen.Error{
 		Errors: []oapi_codegen.Err{{Code: 0, Message: "not implemented"}},

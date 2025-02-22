@@ -63,10 +63,19 @@ type AuthMiddlewareBuilder struct {
 	routes              []RequiredRoute
 	bearerAuthenticator BearerAuthenticator
 	logger              *zap.Logger
+	headerKey           string
 }
 
 func NewBuilder() *AuthMiddlewareBuilder {
-	return &AuthMiddlewareBuilder{}
+	return &AuthMiddlewareBuilder{
+		// See https://yandex.cloud/ru/docs/serverless-containers/concepts/invoke#filter
+		headerKey: "X-Authorization",
+	}
+}
+
+func (b *AuthMiddlewareBuilder) HeaderKey(key string) *AuthMiddlewareBuilder {
+	b.headerKey = key
+	return b
 }
 
 func (b *AuthMiddlewareBuilder) Routes(routes ...RequiredRoute) *AuthMiddlewareBuilder {
@@ -94,19 +103,19 @@ func (b *AuthMiddlewareBuilder) Build() (func(c *gin.Context), error) {
 
 	return func(c *gin.Context) {
 		if checkAuthRequired(b.routes, c) {
-			authHeader := c.GetHeader("Authorization")
+			authHeader := c.GetHeader(b.headerKey)
 			if authHeader == "" {
-				b.logger.Info("authorization header value was not provided")
+				b.logger.Info(fmt.Sprintf(`"%s" header value was not provided`, b.headerKey))
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-					"errors": []gin.H{{"code": 121, "message": "Authorization header must be provided"}},
+					"errors": []gin.H{{"code": 121, "message": fmt.Sprintf(`"%s" header must be provided"`, b.headerKey)}},
 				})
 				return
 			}
 			bearer, stripped := strings.CutPrefix(authHeader, "Bearer ")
 			if !stripped {
-				b.logger.Info("authorization bearer header was not provided", zap.String("value", authHeader))
+				b.logger.Info(fmt.Sprintf(`"%s" header bearer value was not provided`, b.headerKey), zap.String("value", authHeader))
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-					"errors": []gin.H{{"code": 122, "message": `authorization header "Bearer " prefix must be provided`}},
+					"errors": []gin.H{{"code": 122, "message": fmt.Sprintf(`"%s" header value "Bearer " prefix must be provided`, b.headerKey)}},
 				})
 				return
 			}

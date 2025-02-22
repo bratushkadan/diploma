@@ -403,9 +403,14 @@ components:
   securitySchemes:
     # TODO: jwtHeaderAuth
     bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+      # See https://yandex.cloud/ru/docs/serverless-containers/concepts/invoke#filter
+      type: apiKey
+      name: X-Authorization
+      in: header
+      # Bearer is expected to be used in conjunction with the "Authorization" header
+      # type: http
+      # scheme: bearer
+      # bearerFormat: JWT
   schemas:
     # Auth (Users/Email)
     CreateUserAccountReq:
