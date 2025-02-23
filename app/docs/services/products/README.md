@@ -48,4 +48,216 @@ INFRA_TOKENS_SECRET="$(yc lockbox payload get "${INFRA_TOKENS_SECRET_ID}")"
 export APP_AUTH_TOKEN_PUBLIC_KEY="$(echo $INFRA_TOKENS_SECRET | yq -M '.entries.[] | select(.key == "auth_token_public.key").text_value')"
 go run cmd/products/main.go
 ```
+## CURLs for testing
 
+### Get access token
+
+```sh
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"email": "<Email>", "password": "<Password>"}' \
+  https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net/api/v1/users/:authenticate \
+```
+
+```sh
+curl -s -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token": ""}' \
+  https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net/api/v1/users/:createAccessToken \
+  | jq -cMr .access_token
+```
+
+Or export it:
+
+```sh
+ACCESS_TOKEN="$(curl -s -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token": ""}' \
+  https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net/api/v1/users/:createAccessToken \
+  | jq -cMr .access_token)"
+```
+
+### Products
+
+#### Create
+
+Sample request:
+
+```sh
+curl -sL \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Authorization: Bearer ${ACCESS_TOKEN}" \
+  -d '{"name": "foo", "stock": 5, "metadata": {}, "description": ""}' http://localhost:8080/api/v1/products | jq
+```
+
+Sample response:
+
+```json
+{
+  "created_at": "2025-02-23T18:53:49+03:00",
+  "description": "",
+  "id": "31adfeee-574d-4771-bf4c-b6fab6013853",
+  "metadata": {},
+  "name": "foo",
+  "pictures": [],
+  "seller_id": "12dl52q59z8r",
+  "stock": 5,
+  "updated_at": "2025-02-23T18:53:49+03:00"
+}
+```
+
+Sample response (insufficient permissions):
+
+```json
+{
+  "errors": [
+    {
+      "code": 124,
+      "message": "permission denied to upload product picture"
+    }
+  ]
+}
+```
+
+#### Get
+
+Sample request:
+
+```sh
+curl -sL \
+  http://localhost:8080/api/v1/products/31adfeee-574d-4771-bf4c-b6fab6013853 | jq
+```
+
+Sample response:
+
+```json
+{
+  "created_at": "2025-02-23T18:53:49+03:00",
+  "description": "",
+  "id": "31adfeee-574d-4771-bf4c-b6fab6013853",
+  "metadata": {},
+  "name": "foo",
+  "pictures": [
+    {
+      "id": "7bbaf374-6566-479e-a547-a1ac63d2e151",
+      "url": "https://storage.yandexcloud.net/ecom-57a07237dfa8db13/product-pictures/31adfeee-574d-4771-bf4c-b6fab6013853/7bbaf374-6566-479e-a547-a1ac63d2e151.jpg"
+    },
+    {
+      "id": "d25e68b9-b64e-4930-82fb-fd05986e57da",
+      "url": "https://storage.yandexcloud.net/ecom-57a07237dfa8db13/product-pictures/31adfeee-574d-4771-bf4c-b6fab6013853/d25e68b9-b64e-4930-82fb-fd05986e57da.jpg"
+    }
+  ],
+  "seller_id": "12dl52q59z8r",
+  "stock": 5,
+  "updated_at": "2025-02-23T19:02:39+03:00"
+}
+```
+
+#### Update
+
+Sample request:
+
+```sh
+curl -s -X PATCH \
+  -H "X-Authorization: Bearer ${ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"stock_delta": -2, "metadata":{"foo":"bar", "brand":2025}}' \
+  http://localhost:8080/api/v1/products/31adfeee-574d-4771-bf4c-b6fab6013853 | jq
+```
+
+Sample response:
+
+```json
+{
+  "metadata": {
+    "brand": 2025,
+    "foo": "bar"
+  },
+  "stock": 1
+}
+```
+
+Sample error response:
+
+```json
+{
+  "errors": [
+    {
+      "code": 0,
+      "message": "stock is not sufficient: trying to withdraw 2 units from stock when there's only 1"
+    }
+  ]
+}
+```
+
+#### Delete
+
+Sample request:
+
+```sh
+curl -s -X DELETE \
+  -H "X-Authorization: Bearer ${ACCESS_TOKEN}" \
+  http://localhost:8080/api/v1/products/31adfeee-574d-4771-bf4c-b6fab6013853 | jq
+```
+
+Sample response:
+
+```json
+{
+  "id": "31adfeee-574d-4771-bf4c-b6fab6013853"
+}
+```
+
+Sample error response:
+
+```json
+{
+  "errors": [
+    {
+      "code": 0,
+      "message": "stock is not sufficient: trying to withdraw 2 units from stock when there's only 1"
+    }
+  ]
+}
+```
+
+### Product Images
+
+#### Add
+
+Sample request:
+
+```sh
+curl -s -X POST \
+  -H "Content-Type: multipart/form-data" \
+  -H "X-Authorization: Bearer ${ACCESS_TOKEN}" \
+  -F "file=@5-1.jpg" \
+  -F "caption=Sample Movie file" \
+  http://localhost:8080/api/v1/products/31adfeee-574d-4771-bf4c-b6fab6013853/pictures | jq
+```
+
+Sample response:
+
+```json
+{
+  "id": "7bbaf374-6566-479e-a547-a1ac63d2e151",
+  "url": "https://storage.yandexcloud.net/ecom-57a07237dfa8db13/product-pictures/31adfeee-574d-4771-bf4c-b6fab6013853/7bbaf374-6566-479e-a547-a1ac63d2e151.jpg"
+}
+```
+
+#### Delete
+
+Sample request:
+
+```sh
+curl -s -X DELETE \
+  -H "X-Authorization: Bearer ${ACCESS_TOKEN}" \
+  http://localhost:8080/api/v1/products/6660d375-586c-442d-a42b-0198bea36d3b/pictures/895a5c01-2d44-47ca-b9a1-f3bf8ad4560e | jq
+```
+
+Sample response:
+
+```json
+{"id":"2c345e94-6409-462c-a412-bf96ae7d9f89"}
+```

@@ -49,6 +49,11 @@ type DeleteProductPictureRes struct {
 	Id string `json:"id"`
 }
 
+// DeleteProductRes defines model for DeleteProductRes.
+type DeleteProductRes struct {
+	Id string `json:"id"`
+}
+
 // Err defines model for Err.
 type Err struct {
 	Code    int    `json:"code"`
@@ -91,6 +96,26 @@ type ListProductsResProduct struct {
 	SellerId   string `json:"seller_id"`
 }
 
+// UpdateProductReq defines model for UpdateProductReq.
+type UpdateProductReq struct {
+	Description *string                 `json:"description,omitempty"`
+	Metadata    *map[string]interface{} `json:"metadata,omitempty"`
+	Name        *string                 `json:"name,omitempty"`
+
+	// StockDelta The amount of "in stock" product count change, either of:
+	// - positive: stock amount is increased (seller releases more products)
+	// - negative: stock amount is decreased (item purchased)
+	StockDelta *int `json:"stock_delta,omitempty"`
+}
+
+// UpdateProductRes defines model for UpdateProductRes.
+type UpdateProductRes struct {
+	Description *string                 `json:"description,omitempty"`
+	Metadata    *map[string]interface{} `json:"metadata,omitempty"`
+	Name        *string                 `json:"name,omitempty"`
+	Stock       *int                    `json:"stock,omitempty"`
+}
+
 // UploadProductPictureRes defines model for UploadProductPictureRes.
 type UploadProductPictureRes struct {
 	Id  string `json:"id"`
@@ -117,6 +142,9 @@ type ProductsUploadPictureMultipartBody struct {
 
 // ProductsCreateJSONRequestBody defines body for ProductsCreate for application/json ContentType.
 type ProductsCreateJSONRequestBody = CreateProductReq
+
+// ProductsUpdateJSONRequestBody defines body for ProductsUpdate for application/json ContentType.
+type ProductsUpdateJSONRequestBody = UpdateProductReq
 
 // ProductsUploadPictureMultipartRequestBody defines body for ProductsUploadPicture for multipart/form-data ContentType.
 type ProductsUploadPictureMultipartRequestBody ProductsUploadPictureMultipartBody
@@ -252,6 +280,8 @@ func (siw *ServerInterfaceWrapper) ProductsDelete(c *gin.Context) {
 		return
 	}
 
+	c.Set(BearerAuthScopes, []string{})
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -299,6 +329,8 @@ func (siw *ServerInterfaceWrapper) ProductsUpdate(c *gin.Context) {
 		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter product_id: %w", err), http.StatusBadRequest)
 		return
 	}
+
+	c.Set(BearerAuthScopes, []string{})
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
@@ -410,30 +442,33 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/+xZbW/bthP/KgL/f2APUCwnwZLOQF90axoUG7CgSYEBTeCexZPNRCIZ8pTGDfzdB1KS",
-	"LUdU7K7NurV9J5PHe/zdA+k7lqpCK4mSLBvdMYNWK2nR/zgyRhn3kSpJKMl9gta5SIGEksmlVdKt2XSG",
-	"BbgvbZRGQ6I6j+68/xKEhf/4v8GMjdj/kpXYpDpukyNj2CJmNNfIRgyMgTlbLGJm8LoUBjkbvWlYXizJ",
-	"1OQSU2ILR8jRpkZopxsbVaSeQS3Ayf/VIBCeGMXLlF7hdVfpNSZ3jRhLRsipU69AAg4Erc1Gh5hJKDB4",
-	"ypJKr1o7QhJO0XTs8wzWLWmJbPh0zY/vW2a7lqWego+BgipuMlzwT+gPLVIqDW7ExDHSyqST5pBzKOY5",
-	"mnGPUr3ujlmpeb8X7kVDcNaWFIfDs7QlEKm47fU14aEYPscclzGsrQ2GMmh2V/mQDJdlXWgojmF3FWgt",
-	"THGzOM9iRR8SvRbMb/j87+EzZO2W4IxZafItLXKU24rfvr0Ele/0m5j9LmxDaIM4lXhLYw1THJO6wjAY",
-	"dc1ga+3uSa0/N/bDpZy4o1bIgz1Stg3hpnQZh2P8cDaEEFDjuA3ttoiQaa91roD/3dr58fD0VqalETQ/",
-	"dTGthE0QDJpnJc28aDeXzBA4msbIEftzx20rI95DnbBNxLX4DefVaCNkprx6gnK39yJXBvLInYyenbxk",
-	"MbtBY6vBZ3cwHAydSUqjBC3YiO37pZhpoJnXKwEtkpvdBEqajVIlM2GKHSxAeCfc7szTHdBiCoTvYL6T",
-	"1mNcgTRT3LIRO/nj9IzFTBkxdUaRKdGp2bBtw3+K1JmrPBCjFnhdgLz5L7njXm84Kq+1gQIJnRJv7nN6",
-	"IXJCE0e2TGcR2Oi8Rs1A8KeZUucsUqazWA6HewfO/08nYKpfQo59SXz64zljcRWq6xLNfBWpzItibUg4",
-	"w+PWANyBz12Qk8vVE5jimc/UhxhcxOsz+d5w+EET+QfUnNAQ3WxHvmv47QzKnPpYL3VNjlbjd1kUYOaB",
-	"qBNM7VoVu4g72POtscJGYzgIWRcT5ouEuREpjiFNVSmpWodLPERxqK8Ocr03zK6fHO5nq8xyR9DkaO14",
-	"yc937fvCbyAXHKi6BdU/8BVel2jpF8XnK+RrZb1TwkCuhvMaOcuznyiMnTvNYlHVrUeCTeem0Y+bj4JN",
-	"XU19zrfr6JsLlxUrVFX6NLj6kmAVqKjJXf01FnxR1VV3Z+iHXnWn2FRFa6aRb3C+YrlWsSpYK6EfVP4e",
-	"s3qt3yYeB4NfUIEKtuGjWyh0jlGrLI3O5du3b8/l8dFZ1AWf4Au///5c9nbtY6RvcPvITnmM9CUWND+B",
-	"prP+avXaX0C/wefrrlab+l7Sfp5pJq91d1bXwQiaLIrqIxGpiAurc5hHmTItgu8LuI12I42mKYdx5Jb2",
-	"IyEjUgT5D70lr7581o8KnxG9fdNlUeYkNBhKMmWKneZBrO/lPoX+d7ZM5H7ccIyA2IhNhAR/uenenQOP",
-	"9OsGPeac2vciEEi+50AQqSwq/RHkDVoee3TtQyn7GpPZTxfbj7SfN9vijpy6vvTJ+Rf1or6/GUKJ4UmX",
-	"+fCd/UdudJXUryYtSovGJiMoaYaSXEwd+LsE1VP9szRFa8/qp+cHqJxpD1Cc+hexh+gM6hxSfIWZQTtb",
-	"SlzEtTeqdPMPp2xGpO0oSfhPfDg52JdPdifZHp+k8ufrg8H7w8sihxsaOD+9G8xBcrxNc1XygURiLvh1",
-	"XO9n1WkVqapVr/xTvZPWmeXWWTchl09XdbQ7KW/9oXpNGV4FdLmSgqH13wS5mraXNMwL/895ay1D5BNI",
-	"r9jiYvFXAAAA//8dXoQoXh8AAA==",
+	"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",
+	"s4fFIgAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
@@ -488,7 +523,6 @@ func GetSwagger() (swagger *openapi3.T, err error) {
 	loader.IsExternalRefsAllowed = true
 	loader.ReadFromURIFunc = func(loader *openapi3.Loader, url *url.URL) ([]byte, error) {
 		pathToFile := url.String()
-		fmt.Println("pathToFile", pathToFile)
 		pathToFile = path.Clean(pathToFile)
 		getSpec, ok := resolvePath[pathToFile]
 		if !ok {
@@ -506,12 +540,5 @@ func GetSwagger() (swagger *openapi3.T, err error) {
 	if err != nil {
 		return
 	}
-
-	paths, err := swagger.Paths.MarshalYAML()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("paths", paths)
-
 	return
 }

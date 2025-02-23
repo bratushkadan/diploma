@@ -289,9 +289,9 @@ paths:
     post:
       summary: 'Create product'
       description: ''
+      operationId: products_create
       tags:
         - products
-      operationId: products_create
       security:
         - bearerAuth: []
       requestBody:
@@ -350,9 +350,11 @@ paths:
     patch:
       summary: ''
       description: ''
+      operationId: products_update
       tags:
         - products
-      operationId: products_update
+      security:
+        - bearerAuth: []
       parameters:
         - name: product_id
           description: product id
@@ -360,13 +362,18 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductReq'
       responses:
         200:
-          description: Product data
+          description: Product updated fields data
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetProductRes'
+                $ref: '#/components/schemas/UpdateProductRes'
         default:
           $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
@@ -381,6 +388,8 @@ paths:
       tags:
         - products
       operationId: products_delete
+      security:
+        - bearerAuth: []
       parameters:
         - name: product_id
           description: product id
@@ -390,11 +399,11 @@ paths:
             type: string
       responses:
         200:
-          description: Product data
+          description: Id of the deleted product
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetProductRes'
+                $ref: '#/components/schemas/DeleteProductRes'
         default:
           $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
@@ -711,6 +720,41 @@ components:
         created_at:
           type: string
         updated_at:
+          type: string
+    UpdateProductReq:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        stock_delta:
+          type: integer
+          description: |-
+            The amount of "in stock" product count change, either of:
+            - positive: stock amount is increased (seller releases more products)
+            - negative: stock amount is decreased (item purchased)
+        metadata:
+          type: object
+    UpdateProductRes:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        stock:
+          type: integer
+        metadata:
+          type: object
+    DeleteProductRes:
+      type: object
+      required:
+        - id
+      properties:
+        id:
           type: string
 
     GetProductResPictures:

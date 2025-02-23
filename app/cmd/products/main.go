@@ -112,10 +112,10 @@ func main() {
 	authMiddleware, err := auth.NewBuilder().
 		Authenticator(bearerAuthenticator).
 		Routes(
-			// auth.NewRequiredRoute(
-			// 	oapi_codegen.ProductsCreateMethod,
-			// 	oapi_codegen.ProductsCreatePath,
-			// ),
+			auth.NewRequiredRoute(
+				oapi_codegen.ProductsCreateMethod,
+				oapi_codegen.ProductsCreatePath,
+			),
 			auth.NewRequiredRoute(
 				oapi_codegen.ProductsUpdateMethod,
 				oapi_codegen.ProductsUpdatePath,
@@ -123,6 +123,14 @@ func main() {
 			auth.NewRequiredRoute(
 				oapi_codegen.ProductsDeleteMethod,
 				oapi_codegen.ProductsDeletePath,
+			),
+			auth.NewRequiredRoute(
+				oapi_codegen.ProductsUploadPictureMethod,
+				oapi_codegen.ProductsUploadPicturePath,
+			),
+			auth.NewRequiredRoute(
+				oapi_codegen.ProductsDeletePictureMethod,
+				oapi_codegen.ProductsDeletePicturePath,
 			),
 		).
 		Build()

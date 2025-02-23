@@ -116,19 +116,26 @@ func (p *Products) Get(ctx context.Context, id uuid.UUID) (*GetProductDTOOutput,
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
 				var out GetProductDTOOutput
+				var picturesJson, metadataJson []byte
 				if err := res.ScanNamed(
 					named.Required("id", &out.Id),
 					named.Required("seller_id", &out.SellerId),
 					named.Required("name", &out.Name),
 					named.Required("description", &out.Description),
-					named.Required("pictures", &out.Pictures),
-					named.Required("metadata", &out.Metadata),
+					named.Required("pictures", &picturesJson),
+					named.Required("metadata", &metadataJson),
 					named.Required("stock", &out.Stock),
 					named.Required("created_at", &out.CreatedAt),
 					named.Required("updated_at", &out.UpdatedAt),
 					named.Optional("deleted_at", &out.DeletedAt),
 				); err != nil {
 					return err
+				}
+				if err := json.Unmarshal(picturesJson, &out.Pictures); err != nil {
+					return errors.New("failed to unmarshal product pictures json field")
+				}
+				if err := json.Unmarshal(metadataJson, &out.Metadata); err != nil {
+					return errors.New("failed to unmarshal product metadata json field")
 				}
 				outProduct = &out
 			}
@@ -199,7 +206,7 @@ SELECT * FROM $sub;
 )
 
 type UpsertProductDTOInput struct {
-	Id          *uuid.UUID
+	Id          uuid.UUID
 	SellerId    *string
 	Name        *string
 	Description *string
@@ -232,7 +239,7 @@ func (p *Products) Upsert(ctx context.Context, in UpsertProductDTOInput) (Upsert
 
 	var opts []types.StructValueOption
 
-	opts = append(opts, types.StructFieldValue("id", types.NullableUUIDTypedValue(in.Id)))
+	opts = append(opts, types.StructFieldValue("id", types.NullableUUIDTypedValue(&in.Id)))
 	opts = append(opts, types.StructFieldValue("seller_id", types.NullableUTF8Value(in.SellerId)))
 	opts = append(opts, types.StructFieldValue("name", types.NullableUTF8Value(in.Name)))
 	opts = append(opts, types.StructFieldValue("description", types.NullableUTF8Value(in.Description)))
@@ -248,6 +255,8 @@ func (p *Products) Upsert(ctx context.Context, in UpsertProductDTOInput) (Upsert
 		}
 		pictures := string(picturesJson)
 		opts = append(opts, types.StructFieldValue("pictures", types.NullableJSONValue(&pictures)))
+	} else {
+		opts = append(opts, types.StructFieldValue("pictures", types.NullableJSONValue(nil)))
 	}
 	if in.Metadata != nil {
 		metadataJson, err := json.Marshal(in.Metadata)
@@ -256,6 +265,8 @@ func (p *Products) Upsert(ctx context.Context, in UpsertProductDTOInput) (Upsert
 		}
 		metadata := string(metadataJson)
 		opts = append(opts, types.StructFieldValue("metadata", types.NullableJSONValue(&metadata)))
+	} else {
+		opts = append(opts, types.StructFieldValue("metadata", types.NullableJSONValue(nil)))
 	}
 
 	inYql := types.StructValue(opts...)
@@ -299,6 +310,72 @@ func (p *Products) Upsert(ctx context.Context, in UpsertProductDTOInput) (Upsert
 		return res.Err()
 	}); err != nil {
 		return UpsertProductDTOOutput{}, err
+	}
+
+	return out, nil
+}
+
+var queryDeleteProduct = template.ReplaceAllPairs(`
+DECLARE $id AS Uuid;
+DECLARE $deleted_at AS Datetime;
+
+$existing = (
+    SELECT
+        id,
+        $deleted_at AS deleted_at
+    FROM
+        {{table.tableProducts}}
+    WHERE 
+        id = $id
+            AND
+        deleted_at IS NULL
+);
+
+UPDATE
+    {{table.tableProducts}}
+ON 
+    SELECT * FROM $existing
+RETURNING id;
+`,
+	"{{table.tableProducts}}", tableProducts,
+)
+
+type DeleteProductDTOInput struct {
+	Id        uuid.UUID
+	DeletedAt time.Time
+}
+type DeleteProductDTOOutput struct {
+	Id uuid.UUID
+}
+
+func (p *Products) Delete(ctx context.Context, in DeleteProductDTOInput) (*DeleteProductDTOOutput, error) {
+	var out *DeleteProductDTOOutput
+
+	if err := p.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		res, err := tx.Execute(ctx, queryDeleteProduct, table.NewQueryParameters(
+			table.ValueParam("$id", types.UuidValue(in.Id)),
+			table.ValueParam("$deleted_at", types.DatetimeValueFromTime(in.DeletedAt)),
+		))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var outV DeleteProductDTOOutput
+				if err := res.ScanNamed(
+					named.Required("id", &outV.Id),
+				); err != nil {
+					return err
+				}
+				out = &outV
+			}
+		}
+
+		return res.Err()
+	}); err != nil {
+		return nil, err
 	}
 
 	return out, nil
