@@ -12,14 +12,20 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"go.uber.org/zap"
 
+	"github.com/bratushkadan/floral/internal/auth/setup"
 	"github.com/bratushkadan/floral/internal/products/presentation"
 	oapi_codegen "github.com/bratushkadan/floral/internal/products/presentation/generated"
+	"github.com/bratushkadan/floral/internal/products/service"
+	"github.com/bratushkadan/floral/internal/products/store"
 	"github.com/bratushkadan/floral/pkg/cfg"
 	"github.com/bratushkadan/floral/pkg/logging"
+	"github.com/bratushkadan/floral/pkg/s3aws"
 	xgin "github.com/bratushkadan/floral/pkg/xhttp/gin"
 	"github.com/bratushkadan/floral/pkg/xhttp/gin/middleware/auth"
+	ydbpkg "github.com/bratushkadan/floral/pkg/ydb"
 	ginzap "github.com/gin-contrib/zap"
 )
 
@@ -34,6 +40,47 @@ func main() {
 	logger, err := logging.NewZapConf("prod").Build()
 	if err != nil {
 		log.Fatalf("Error setting up zap: %v", err)
+	}
+
+	env := cfg.AssertEnv(
+		setup.EnvKeyYdbEndpoint,
+		setup.EnvKeyAwsAccessKeyId,
+		setup.EnvKeyAwsSecretAccessKey,
+		setup.EnvKeyAuthTokenPublicKey,
+		setup.EnvKeyStorePicturesBucket,
+	)
+
+	authMethod := cfg.EnvDefault(setup.EnvKeyYdbAuthMethod, ydbpkg.YdbAuthMethodMetadata)
+	db, err := ydb.Open(ctx, env[setup.EnvKeyYdbEndpoint], ydbpkg.GetYdbAuthOpts(authMethod)...)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		if err := db.Close(ctx); err != nil {
+			logger.Error("failed to close ydb", zap.Error(err))
+		}
+	}()
+
+	productsStore, err := store.NewProductsBuilder().
+		Logger(logger).
+		YDBDriver(db).
+		Build()
+	if err != nil {
+		logger.Fatal("failed to setup products store", zap.Error(err))
+	}
+
+	s3client, err := s3aws.New(ctx, env[setup.EnvKeyAwsAccessKeyId], env[setup.EnvKeyAwsSecretAccessKey])
+	if err != nil {
+		logger.Fatal("failed to setup s3 client", zap.Error(err))
+	}
+	pictureStore, err := store.NewPicturesBuilder().
+		Bucket(env[setup.EnvKeyStorePicturesBucket]).
+		S3Client(s3client).
+		Build()
+	if err != nil {
+		logger.Fatal("failed to setup picture store", zap.Error(err))
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -53,10 +100,11 @@ func main() {
 	r.GET("/ready", readinessHandler)
 	r.GET("/health", readinessHandler)
 
-	apiImpl := &presentation.ApiImpl{Logger: logger}
+	svc := service.New(productsStore, pictureStore)
 
-	jwtPublicKey := cfg.MustEnv("APP_AUTH_TOKEN_PUBLIC_KEY")
-	bearerAuthenticator, err := auth.NewJwtBearerAuthenticator(jwtPublicKey)
+	apiImpl := &presentation.ApiImpl{Logger: logger, ProductsService: svc, PictureStore: pictureStore}
+
+	bearerAuthenticator, err := auth.NewJwtBearerAuthenticator(env[setup.EnvKeyAuthTokenPublicKey])
 	if err != nil {
 		logger.Fatal("failed to setup jwt bearer authenticator", zap.Error(err))
 	}
@@ -64,10 +112,10 @@ func main() {
 	authMiddleware, err := auth.NewBuilder().
 		Authenticator(bearerAuthenticator).
 		Routes(
-			auth.NewRequiredRoute(
-				oapi_codegen.ProductsCreateMethod,
-				oapi_codegen.ProductsCreatePath,
-			),
+			// auth.NewRequiredRoute(
+			// 	oapi_codegen.ProductsCreateMethod,
+			// 	oapi_codegen.ProductsCreatePath,
+			// ),
 			auth.NewRequiredRoute(
 				oapi_codegen.ProductsUpdateMethod,
 				oapi_codegen.ProductsUpdatePath,

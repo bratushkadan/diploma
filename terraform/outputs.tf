@@ -1,3 +1,7 @@
+output "s3" {
+  value = yandex_storage_bucket.ecom.id
+}
+
 output "ydb" {
   value = {
     id                    = yandex_ydb_database_serverless.this.id

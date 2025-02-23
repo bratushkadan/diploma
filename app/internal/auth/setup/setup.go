@@ -28,6 +28,10 @@ const (
 	EnvKeyAuthTokenPublicKeyPath  = "APP_AUTH_TOKEN_PUBLIC_KEY_PATH"
 )
 
+const (
+	EnvKeyStorePicturesBucket = "PICTURES_BUCKET"
+)
+
 // Yandex Cloud Serverless
 const (
 	EnvKeyYmqTriggerHttpEndpointsEnabled = "YMQ_TRIGGER_HTTP_ENDPOINTS_ENABLED"

@@ -4,16 +4,50 @@
 package oapi_codegen
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
+	"path"
+	"strings"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gin-gonic/gin"
 	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
+
+// CreateProductReq defines model for CreateProductReq.
+type CreateProductReq struct {
+	Description string                 `json:"description"`
+	Metadata    map[string]interface{} `json:"metadata"`
+	Name        string                 `json:"name"`
+	Stock       int                    `json:"stock"`
+}
+
+// CreateProductRes defines model for CreateProductRes.
+type CreateProductRes struct {
+	CreatedAt   string                 `json:"created_at"`
+	Description string                 `json:"description"`
+	Id          string                 `json:"id"`
+	Metadata    map[string]interface{} `json:"metadata"`
+	Name        string                 `json:"name"`
+	Pictures    GetProductResPictures  `json:"pictures"`
+	SellerId    string                 `json:"seller_id"`
+	Stock       int                    `json:"stock"`
+	UpdatedAt   string                 `json:"updated_at"`
+}
+
+// DeleteProductPictureRes defines model for DeleteProductPictureRes.
+type DeleteProductPictureRes struct {
+	Id string `json:"id"`
+}
 
 // Err defines model for Err.
 type Err struct {
@@ -28,11 +62,20 @@ type GetProductRes struct {
 	Id          string                 `json:"id"`
 	Metadata    map[string]interface{} `json:"metadata"`
 	Name        string                 `json:"name"`
-	PictureUrls string                 `json:"picture_urls"`
+	Pictures    GetProductResPictures  `json:"pictures"`
 	SellerId    string                 `json:"seller_id"`
 	Stock       int                    `json:"stock"`
 	UpdatedAt   string                 `json:"updated_at"`
 }
+
+// GetProductResPicture defines model for GetProductResPicture.
+type GetProductResPicture struct {
+	Id  string `json:"id"`
+	Url string `json:"url"`
+}
+
+// GetProductResPictures defines model for GetProductResPictures.
+type GetProductResPictures = []GetProductResPicture
 
 // ListProductsRes defines model for ListProductsRes.
 type ListProductsRes struct {
@@ -48,6 +91,12 @@ type ListProductsResProduct struct {
 	SellerId   string `json:"seller_id"`
 }
 
+// UploadProductPictureRes defines model for UploadProductPictureRes.
+type UploadProductPictureRes struct {
+	Id  string `json:"id"`
+	Url string `json:"url"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	Errors []Err `json:"errors"`
@@ -60,6 +109,18 @@ type ProductsListParams struct {
 	NextPageToken *string `form:"nextPageToken,omitempty" json:"nextPageToken,omitempty"`
 }
 
+// ProductsUploadPictureMultipartBody defines parameters for ProductsUploadPicture.
+type ProductsUploadPictureMultipartBody struct {
+	Caption *string             `json:"caption,omitempty"`
+	File    *openapi_types.File `json:"file,omitempty"`
+}
+
+// ProductsCreateJSONRequestBody defines body for ProductsCreate for application/json ContentType.
+type ProductsCreateJSONRequestBody = CreateProductReq
+
+// ProductsUploadPictureMultipartRequestBody defines body for ProductsUploadPicture for multipart/form-data ContentType.
+type ProductsUploadPictureMultipartRequestBody ProductsUploadPictureMultipartBody
+
 // Method & Path constants for routes.
 // List products
 const ProductsListMethod = "GET"
@@ -70,14 +131,22 @@ const ProductsCreateMethod = "POST"
 const ProductsCreatePath = "/api/v1/products"
 
 const ProductsDeleteMethod = "DELETE"
-const ProductsDeletePath = "/api/v1/products/:id"
+const ProductsDeletePath = "/api/v1/products/:product_id"
 
 // Get product
 const ProductsGetMethod = "GET"
-const ProductsGetPath = "/api/v1/products/:id"
+const ProductsGetPath = "/api/v1/products/:product_id"
 
 const ProductsUpdateMethod = "PATCH"
-const ProductsUpdatePath = "/api/v1/products/:id"
+const ProductsUpdatePath = "/api/v1/products/:product_id"
+
+// Upload a product picture
+const ProductsUploadPictureMethod = "POST"
+const ProductsUploadPicturePath = "/api/v1/products/:product_id/pictures"
+
+// Delete a product picture
+const ProductsDeletePictureMethod = "DELETE"
+const ProductsDeletePicturePath = "/api/v1/products/:product_id/pictures/:id"
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -88,14 +157,20 @@ type ServerInterface interface {
 	// (POST /api/v1/products)
 	ProductsCreate(c *gin.Context)
 
-	// (DELETE /api/v1/products/{id})
-	ProductsDelete(c *gin.Context, id string)
+	// (DELETE /api/v1/products/{product_id})
+	ProductsDelete(c *gin.Context, productId string)
 	// Get product
-	// (GET /api/v1/products/{id})
-	ProductsGet(c *gin.Context, id string)
+	// (GET /api/v1/products/{product_id})
+	ProductsGet(c *gin.Context, productId string)
 
-	// (PATCH /api/v1/products/{id})
-	ProductsUpdate(c *gin.Context, id string)
+	// (PATCH /api/v1/products/{product_id})
+	ProductsUpdate(c *gin.Context, productId string)
+	// Upload a product picture
+	// (POST /api/v1/products/{product_id}/pictures)
+	ProductsUploadPicture(c *gin.Context, productId string)
+	// Delete a product picture
+	// (DELETE /api/v1/products/{product_id}/pictures/{id})
+	ProductsDeletePicture(c *gin.Context, productId string, id string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -168,12 +243,12 @@ func (siw *ServerInterfaceWrapper) ProductsDelete(c *gin.Context) {
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id string
+	// ------------- Path parameter "product_id" -------------
+	var productId string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "product_id", c.Param("product_id"), &productId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter product_id: %w", err), http.StatusBadRequest)
 		return
 	}
 
@@ -184,7 +259,7 @@ func (siw *ServerInterfaceWrapper) ProductsDelete(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.ProductsDelete(c, id)
+	siw.Handler.ProductsDelete(c, productId)
 }
 
 // ProductsGet operation middleware
@@ -192,12 +267,12 @@ func (siw *ServerInterfaceWrapper) ProductsGet(c *gin.Context) {
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id string
+	// ------------- Path parameter "product_id" -------------
+	var productId string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "product_id", c.Param("product_id"), &productId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter product_id: %w", err), http.StatusBadRequest)
 		return
 	}
 
@@ -208,7 +283,7 @@ func (siw *ServerInterfaceWrapper) ProductsGet(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.ProductsGet(c, id)
+	siw.Handler.ProductsGet(c, productId)
 }
 
 // ProductsUpdate operation middleware
@@ -216,12 +291,12 @@ func (siw *ServerInterfaceWrapper) ProductsUpdate(c *gin.Context) {
 
 	var err error
 
-	// ------------- Path parameter "id" -------------
-	var id string
+	// ------------- Path parameter "product_id" -------------
+	var productId string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	err = runtime.BindStyledParameterWithOptions("simple", "product_id", c.Param("product_id"), &productId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
 	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter product_id: %w", err), http.StatusBadRequest)
 		return
 	}
 
@@ -232,7 +307,68 @@ func (siw *ServerInterfaceWrapper) ProductsUpdate(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.ProductsUpdate(c, id)
+	siw.Handler.ProductsUpdate(c, productId)
+}
+
+// ProductsUploadPicture operation middleware
+func (siw *ServerInterfaceWrapper) ProductsUploadPicture(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "product_id" -------------
+	var productId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "product_id", c.Param("product_id"), &productId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter product_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ProductsUploadPicture(c, productId)
+}
+
+// ProductsDeletePicture operation middleware
+func (siw *ServerInterfaceWrapper) ProductsDeletePicture(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "product_id" -------------
+	var productId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "product_id", c.Param("product_id"), &productId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter product_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ProductsDeletePicture(c, productId, id)
 }
 
 // GinServerOptions provides options for the Gin server.
@@ -264,7 +400,118 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 
 	router.GET(options.BaseURL+"/api/v1/products", wrapper.ProductsList)
 	router.POST(options.BaseURL+"/api/v1/products", wrapper.ProductsCreate)
-	router.DELETE(options.BaseURL+"/api/v1/products/:id", wrapper.ProductsDelete)
-	router.GET(options.BaseURL+"/api/v1/products/:id", wrapper.ProductsGet)
-	router.PATCH(options.BaseURL+"/api/v1/products/:id", wrapper.ProductsUpdate)
+	router.DELETE(options.BaseURL+"/api/v1/products/:product_id", wrapper.ProductsDelete)
+	router.GET(options.BaseURL+"/api/v1/products/:product_id", wrapper.ProductsGet)
+	router.PATCH(options.BaseURL+"/api/v1/products/:product_id", wrapper.ProductsUpdate)
+	router.POST(options.BaseURL+"/api/v1/products/:product_id/pictures", wrapper.ProductsUploadPicture)
+	router.DELETE(options.BaseURL+"/api/v1/products/:product_id/pictures/:id", wrapper.ProductsDeletePicture)
+}
+
+// Base64 encoded, gzipped, json marshaled Swagger object
+var swaggerSpec = []string{
+
+	"H4sIAAAAAAAC/+xZbW/bthP/KgL/f2APUCwnwZLOQF90axoUG7CgSYEBTeCexZPNRCIZ8pTGDfzdB1KS",
+	"LUdU7K7NurV9J5PHe/zdA+k7lqpCK4mSLBvdMYNWK2nR/zgyRhn3kSpJKMl9gta5SIGEksmlVdKt2XSG",
+	"BbgvbZRGQ6I6j+68/xKEhf/4v8GMjdj/kpXYpDpukyNj2CJmNNfIRgyMgTlbLGJm8LoUBjkbvWlYXizJ",
+	"1OQSU2ILR8jRpkZopxsbVaSeQS3Ayf/VIBCeGMXLlF7hdVfpNSZ3jRhLRsipU69AAg4Erc1Gh5hJKDB4",
+	"ypJKr1o7QhJO0XTs8wzWLWmJbPh0zY/vW2a7lqWego+BgipuMlzwT+gPLVIqDW7ExDHSyqST5pBzKOY5",
+	"mnGPUr3ujlmpeb8X7kVDcNaWFIfDs7QlEKm47fU14aEYPscclzGsrQ2GMmh2V/mQDJdlXWgojmF3FWgt",
+	"THGzOM9iRR8SvRbMb/j87+EzZO2W4IxZafItLXKU24rfvr0Ele/0m5j9LmxDaIM4lXhLYw1THJO6wjAY",
+	"dc1ga+3uSa0/N/bDpZy4o1bIgz1Stg3hpnQZh2P8cDaEEFDjuA3ttoiQaa91roD/3dr58fD0VqalETQ/",
+	"dTGthE0QDJpnJc28aDeXzBA4msbIEftzx20rI95DnbBNxLX4DefVaCNkprx6gnK39yJXBvLInYyenbxk",
+	"MbtBY6vBZ3cwHAydSUqjBC3YiO37pZhpoJnXKwEtkpvdBEqajVIlM2GKHSxAeCfc7szTHdBiCoTvYL6T",
+	"1mNcgTRT3LIRO/nj9IzFTBkxdUaRKdGp2bBtw3+K1JmrPBCjFnhdgLz5L7njXm84Kq+1gQIJnRJv7nN6",
+	"IXJCE0e2TGcR2Oi8Rs1A8KeZUucsUqazWA6HewfO/08nYKpfQo59SXz64zljcRWq6xLNfBWpzItibUg4",
+	"w+PWANyBz12Qk8vVE5jimc/UhxhcxOsz+d5w+EET+QfUnNAQ3WxHvmv47QzKnPpYL3VNjlbjd1kUYOaB",
+	"qBNM7VoVu4g72POtscJGYzgIWRcT5ouEuREpjiFNVSmpWodLPERxqK8Ocr03zK6fHO5nq8xyR9DkaO14",
+	"yc937fvCbyAXHKi6BdU/8BVel2jpF8XnK+RrZb1TwkCuhvMaOcuznyiMnTvNYlHVrUeCTeem0Y+bj4JN",
+	"XU19zrfr6JsLlxUrVFX6NLj6kmAVqKjJXf01FnxR1VV3Z+iHXnWn2FRFa6aRb3C+YrlWsSpYK6EfVP4e",
+	"s3qt3yYeB4NfUIEKtuGjWyh0jlGrLI3O5du3b8/l8dFZ1AWf4Au///5c9nbtY6RvcPvITnmM9CUWND+B",
+	"prP+avXaX0C/wefrrlab+l7Sfp5pJq91d1bXwQiaLIrqIxGpiAurc5hHmTItgu8LuI12I42mKYdx5Jb2",
+	"IyEjUgT5D70lr7581o8KnxG9fdNlUeYkNBhKMmWKneZBrO/lPoX+d7ZM5H7ccIyA2IhNhAR/uenenQOP",
+	"9OsGPeac2vciEEi+50AQqSwq/RHkDVoee3TtQyn7GpPZTxfbj7SfN9vijpy6vvTJ+Rf1or6/GUKJ4UmX",
+	"+fCd/UdudJXUryYtSovGJiMoaYaSXEwd+LsE1VP9szRFa8/qp+cHqJxpD1Cc+hexh+gM6hxSfIWZQTtb",
+	"SlzEtTeqdPMPp2xGpO0oSfhPfDg52JdPdifZHp+k8ufrg8H7w8sihxsaOD+9G8xBcrxNc1XygURiLvh1",
+	"XO9n1WkVqapVr/xTvZPWmeXWWTchl09XdbQ7KW/9oXpNGV4FdLmSgqH13wS5mraXNMwL/895ay1D5BNI",
+	"r9jiYvFXAAAA//8dXoQoXh8AAA==",
+}
+
+// GetSwagger returns the content of the embedded swagger specification file
+// or error if failed to decode
+func decodeSpec() ([]byte, error) {
+	zipped, err := base64.StdEncoding.DecodeString(strings.Join(swaggerSpec, ""))
+	if err != nil {
+		return nil, fmt.Errorf("error base64 decoding spec: %w", err)
+	}
+	zr, err := gzip.NewReader(bytes.NewReader(zipped))
+	if err != nil {
+		return nil, fmt.Errorf("error decompressing spec: %w", err)
+	}
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(zr)
+	if err != nil {
+		return nil, fmt.Errorf("error decompressing spec: %w", err)
+	}
+
+	return buf.Bytes(), nil
+}
+
+var rawSpec = decodeSpecCached()
+
+// a naive cached of a decoded swagger spec
+func decodeSpecCached() func() ([]byte, error) {
+	data, err := decodeSpec()
+	return func() ([]byte, error) {
+		return data, err
+	}
+}
+
+// Constructs a synthetic filesystem for resolving external references when loading openapi specifications.
+func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error) {
+	res := make(map[string]func() ([]byte, error))
+	if len(pathToFile) > 0 {
+		res[pathToFile] = rawSpec
+	}
+
+	return res
+}
+
+// GetSwagger returns the Swagger specification corresponding to the generated code
+// in this file. The external references of Swagger specification are resolved.
+// The logic of resolving external references is tightly connected to "import-mapping" feature.
+// Externally referenced files must be embedded in the corresponding golang packages.
+// Urls can be supported but this task was out of the scope.
+func GetSwagger() (swagger *openapi3.T, err error) {
+	resolvePath := PathToRawSpec("")
+
+	loader := openapi3.NewLoader()
+	loader.IsExternalRefsAllowed = true
+	loader.ReadFromURIFunc = func(loader *openapi3.Loader, url *url.URL) ([]byte, error) {
+		pathToFile := url.String()
+		fmt.Println("pathToFile", pathToFile)
+		pathToFile = path.Clean(pathToFile)
+		getSpec, ok := resolvePath[pathToFile]
+		if !ok {
+			err1 := fmt.Errorf("path not found: %s", pathToFile)
+			return nil, err1
+		}
+		return getSpec()
+	}
+	var specData []byte
+	specData, err = rawSpec()
+	if err != nil {
+		return
+	}
+	swagger, err = loader.LoadFromData(specData)
+	if err != nil {
+		return
+	}
+
+	paths, err := swagger.Paths.MarshalYAML()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("paths", paths)
+
+	return
 }

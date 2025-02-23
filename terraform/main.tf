@@ -26,6 +26,12 @@ resource "yandex_resourcemanager_folder_iam_member" "app_ydb_writer" {
   role   = "ydb.editor"
   member = "serviceAccount:${yandex_iam_service_account.app.id}"
 }
+resource "yandex_resourcemanager_folder_iam_member" "app_storage_editor" {
+  folder_id = local.folder_id
+
+  role   = "storage.editor"
+  member = "serviceAccount:${yandex_iam_service_account.app.id}"
+}
 resource "yandex_resourcemanager_folder_iam_member" "app_ymq_reader" {
   folder_id = local.folder_id
 

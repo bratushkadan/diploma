@@ -294,13 +294,18 @@ paths:
       operationId: products_create
       security:
         - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductReq'
       responses:
         200:
           description: Product data
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetProductRes'
+                $ref: '#/components/schemas/CreateProductRes'
         default:
           $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
@@ -309,7 +314,7 @@ paths:
         type: serverless_containers
         container_id: '${containers.products.id}'
         service_account_id: '${containers.products.sa_id}'
-  /api/v1/products/{id}:
+  /api/v1/products/{product_id}:
     get:
       summary: Get product
       description: |
@@ -321,7 +326,7 @@ paths:
         - products
       operationId: products_get
       parameters:
-        - name: id
+        - name: product_id
           description: product id
           in: path
           required: true
@@ -349,7 +354,7 @@ paths:
         - products
       operationId: products_update
       parameters:
-        - name: id
+        - name: product_id
           description: product id
           in: path
           required: true
@@ -377,7 +382,7 @@ paths:
         - products
       operationId: products_delete
       parameters:
-        - name: id
+        - name: product_id
           description: product id
           in: path
           required: true
@@ -390,6 +395,85 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetProductRes'
+        default:
+          $ref: '#/components/responses/Error'
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: '${containers.products.id}'
+        service_account_id: '${containers.products.sa_id}'
+  /api/v1/products/{product_id}/pictures:
+    post:
+      summary: Upload a product picture
+      description: Upload a product picture to display for a product (max 1 per request, max 3 in total)
+      operationId: products_upload_picture
+      tags:
+        - products
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product_id
+          description: product id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                caption:
+                  type: string
+      responses:
+        200:
+          description: Data of uploaded picture
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadProductPictureRes'
+        default:
+          $ref: '#/components/responses/Error'
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: '${containers.products.id}'
+        service_account_id: '${containers.products.sa_id}'
+  /api/v1/products/{product_id}/pictures/{id}:
+    delete:
+      summary: Delete a product picture
+      operationId: products_delete_picture
+      tags:
+        - products
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product_id
+          description: product id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          description: picture id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Deleted picture's data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteProductPictureRes'
         default:
           $ref: '#/components/responses/Error'
       x-yc-apigateway-validator:
@@ -557,9 +641,9 @@ components:
         - seller_id
         - name
         - description
-        - stock
+        - pictures
         - metadata
-        - picture_urls
+        - stock
         - created_at
         - updated_at
       properties:
@@ -573,13 +657,92 @@ components:
           type: string
         stock:
           type: integer
+        pictures:
+          $ref: '#/components/schemas/GetProductResPictures'
         metadata:
           type: object
-        picture_urls:
-          type: string
         created_at:
           type: string
         updated_at:
+          type: string
+    CreateProductReq:
+      type: object
+      required:
+        - name
+        - description
+        - metadata
+        - stock
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        stock:
+          type: integer
+        metadata:
+          type: object
+    CreateProductRes:
+      type: object
+      required:
+        - id
+        - seller_id
+        - name
+        - description
+        - pictures
+        - metadata
+        - stock
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        seller_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        stock:
+          type: integer
+        pictures:
+          $ref: '#/components/schemas/GetProductResPictures'
+        metadata:
+          type: object
+        created_at:
+          type: string
+        updated_at:
+          type: string
+
+    GetProductResPictures:
+      type: array
+      items:
+        $ref: '#/components/schemas/GetProductResPicture'
+    GetProductResPicture:
+      type: object
+      required:
+        - id
+        - url
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+    UploadProductPictureRes:
+      type: object
+      required:
+        - id
+        - url
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+    DeleteProductPictureRes:
+      type: object
+      required:
+        - id
+      properties:
+        id:
           type: string
     # Errors
     Err:
