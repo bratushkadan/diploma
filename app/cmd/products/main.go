@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/gin-gonic/gin"
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"go.uber.org/zap"
@@ -27,6 +28,7 @@ import (
 	"github.com/bratushkadan/floral/pkg/xhttp/gin/middleware/auth"
 	ydbpkg "github.com/bratushkadan/floral/pkg/ydb"
 	ginzap "github.com/gin-contrib/zap"
+	middleware "github.com/oapi-codegen/gin-middleware"
 )
 
 var (
@@ -108,6 +110,19 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to setup jwt bearer authenticator", zap.Error(err))
 	}
+
+	swagger, err := oapi_codegen.GetSwagger()
+	if err != nil {
+		logger.Fatal("failed to setup swagger spec")
+	}
+
+	r.Use(middleware.OapiRequestValidatorWithOptions(swagger, &middleware.Options{
+		ErrorHandler: apiImpl.ErrorHandlerValidation,
+		Options: openapi3filter.Options{
+			// TODO: do some explorations
+			AuthenticationFunc: openapi3filter.NoopAuthenticationFunc,
+		},
+	}))
 
 	authMiddleware, err := auth.NewBuilder().
 		Authenticator(bearerAuthenticator).

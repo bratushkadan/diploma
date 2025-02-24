@@ -42,7 +42,7 @@ migrate_products_up_by_one:
 
 .PHONY: generate_api_products
 generate_api_products:
-	@yc serverless api-gateway get-spec auth-service-api-gw > ./internal/products/presentation/oapi/api.yaml && \
+	@yc serverless api-gateway get-spec auth-service-api-gw | yq -M 'del(.servers)' > ./internal/products/presentation/oapi/api.yaml && \
 		go generate ./internal/products/...
 
 .PHONY: migrate_auth_create_pg
