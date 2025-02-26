@@ -29,18 +29,108 @@ type ApiImpl struct {
 	PictureStore    *store.Pictures
 }
 
-func (*ApiImpl) ProductsList(c *gin.Context, params oapi_codegen.ProductsListParams) {
-	c.JSON(http.StatusOK, oapi_codegen.ListProductsRes{
-		NextPageToken: "",
-		Products: []oapi_codegen.ListProductsResProduct{
-			{
-				Id:         "1",
-				Name:       "foo",
-				PictureUrl: "https://www.ferra.ru/imgs/2024/05/08/05/6460496/c2150453d059e8999c5f0b211ce334f7c869147c.jpg",
-				SellerId:   "3",
-			},
-		},
-	})
+type productsListFilter struct {
+	ProductIds []uuid.UUID
+	SellerId   *string
+	InStock    *bool
+}
+
+const len20CsUuids = 20*36 + 19*1
+
+func parseProductsListFilter(filter string) (productsListFilter, error) {
+	f := productsListFilter{}
+	for _, cond := range strings.Split(filter, "&") {
+		pair := strings.Split(cond, "=")
+		if len(pair) < 2 {
+			return productsListFilter{}, fmt.Errorf(`invalid filter condition with key "%s" provided: condition must be a key=value(s) pair`, pair[0])
+		}
+		switch key, val := pair[0], pair[1]; key {
+		case "ids":
+			if len(val) > len20CsUuids {
+				return productsListFilter{}, errors.New(`invalid filter condition with key "ids" provided: only max of 20 uuids supported via query filter field`)
+			}
+			csids := strings.Split(val, ",")
+			ids := make([]uuid.UUID, 0, len(csids))
+			for _, rawId := range csids {
+				id, err := uuid.Parse(rawId)
+				if err != nil {
+					return productsListFilter{}, fmt.Errorf(`invalid filter condition with key "ids" provided: failed to parse id "%s"`, rawId)
+				}
+				ids = append(ids, id)
+			}
+		case "seller.id":
+			f.SellerId = &val
+		case "in_stock":
+			if val == "*" {
+			} else if val == "true" {
+				f.InStock = ptr(true)
+			} else if val == "false" {
+				f.InStock = ptr(false)
+			} else {
+				return productsListFilter{}, errors.New(`invalid filter condition "in_stock" provided: condition's value must be one of ["*", "true", "false"]`)
+			}
+		default:
+		}
+	}
+
+	return f, nil
+}
+
+func (a *ApiImpl) ProductsList(c *gin.Context, params oapi_codegen.ProductsListParams) {
+	if params.NextPageToken == nil && params.Filter == nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 0, Message: `either "filter" or "nextPageToken" query parameter must be specified`}},
+		})
+		return
+	}
+	listProductsReq := service.ListProductsReq{
+		NextPageToken: params.NextPageToken,
+	}
+	if params.NextPageToken == nil {
+		filter, err := parseProductsListFilter(*params.Filter)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
+				Errors: []oapi_codegen.Err{{Code: 0, Message: fmt.Sprintf("invalid request filter: %v", err)}},
+			})
+			return
+		}
+		listProductsReq.Filter = service.ListProductsReqFilter{
+			PageSize: params.MaxPageSize,
+		}
+		if filter.SellerId != nil {
+			listProductsReq.Filter.SellerId = filter.SellerId
+		}
+		if filter.ProductIds != nil {
+			listProductsReq.Filter.ProductIds = filter.ProductIds
+		}
+		if filter.InStock != nil {
+			listProductsReq.Filter.InStock = filter.InStock
+		}
+	}
+
+	res, err := a.ProductsService.ListProducts(c.Request.Context(), listProductsReq)
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidListProductsPageSize) {
+			c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
+				Errors: []oapi_codegen.Err{{Code: 0, Message: err.Error()}},
+			})
+			return
+		}
+		if errors.Is(err, service.ErrInvalidListProductsNextPageToken) {
+			c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
+				Errors: []oapi_codegen.Err{{Code: 0, Message: err.Error()}},
+			})
+			return
+		}
+		msg := "failed to list products"
+		a.Logger.Error(msg, zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 0, Message: msg}},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
 }
 
 func (a *ApiImpl) ProductsGet(c *gin.Context, id string) {

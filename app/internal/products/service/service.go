@@ -10,17 +10,21 @@ import (
 	oapi_codegen "github.com/bratushkadan/floral/internal/products/presentation/generated"
 	"github.com/bratushkadan/floral/internal/products/store"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type Products struct {
 	productsStore *store.Products
 	picturesStore *store.Pictures
+
+	l *zap.Logger
 }
 
-func New(products *store.Products, pictures *store.Pictures) *Products {
+func New(products *store.Products, pictures *store.Pictures, logger *zap.Logger) *Products {
 	return &Products{
 		productsStore: products,
 		picturesStore: pictures,
+		l:             logger,
 	}
 }
 
@@ -61,10 +65,15 @@ func (s *Products) ListProducts(ctx context.Context, req ListProductsReq) (oapi_
 		page = store.ListProductsNextPage{
 			InStock:  req.Filter.InStock,
 			SellerId: req.Filter.SellerId,
-			PageSize: *req.Filter.PageSize,
+		}
+		if req.Filter.PageSize != nil {
+			page.PageSize = *req.Filter.PageSize
+		} else {
+			page.PageSize = 10
 		}
 	}
 
+	s.l.Info("here with prepared page")
 	items, err := s.productsStore.List(ctx, req.Filter.ProductIds, page)
 	if err != nil {
 		return oapi_codegen.ListProductsRes{}, fmt.Errorf("failed to list products from product store: %w", err)

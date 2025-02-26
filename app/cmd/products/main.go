@@ -102,7 +102,7 @@ func main() {
 	r.GET("/ready", readinessHandler)
 	r.GET("/health", readinessHandler)
 
-	svc := service.New(productsStore, pictureStore)
+	svc := service.New(productsStore, pictureStore, logger)
 
 	apiImpl := &presentation.ApiImpl{Logger: logger, ProductsService: svc, PictureStore: pictureStore}
 

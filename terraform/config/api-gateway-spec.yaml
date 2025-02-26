@@ -264,9 +264,14 @@ paths:
         - name: filter
           description: Filter, such as "seller.id=foo" or "seller.id=foo&name=bar&in_stock=*"
           in: query
-          required: true
           schema:
             type: string
+        - name: maxPageSize
+          description: Max number of returned results
+          in: query
+          schema:
+            type: integer
+            minimum: 1
         - name: nextPageToken
           in: query
           schema:

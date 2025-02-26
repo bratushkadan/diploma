@@ -391,8 +391,6 @@ DECLARE $page_created_at AS Optional<Datetime>;
 DECLARE $page_id AS Optional<Uuid>;
 DECLARE $page_size AS Uint64;
 
--- SET TRANSCATION ISOLATION LEVEL StaleRO;
-
 SELECT 
    ca.id          AS id, 
    ca.seller_id   AS seller_id,
@@ -410,17 +408,18 @@ CROSS JOIN {{table.table_products}}
 VIEW {{index.seller_id}} s
 WHERE
     ($ids IS NULL OR ca.id IN $ids)
-    AND (
-        ($created_at IS NULL OR ca.created_at > $created_at)
-            AND
-        ($page_id IS NULL OR ca.id > $page_id)
-    )
-    AND (s.seller_id = COALESCE($seller_id, s.seller_id))
-    AND deleted_at IS NULL
-    AND ($in_stock IS NULL OR (ca.stock > 0 AND $in_stock) OR (ca.stock = 0 AND NOT $in_stock))
+        AND
+    ($page_created_at IS NULL OR ca.created_at > $page_created_at)
+        AND
+    ($page_id IS NULL OR ca.id > $page_id)
+        AND
+    (s.seller_id = COALESCE($seller_id, s.seller_id))
+        AND
+    ca.deleted_at IS NULL
+        AND
+    ($in_stock IS NULL OR (ca.stock > 0 AND $in_stock) OR (ca.stock = 0 AND NOT $in_stock))
 ORDER BY id, created_at
 LIMIT MIN_OF($page_size, 25) + 1;
-)
 `,
 	"{{table.table_products}}", tableProducts,
 	"{{index.seller_id}}", tableProductsIndexSellerId,
@@ -461,11 +460,11 @@ func (p *Products) List(ctx context.Context, productIds []uuid.UUID, nextPage Li
 			list = append(list, types.UuidValue(id))
 		}
 		uuidsList = types.ListValue(list...)
-
 	}
 
 	tableParams := make([]table.ParameterOption, 0, 6)
-	tableParams = append(tableParams, table.ValueParam("$ids", uuidsList))
+	// tableParams = append(tableParams, table.ValueParam("$ids", uuidsList))
+	_ = uuidsList
 	tableParams = append(tableParams, table.ValueParam("$seller_id", types.NullableUTF8Value(nextPage.SellerId)))
 	tableParams = append(tableParams, table.ValueParam("$in_stock", types.NullableBoolValue(nextPage.InStock)))
 	tableParams = append(tableParams, table.ValueParam("$page_created_at", types.NullableDatetimeValueFromTime(nextPage.CreatedAt)))
@@ -474,6 +473,7 @@ func (p *Products) List(ctx context.Context, productIds []uuid.UUID, nextPage Li
 
 	var outProducts []ListProductsDTOOutputItem
 
+	p.l.Info("query ydb")
 	if err := p.db.Table().Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, queryListProducts, table.NewQueryParameters(tableParams...))
 		if err != nil {
