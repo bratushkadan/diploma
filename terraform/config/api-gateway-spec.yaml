@@ -638,6 +638,7 @@ components:
             $ref: '#/components/schemas/ListProductsResProduct'
         next_page_token:
           type: string
+          nullable: true
     ListProductsResProduct:
       type: object
       required:

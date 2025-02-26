@@ -19,7 +19,8 @@ import (
 const (
 	tableProducts = "`products/products`"
 
-	tableProductsIndexSellerId = "idx_seller_id"
+	tableProductsIndexSellerId    = "idx_seller_id"
+	tableProductsIndexCreatedAtId = "idx_created_at_id"
 )
 
 type Products struct {
@@ -381,30 +382,136 @@ func (p *Products) Delete(ctx context.Context, in DeleteProductDTOInput) (*Delet
 	return out, nil
 }
 
-var queryGetProductsBySellerId = template.ReplaceAllPairs(`
-DECLARE $seller_id AS Utf8;
+var queryListProducts = template.ReplaceAllPairs(`
+DECLARE $ids AS Optional<List<Uuid>>;
+DECLARE $seller_id AS Optional<Utf8>;
+DECLARE $in_stock AS Optional<Bool>;
 
-DECLARE $id AS Utf8;
+DECLARE $page_created_at AS Optional<Datetime>;
+DECLARE $page_id AS Optional<Uuid>;
+DECLARE $page_size AS Uint64;
+
+-- SET TRANSCATION ISOLATION LEVEL StaleRO;
 
 SELECT 
-    id,
-    seller_id,
-    name,
-    description,
-    pictures,
-    metadata,
-    stock
-    created_at,
-    updated_at,
-    deleted_at
-FROM
-    {{table.tableProducts}}
-VIEW
-    {{index.seller_id}}
+   ca.id          AS id, 
+   ca.seller_id   AS seller_id,
+   ca.name        AS name,
+   ca.description AS description,
+   ca.pictures    AS pictures,
+   ca.metadata    AS metadata,
+   ca.stock       AS stock,
+   ca.created_at  AS created_at,
+   ca.updated_at  AS updated_at,
+FROM 
+  {{table.table_products}}
+VIEW {{index.created_at_id}} ca
+CROSS JOIN {{table.table_products}} 
+VIEW {{index.seller_id}} s
 WHERE
-    seller_id = $seller_id;
+    ($ids IS NULL OR ca.id IN $ids)
+    AND (
+        ($created_at IS NULL OR ca.created_at > $created_at)
+            AND
+        ($page_id IS NULL OR ca.id > $page_id)
+    )
+    AND (s.seller_id = COALESCE($seller_id, s.seller_id))
+    AND deleted_at IS NULL
+    AND ($in_stock IS NULL OR (ca.stock > 0 AND $in_stock) OR (ca.stock = 0 AND NOT $in_stock))
+ORDER BY id, created_at
+LIMIT MIN_OF($page_size, 25) + 1;
 )
 `,
-	"{{table.tableProducts}}", tableProducts,
+	"{{table.table_products}}", tableProducts,
 	"{{index.seller_id}}", tableProductsIndexSellerId,
+	"{{index.created_at_id}}", tableProductsIndexCreatedAtId,
 )
+
+type ListProductsDTOOutputItem struct {
+	Id          uuid.UUID
+	SellerId    string
+	Name        string
+	Description string
+	Pictures    []ListProductsDTOOutputPicture
+	Metadata    map[string]any
+	Stock       uint32
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+type ListProductsDTOOutputPicture struct {
+	Id  string `json:"id"`
+	Url string `json:"url"`
+}
+
+type ListProductsNextPage struct {
+	CreatedAt *time.Time `json:"created_at"`
+	Id        *uuid.UUID `json:"id"`
+	InStock   *bool      `json:"in_stock"`
+	SellerId  *string    `json:"seller_id"`
+	PageSize  int        `json:"page_size"`
+}
+
+func (p *Products) List(ctx context.Context, productIds []uuid.UUID, nextPage ListProductsNextPage) ([]ListProductsDTOOutputItem, error) {
+	readTx := table.TxControl(table.BeginTx(table.WithStaleReadOnly()), table.CommitTx())
+
+	var uuidsList types.Value
+	if len(productIds) > 0 {
+		var list = make([]types.Value, 0, len(productIds))
+		for _, id := range productIds {
+			list = append(list, types.UuidValue(id))
+		}
+		uuidsList = types.ListValue(list...)
+
+	}
+
+	tableParams := make([]table.ParameterOption, 0, 6)
+	tableParams = append(tableParams, table.ValueParam("$ids", uuidsList))
+	tableParams = append(tableParams, table.ValueParam("$seller_id", types.NullableUTF8Value(nextPage.SellerId)))
+	tableParams = append(tableParams, table.ValueParam("$in_stock", types.NullableBoolValue(nextPage.InStock)))
+	tableParams = append(tableParams, table.ValueParam("$page_created_at", types.NullableDatetimeValueFromTime(nextPage.CreatedAt)))
+	tableParams = append(tableParams, table.ValueParam("$page_id", types.NullableUUIDTypedValue(nextPage.Id)))
+	tableParams = append(tableParams, table.ValueParam("$page_size", types.Uint64Value(uint64(nextPage.PageSize))))
+
+	var outProducts []ListProductsDTOOutputItem
+
+	if err := p.db.Table().Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, res, err := s.Execute(ctx, readTx, queryListProducts, table.NewQueryParameters(tableParams...))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var out ListProductsDTOOutputItem
+				var picturesJson, metadataJson []byte
+				if err := res.ScanNamed(
+					named.Required("id", &out.Id),
+					named.Required("seller_id", &out.SellerId),
+					named.Required("name", &out.Name),
+					named.Required("description", &out.Description),
+					named.Required("pictures", &picturesJson),
+					named.Required("metadata", &metadataJson),
+					named.Required("stock", &out.Stock),
+					named.Required("created_at", &out.CreatedAt),
+					named.Required("updated_at", &out.UpdatedAt),
+				); err != nil {
+					return err
+				}
+				if err := json.Unmarshal(picturesJson, &out.Pictures); err != nil {
+					return errors.New("failed to unmarshal product pictures json field")
+				}
+				if err := json.Unmarshal(metadataJson, &out.Metadata); err != nil {
+					return errors.New("failed to unmarshal product metadata json field")
+				}
+				outProducts = append(outProducts, out)
+			}
+		}
+
+		return res.Err()
+	}); err != nil {
+		return nil, err
+	}
+
+	return outProducts, nil
+}

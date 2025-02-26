@@ -13,6 +13,7 @@ CREATE TABLE `products/products` (
     deleted_at Datetime,
     PRIMARY KEY (id),
     INDEX idx_seller_id GLOBAL ASYNC ON (seller_id),
+    INDEX idx_created_at_id GLOBAL ASYNC ON (created_at, id)
 );
 -- +goose StatementEnd
 

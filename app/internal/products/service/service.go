@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -24,18 +25,98 @@ func New(products *store.Products, pictures *store.Pictures) *Products {
 }
 
 type ListProductsReqFilter struct {
-	SellerId   string
-	ProductIds *[]string
-	Name       *string
+	SellerId   *string
+	ProductIds []uuid.UUID
 	InStock    *bool
+	PageSize   *int
 }
 type ListProductsReq struct {
 	Filter        ListProductsReqFilter
 	NextPageToken *string
 }
 
+var (
+	ErrInvalidListProductsPageSize      = errors.New("invalid list products page size")
+	ErrInvalidListProductsNextPageToken = errors.New("invalid list products next page token")
+)
+
 func (s *Products) ListProducts(ctx context.Context, req ListProductsReq) (oapi_codegen.ListProductsRes, error) {
-	return oapi_codegen.ListProductsRes{}, errors.New("unimplemented")
+	if req.Filter.PageSize != nil {
+		if *req.Filter.PageSize < 0 {
+			return oapi_codegen.ListProductsRes{}, fmt.Errorf("%w: page size can't be negative", ErrInvalidListProductsPageSize)
+		}
+		if *req.Filter.PageSize > 25 {
+			return oapi_codegen.ListProductsRes{}, fmt.Errorf("%w: max page size is 25", ErrInvalidListProductsPageSize)
+		}
+	}
+
+	var page store.ListProductsNextPage
+	if req.NextPageToken != nil {
+		// TODO: encode
+		nextPageTokenDecoded := *req.NextPageToken
+		if err := json.Unmarshal([]byte(nextPageTokenDecoded), &page); err != nil {
+			return oapi_codegen.ListProductsRes{}, fmt.Errorf("%w: failed to decode list products next page token", ErrInvalidListProductsNextPageToken)
+		}
+	} else {
+		page = store.ListProductsNextPage{
+			InStock:  req.Filter.InStock,
+			SellerId: req.Filter.SellerId,
+			PageSize: *req.Filter.PageSize,
+		}
+	}
+
+	items, err := s.productsStore.List(ctx, req.Filter.ProductIds, page)
+	if err != nil {
+		return oapi_codegen.ListProductsRes{}, fmt.Errorf("failed to list products from product store: %w", err)
+	}
+
+	if len(items) == 0 {
+		return oapi_codegen.ListProductsRes{
+			NextPageToken: nil,
+			Products:      make([]oapi_codegen.ListProductsResProduct, 0),
+		}, nil
+	}
+
+	products := make([]oapi_codegen.ListProductsResProduct, 0, len(items))
+	for _, item := range items[:page.PageSize] {
+		var pictureUrl string
+		if len(item.Pictures) > 0 {
+			pictureUrl = item.Pictures[0].Url
+		}
+
+		products = append(products, oapi_codegen.ListProductsResProduct{
+			Id:         item.Id.String(),
+			Name:       item.Name,
+			PictureUrl: pictureUrl,
+			SellerId:   item.SellerId,
+		})
+	}
+
+	res := oapi_codegen.ListProductsRes{
+		NextPageToken: nil,
+		Products:      products,
+	}
+
+	if len(items) > page.PageSize {
+		nextPage := store.ListProductsNextPage{
+			CreatedAt: ptr(items[page.PageSize].CreatedAt),
+			Id:        ptr(items[page.PageSize].Id),
+			InStock:   page.InStock,
+			SellerId:  page.SellerId,
+			PageSize:  page.PageSize,
+		}
+
+		// TODO: encode
+		tokenBytes, err := json.Marshal(&nextPage)
+		if err != nil {
+			return oapi_codegen.ListProductsRes{}, fmt.Errorf("failed to serialize next page token: %w", err)
+		}
+
+		res.NextPageToken = ptr(string(tokenBytes))
+
+	}
+
+	return res, nil
 }
 
 func (s *Products) GetProduct(ctx context.Context, id uuid.UUID) (*oapi_codegen.GetProductRes, error) {

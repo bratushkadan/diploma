@@ -116,6 +116,7 @@ func main() {
 		logger.Fatal("failed to setup swagger spec")
 	}
 
+	// TODO: determine why additionalProperties: false is not respected
 	r.Use(middleware.OapiRequestValidatorWithOptions(swagger, &middleware.Options{
 		ErrorHandler: apiImpl.ErrorHandlerValidation,
 		Options: openapi3filter.Options{
