@@ -35,8 +35,6 @@ type productsListFilter struct {
 	InStock    *bool
 }
 
-const len20CsUuids = 20*36 + 19*1
-
 func parseProductsListFilter(filter string) (productsListFilter, error) {
 	f := productsListFilter{}
 	for _, cond := range strings.Split(filter, "&") {
@@ -45,19 +43,6 @@ func parseProductsListFilter(filter string) (productsListFilter, error) {
 			return productsListFilter{}, fmt.Errorf(`invalid filter condition with key "%s" provided: condition must be a key=value(s) pair`, pair[0])
 		}
 		switch key, val := pair[0], pair[1]; key {
-		case "ids":
-			if len(val) > len20CsUuids {
-				return productsListFilter{}, errors.New(`invalid filter condition with key "ids" provided: only max of 20 uuids supported via query filter field`)
-			}
-			csids := strings.Split(val, ",")
-			ids := make([]uuid.UUID, 0, len(csids))
-			for _, rawId := range csids {
-				id, err := uuid.Parse(rawId)
-				if err != nil {
-					return productsListFilter{}, fmt.Errorf(`invalid filter condition with key "ids" provided: failed to parse id "%s"`, rawId)
-				}
-				ids = append(ids, id)
-			}
 		case "seller.id":
 			f.SellerId = &val
 		case "in_stock":
@@ -69,7 +54,6 @@ func parseProductsListFilter(filter string) (productsListFilter, error) {
 			} else {
 				return productsListFilter{}, errors.New(`invalid filter condition "in_stock" provided: condition's value must be one of ["*", "true", "false"]`)
 			}
-		default:
 		}
 	}
 
@@ -80,6 +64,12 @@ func (a *ApiImpl) ProductsList(c *gin.Context, params oapi_codegen.ProductsListP
 	if params.NextPageToken == nil && params.Filter == nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 0, Message: `either "filter" or "nextPageToken" query parameter must be specified`}},
+		})
+		return
+	}
+	if params.NextPageToken != nil && params.Filter != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 0, Message: `both "filter" and "nextPageToken" can't be specified`}},
 		})
 		return
 	}
@@ -99,9 +89,6 @@ func (a *ApiImpl) ProductsList(c *gin.Context, params oapi_codegen.ProductsListP
 		}
 		if filter.SellerId != nil {
 			listProductsReq.Filter.SellerId = filter.SellerId
-		}
-		if filter.ProductIds != nil {
-			listProductsReq.Filter.ProductIds = filter.ProductIds
 		}
 		if filter.InStock != nil {
 			listProductsReq.Filter.InStock = filter.InStock

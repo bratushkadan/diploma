@@ -383,7 +383,6 @@ func (p *Products) Delete(ctx context.Context, in DeleteProductDTOInput) (*Delet
 }
 
 var queryListProducts = template.ReplaceAllPairs(`
-DECLARE $ids AS Optional<List<Uuid>>;
 DECLARE $seller_id AS Optional<Utf8>;
 DECLARE $in_stock AS Optional<Bool>;
 
@@ -404,14 +403,13 @@ SELECT
 FROM 
   {{table.table_products}}
 VIEW {{index.created_at_id}} ca
-CROSS JOIN {{table.table_products}} 
+JOIN {{table.table_products}} 
 VIEW {{index.seller_id}} s
+ON ca.id = s.id
 WHERE
-    ($ids IS NULL OR ca.id IN $ids)
+    ($page_created_at IS NULL OR ca.created_at >= $page_created_at)
         AND
-    ($page_created_at IS NULL OR ca.created_at > $page_created_at)
-        AND
-    ($page_id IS NULL OR ca.id > $page_id)
+    ($page_id IS NULL OR ca.id >= $page_id)
         AND
     (s.seller_id = COALESCE($seller_id, s.seller_id))
         AND
@@ -450,21 +448,10 @@ type ListProductsNextPage struct {
 	PageSize  int        `json:"page_size"`
 }
 
-func (p *Products) List(ctx context.Context, productIds []uuid.UUID, nextPage ListProductsNextPage) ([]ListProductsDTOOutputItem, error) {
+func (p *Products) List(ctx context.Context, nextPage ListProductsNextPage) ([]ListProductsDTOOutputItem, error) {
 	readTx := table.TxControl(table.BeginTx(table.WithStaleReadOnly()), table.CommitTx())
 
-	var uuidsList types.Value
-	if len(productIds) > 0 {
-		var list = make([]types.Value, 0, len(productIds))
-		for _, id := range productIds {
-			list = append(list, types.UuidValue(id))
-		}
-		uuidsList = types.ListValue(list...)
-	}
-
-	tableParams := make([]table.ParameterOption, 0, 6)
-	// tableParams = append(tableParams, table.ValueParam("$ids", uuidsList))
-	_ = uuidsList
+	tableParams := make([]table.ParameterOption, 0, 5)
 	tableParams = append(tableParams, table.ValueParam("$seller_id", types.NullableUTF8Value(nextPage.SellerId)))
 	tableParams = append(tableParams, table.ValueParam("$in_stock", types.NullableBoolValue(nextPage.InStock)))
 	tableParams = append(tableParams, table.ValueParam("$page_created_at", types.NullableDatetimeValueFromTime(nextPage.CreatedAt)))

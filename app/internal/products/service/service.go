@@ -29,14 +29,21 @@ func New(products *store.Products, pictures *store.Pictures, logger *zap.Logger)
 }
 
 type ListProductsReqFilter struct {
-	SellerId   *string
-	ProductIds []uuid.UUID
-	InStock    *bool
-	PageSize   *int
+	SellerId *string
+	InStock  *bool
+	PageSize *int
 }
 type ListProductsReq struct {
 	Filter        ListProductsReqFilter
 	NextPageToken *string
+}
+
+type ListProductsNextPageSerialized struct {
+	CreatedAt int64     `json:"created_at"`
+	Id        uuid.UUID `json:"id"`
+	InStock   *bool     `json:"in_stock"`
+	SellerId  *string   `json:"seller_id"`
+	PageSize  int       `json:"page_size"`
 }
 
 var (
@@ -56,10 +63,19 @@ func (s *Products) ListProducts(ctx context.Context, req ListProductsReq) (oapi_
 
 	var page store.ListProductsNextPage
 	if req.NextPageToken != nil {
-		// TODO: encode
+		// TODO: decode
+		var deserializedPage ListProductsNextPageSerialized
 		nextPageTokenDecoded := *req.NextPageToken
-		if err := json.Unmarshal([]byte(nextPageTokenDecoded), &page); err != nil {
+		if err := json.Unmarshal([]byte(nextPageTokenDecoded), &deserializedPage); err != nil {
+			s.l.Info("error unmarshaling next page token", zap.Error(err))
 			return oapi_codegen.ListProductsRes{}, fmt.Errorf("%w: failed to decode list products next page token", ErrInvalidListProductsNextPageToken)
+		}
+		page = store.ListProductsNextPage{
+			CreatedAt: ptr(time.Unix(deserializedPage.CreatedAt, 0)),
+			Id:        ptr(deserializedPage.Id),
+			InStock:   deserializedPage.InStock,
+			SellerId:  deserializedPage.SellerId,
+			PageSize:  deserializedPage.PageSize,
 		}
 	} else {
 		page = store.ListProductsNextPage{
@@ -74,7 +90,7 @@ func (s *Products) ListProducts(ctx context.Context, req ListProductsReq) (oapi_
 	}
 
 	s.l.Info("here with prepared page")
-	items, err := s.productsStore.List(ctx, req.Filter.ProductIds, page)
+	items, err := s.productsStore.List(ctx, page)
 	if err != nil {
 		return oapi_codegen.ListProductsRes{}, fmt.Errorf("failed to list products from product store: %w", err)
 	}
@@ -87,7 +103,13 @@ func (s *Products) ListProducts(ctx context.Context, req ListProductsReq) (oapi_
 	}
 
 	products := make([]oapi_codegen.ListProductsResProduct, 0, len(items))
-	for _, item := range items[:page.PageSize] {
+	var boundIndex int
+	if lenItems := len(items); lenItems > page.PageSize {
+		boundIndex = page.PageSize
+	} else {
+		boundIndex = lenItems
+	}
+	for _, item := range items[:boundIndex] {
 		var pictureUrl string
 		if len(item.Pictures) > 0 {
 			pictureUrl = item.Pictures[0].Url
@@ -107,9 +129,9 @@ func (s *Products) ListProducts(ctx context.Context, req ListProductsReq) (oapi_
 	}
 
 	if len(items) > page.PageSize {
-		nextPage := store.ListProductsNextPage{
-			CreatedAt: ptr(items[page.PageSize].CreatedAt),
-			Id:        ptr(items[page.PageSize].Id),
+		nextPage := ListProductsNextPageSerialized{
+			CreatedAt: items[page.PageSize].CreatedAt.Unix(),
+			Id:        items[page.PageSize].Id,
 			InStock:   page.InStock,
 			SellerId:  page.SellerId,
 			PageSize:  page.PageSize,
