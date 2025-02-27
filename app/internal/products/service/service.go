@@ -72,12 +72,13 @@ func (s *Products) ListProducts(ctx context.Context, req ListProductsReq) (oapi_
 	if req.NextPageToken != nil {
 		token, err := decryptToken(*req.NextPageToken, s.encryptNextPageTokenSecretKey)
 		if err != nil {
-			return oapi_codegen.ListProductsRes{}, fmt.Errorf("failed to decode next page token: %w", err)
+			s.l.Info("error decoding next page token", zap.Error(err))
+			return oapi_codegen.ListProductsRes{}, fmt.Errorf("%w: %w", ErrInvalidListProductsNextPageToken, err)
 		}
 		var deserializedPage ListProductsNextPageSerialized
 		if err := json.Unmarshal([]byte(token), &deserializedPage); err != nil {
 			s.l.Info("error unmarshaling next page token", zap.Error(err))
-			return oapi_codegen.ListProductsRes{}, fmt.Errorf("%w: failed to decode list products next page token", ErrInvalidListProductsNextPageToken)
+			return oapi_codegen.ListProductsRes{}, fmt.Errorf("%w: %w", ErrInvalidListProductsNextPageToken, err)
 		}
 		page = store.ListProductsNextPage{
 			CreatedAt: ptr(time.Unix(deserializedPage.CreatedAt, 0)),
