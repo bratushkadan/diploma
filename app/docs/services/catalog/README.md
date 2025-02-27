@@ -2,6 +2,32 @@
 
 ## Components
 
+### OpenSearch
+
+Ports:
+- `9200` - RESTful API port.
+
+#### Run in docker
+
+OpenSearch:
+
+```sh
+docker run -d \
+  --name opensearch-node \
+  -p 9200:9200 \
+  -p 9600:9600 \
+  -e "discovery.type=single-node" \
+  -e "xpack.security.enabled=false" \
+  -e ES_JAVA_OPTS="-Xms200m -Xmx200m" \
+  opensearchproject/opensearch:2.19.0
+```
+
+OpenSearch Dashboard:
+
+```sh
+
+```
+
 ### Elasticsearch
 
 Ports:
