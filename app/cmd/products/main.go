@@ -102,7 +102,8 @@ func main() {
 	r.GET("/ready", readinessHandler)
 	r.GET("/health", readinessHandler)
 
-	svc := service.New(productsStore, pictureStore, logger)
+	// base32 </dev/urandom | head -c32
+	svc := service.New(productsStore, pictureStore, logger, "puqsyuv4jxjd74rs43yj3lyegcji2qpe")
 
 	apiImpl := &presentation.ApiImpl{Logger: logger, ProductsService: svc, PictureStore: pictureStore}
 
