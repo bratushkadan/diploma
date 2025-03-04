@@ -128,8 +128,9 @@ func (s *Products) ListProducts(ctx context.Context, req ListProductsReq) (oapi_
 		products = append(products, oapi_codegen.ListProductsResProduct{
 			Id:         item.Id.String(),
 			Name:       item.Name,
-			PictureUrl: pictureUrl,
 			SellerId:   item.SellerId,
+			Price:      item.Price,
+			PictureUrl: pictureUrl,
 		})
 	}
 
@@ -188,6 +189,7 @@ func (s *Products) GetProduct(ctx context.Context, id uuid.UUID) (*oapi_codegen.
 		Pictures:    pictures,
 		Metadata:    product.Metadata,
 		Stock:       int(product.Stock),
+		Price:       product.Price,
 		CreatedAt:   product.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   product.UpdatedAt.Format(time.RFC3339),
 	}, nil
@@ -202,6 +204,7 @@ func (s *Products) CreateProduct(ctx context.Context, req *oapi_codegen.CreatePr
 		Pictures:    []store.UpsertProductDTOOutputPicture{},
 		Metadata:    map[string]any{},
 		Stock:       ptr(uint32(req.Stock)),
+		Price:       ptr(req.Price),
 		CreatedAt:   ptr(time.Now()),
 		UpdatedAt:   ptr(time.Now()),
 	})
@@ -226,6 +229,7 @@ func (s *Products) CreateProduct(ctx context.Context, req *oapi_codegen.CreatePr
 		Pictures:    pictures,
 		Metadata:    product.Metadata,
 		Stock:       int(product.Stock),
+		Price:       product.Price,
 		CreatedAt:   product.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   product.UpdatedAt.Format(time.RFC3339),
 	}, nil
@@ -238,6 +242,7 @@ type UpdateProductReq struct {
 	Metadata    map[string]any
 	Pictures    []store.UpsertProductDTOOutputPicture
 	StockDelta  *int32
+	Price       *float64
 }
 
 var (
@@ -266,6 +271,7 @@ func (s *Products) UpdateProduct(ctx context.Context, in UpdateProductReq) (oapi
 		Metadata:    in.Metadata,
 		Pictures:    in.Pictures,
 		Stock:       stock,
+		Price:       in.Price,
 		UpdatedAt:   ptr(time.Now()),
 	})
 	if err != nil {
@@ -286,6 +292,9 @@ func (s *Products) UpdateProduct(ctx context.Context, in UpdateProductReq) (oapi
 	if in.StockDelta != nil {
 		vstock := int(*stock)
 		res.Stock = &vstock
+	}
+	if in.Price != nil {
+		res.Price = &product.Price
 	}
 
 	return res, nil

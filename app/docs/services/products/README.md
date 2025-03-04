@@ -15,11 +15,13 @@ CREATE TABLE `products/products` (
     pictures Json NOT NULL,
     metadata Json NOT NULL,
     stock Uint32 NOT NULL,
+    price Double NOT NULL,
     created_at Datetime NOT NULL,
     updated_at Datetime NOT NULL,
     deleted_at Datetime,
     PRIMARY KEY (id),
     INDEX idx_seller_id GLOBAL ASYNC ON (seller_id),
+    INDEX idx_created_at_id GLOBAL ASYNC ON (created_at, id)
 );
 ```
 
@@ -88,22 +90,23 @@ curl -sL \
   -X POST \
   -H "Content-Type: application/json" \
   -H "X-Authorization: Bearer ${ACCESS_TOKEN}" \
-  -d '{"name": "foo", "stock": 5, "metadata": {}, "description": ""}' http://localhost:8080/api/v1/products | jq
+  -d '{"name": "foo", "stock": 5, "price": 145, "metadata": {}, "description": ""}' http://localhost:8080/api/v1/products | jq
 ```
 
 Sample response:
 
 ```json
 {
-  "created_at": "2025-02-23T18:53:49+03:00",
+  "created_at": "2025-02-23T06:28:46+03:00",
   "description": "",
-  "id": "31adfeee-574d-4771-bf4c-b6fab6013853",
+  "id": "13eb5b42-795d-4b18-886d-84b985180c34",
   "metadata": {},
   "name": "foo",
   "pictures": [],
+  "price": 145,
   "seller_id": "12dl52q59z8r",
   "stock": 5,
-  "updated_at": "2025-02-23T18:53:49+03:00"
+  "updated_at": "2025-02-23T06:28:46+03:00"
 }
 ```
 
@@ -114,7 +117,7 @@ Sample response (insufficient permissions):
   "errors": [
     {
       "code": 124,
-      "message": "permission denied to upload product picture"
+      "message": "permission denied"
     }
   ]
 }

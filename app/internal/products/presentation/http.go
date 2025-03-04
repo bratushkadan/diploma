@@ -214,6 +214,7 @@ func (a *ApiImpl) ProductsUpdate(c *gin.Context, id string) {
 		Description: bodyReq.Description,
 		Metadata:    metadata,
 		StockDelta:  stockDelta,
+		Price:       bodyReq.Price,
 	})
 	if err != nil {
 		if errors.Is(err, service.ErrInsufficientStock) {

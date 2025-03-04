@@ -28,6 +28,7 @@ type CreateProductReq struct {
 	Description string                 `json:"description"`
 	Metadata    map[string]interface{} `json:"metadata"`
 	Name        string                 `json:"name"`
+	Price       float64                `json:"price"`
 	Stock       int                    `json:"stock"`
 }
 
@@ -39,6 +40,7 @@ type CreateProductRes struct {
 	Metadata    map[string]interface{} `json:"metadata"`
 	Name        string                 `json:"name"`
 	Pictures    GetProductResPictures  `json:"pictures"`
+	Price       float64                `json:"price"`
 	SellerId    string                 `json:"seller_id"`
 	Stock       int                    `json:"stock"`
 	UpdatedAt   string                 `json:"updated_at"`
@@ -68,6 +70,7 @@ type GetProductRes struct {
 	Metadata    map[string]interface{} `json:"metadata"`
 	Name        string                 `json:"name"`
 	Pictures    GetProductResPictures  `json:"pictures"`
+	Price       float64                `json:"price"`
 	SellerId    string                 `json:"seller_id"`
 	Stock       int                    `json:"stock"`
 	UpdatedAt   string                 `json:"updated_at"`
@@ -90,10 +93,11 @@ type ListProductsRes struct {
 
 // ListProductsResProduct defines model for ListProductsResProduct.
 type ListProductsResProduct struct {
-	Id         string `json:"id"`
-	Name       string `json:"name"`
-	PictureUrl string `json:"picture_url"`
-	SellerId   string `json:"seller_id"`
+	Id         string  `json:"id"`
+	Name       string  `json:"name"`
+	PictureUrl string  `json:"picture_url"`
+	Price      float64 `json:"price"`
+	SellerId   string  `json:"seller_id"`
 }
 
 // UpdateProductReq defines model for UpdateProductReq.
@@ -101,6 +105,7 @@ type UpdateProductReq struct {
 	Description *string                 `json:"description,omitempty"`
 	Metadata    *map[string]interface{} `json:"metadata,omitempty"`
 	Name        *string                 `json:"name,omitempty"`
+	Price       *float64                `json:"price,omitempty"`
 
 	// StockDelta The amount of "in stock" product count change, either of:
 	// - positive: stock amount is increased (seller releases more products)
@@ -113,6 +118,7 @@ type UpdateProductRes struct {
 	Description *string                 `json:"description,omitempty"`
 	Metadata    *map[string]interface{} `json:"metadata,omitempty"`
 	Name        *string                 `json:"name,omitempty"`
+	Price       *float64                `json:"price,omitempty"`
 	Stock       *int                    `json:"stock,omitempty"`
 }
 
@@ -446,33 +452,33 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/+xae2/bNhD/KgQ3YO2g1EkLtIOA/tGtaVBsw4ImAwbUgXsRTxYbilRIKosb+LsPJCVZ",
-	"tug4RuO2SPefzMc9eL97Jjc0U2WlJEpraHpDNZpKSYP+x6HWSruPTEmL0rpPqCrBM7BcydFHo6RbM1mB",
-	"JfhdxrjbAnGsVYXackcpB2EwoVVv6YaiI+6/uMXSf/yoMacp/WG0kGkUaJvRodZ0nlA7q5CmFLSGGZ3P",
-	"E6rxsuYaGU3ftyTPumPq/CNmls7dQYYm07xy0tE0HPUEGgaO/28aweKxVqzO7Du83FKjJQ43rQzGai6n",
-	"TvYSLTCw0NtsBUyohBKjt4xV2UVvh0uLU9QD5T2BZTV7LFs6w7dJVtU2W6qd+etsAjYq/6ZX4eweH6vi",
-	"ma01bkTTEdqFvsftJffaKATqyRqh1toioXXF1r/Ciqk4o31OSdx2nS4RMyb9V19iHjPwaxTYGbjRdns7",
-	"R99kqNlGAb4oZxc2toSzYhg3cYnGwBQ3y+JJLM7H5FoC4P8O98AcLqbtfWA+obUWd1TXnbyrbHdPw1HN",
-	"Bnk5oX9w0x402yNc4rWdVDDFiVUX6GEsayHgXCBNra4xiSCx4XZnVVZEbD43Fhkdn2QgZuy513C5FzBs",
-	"8spJHC23O10MS4279D2ozyKm99/eQ7aopUou+6sHX7C6mjAU4eJykXhaIIFS1dISlZMx5ZL482NKGhSQ",
-	"zO9mBcgpJgS5LVATladjuUcqZbjlV5iGWy0pbgiXLpoYZORReFOiUbgFQ0qlsaVuHjsyEqcQJ8OwI+MQ",
-	"T6paZ4X7/ZgmsXJxk5HMt2ykNSVwRCehgO2k2Pn88Ot9L6s1t7MTF4YCs3MEjfpVbQvP2kGvQGCoW9dL",
-	"6T97bltp/gmabNUGqYr/jrPQ4nCZKy8ety5Q0jdCaRDE3SSvjt/ShF6hNgHbB0/2n+w7lVSFEipOU/rM",
-	"LyW0Alt4uUZQ8dHVwQhqW6SZkjnX5R6WwP0jXO/Nsj2o+BQs/guzvaxp50q0hWKGpvT4r5NTmlCl+dQp",
-	"5QK3E7Ml24/YU7RD/3Oxk/TirTOQV/8tc9SbDXfKS62hRItOiPerlN5wYVEnxNRZQcCQcRPLnnD2Mldq",
-	"TInSg8V6f//pc/f+L89Bh19cTjwYX/48pjQJprqsUc8Wlso9K5r0uuIBXFbF+xOuiazLcx87iEZba4mM",
-	"aDS18JrHGJVwfQxTPOGfcIlbySUv69J759BhbqK0XCZzxE59HrtN9rNkeUbwdH9/qwnBFhk51re328RH",
-	"Eb+dQy3sOtKdrKPDRcdflyXoWQRgFqZmKcefJQOY+7cMMGwVBy6bbEp9ltRXPMMJZD45hHX4iC+Qv6gu",
-	"novq6X5++cuLZ/nCid0V1AKNmXT0fHW8yvwKBGdgw1Sm+YHv8LJGY39VbLZwskoZ/yhxnwktPw1xq7t7",
-	"T2YcjFHm8xAidwSbwfxiPW4+CzZN4PbhpR+y3585r1igKsjT4uohwSoSvEc3zdeEs3kI4a7XXw+9MAvY",
-	"FLDb+srnUh+xXFZaBKwFU9pPvqE3+DrRazDkiMDwLXMB3hZIwjOxDiU7weQDimfRAuHwGspKIOlFsXQs",
-	"P3z4MJZHh6dkiFXO5n7/01iurSeO0D5AdC4PnHYUIbsQeIT2IcY/XxtnxfrgFhqqrwmf+0/ng05+x+l8",
-	"0JTeAtZmDkdyjoKZHWb37yaFj/oT3baIXH780GET6IYgzRViFWHcVAJmJFe6d+BRCdfkgFR+0OFFSohb",
-	"eka4JFZZEI/XhuOmn29Gjd+gZ5W1sLwCbUe50uVeO95YUFuZ3sP68UjOha+cHCGwNKXnXILv04YTh8if",
-	"OJcV2q2PxocsEVd9DRZc0VP7K67iWUyNd1mFr0Mp/R6d2Vc+d6/Ov663DcYjbXxZx+dbbQI2OEbbAYRT",
-	"P5kv0pwGrt+NW9QGtRmlUNsCpXU2deAfHgh/3XuVZWjMafM3p1tOOdVuOXHi54i3ndNYCcjwHeYaTdFx",
-	"nHdWWPWBk/CuIbEutAmz4MYP3Doduk83M2tsM3BQ4y81a0qz8PzdSgbaLv+2INS0v1TBrPT/QtRbyxHZ",
-	"OWQXdH42/y8AAP//RRa7YGckAAA=",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

@@ -8,6 +8,7 @@ CREATE TABLE `products/products` (
     pictures Json NOT NULL,
     metadata Json NOT NULL,
     stock Uint32 NOT NULL,
+    price Double NOT NULL,
     created_at Datetime NOT NULL,
     updated_at Datetime NOT NULL,
     deleted_at Datetime,

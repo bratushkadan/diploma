@@ -70,6 +70,7 @@ SELECT
     pictures,
     metadata,
     stock,
+    price,
     created_at,
     updated_at,
     deleted_at
@@ -91,6 +92,7 @@ type GetProductDTOOutput struct {
 	Pictures    []GetProductDTOOutputPicture
 	Metadata    map[string]any
 	Stock       uint32
+	Price       float64
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   *time.Time
@@ -126,6 +128,7 @@ func (p *Products) Get(ctx context.Context, id uuid.UUID) (*GetProductDTOOutput,
 					named.Required("pictures", &picturesJson),
 					named.Required("metadata", &metadataJson),
 					named.Required("stock", &out.Stock),
+					named.Required("price", &out.Price),
 					named.Required("created_at", &out.CreatedAt),
 					named.Required("updated_at", &out.UpdatedAt),
 					named.Optional("deleted_at", &out.DeletedAt),
@@ -159,6 +162,7 @@ DECLARE $s AS Struct<
     pictures:Optional<Json>,
     metadata:Optional<Json>,
     stock:Optional<Uint32>,
+    price:Optional<Double>,
     created_at:Optional<Datetime>,
     updated_at:Optional<Datetime>,
     deleted_at:Optional<Datetime>,
@@ -173,6 +177,7 @@ $existing = (
         pictures,
         metadata,
         stock,
+        price,
         created_at,
         updated_at,
         deleted_at,
@@ -190,6 +195,7 @@ $sub = (
         Unwrap(COALESCE(u.pictures, e.pictures)) AS pictures,
         Unwrap(COALESCE(u.metadata, e.metadata)) AS metadata,
         Unwrap(COALESCE(u.stock, e.stock)) AS stock,
+        Unwrap(COALESCE(u.price, e.price)) AS price,
         Unwrap(COALESCE(u.created_at, e.created_at)) AS created_at,
         Unwrap(COALESCE(u.updated_at, e.updated_at)) AS updated_at,
         COALESCE(u.deleted_at, e.deleted_at) AS deleted_at,
@@ -214,6 +220,7 @@ type UpsertProductDTOInput struct {
 	Pictures    []UpsertProductDTOOutputPicture
 	Metadata    map[string]any
 	Stock       *uint32
+	Price       *float64
 	CreatedAt   *time.Time
 	UpdatedAt   *time.Time
 	DeletedAt   *time.Time
@@ -226,6 +233,7 @@ type UpsertProductDTOOutput struct {
 	Pictures    []UpsertProductDTOOutputPicture
 	Metadata    map[string]any
 	Stock       uint32
+	Price       float64
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   *time.Time
@@ -245,6 +253,7 @@ func (p *Products) Upsert(ctx context.Context, in UpsertProductDTOInput) (Upsert
 	opts = append(opts, types.StructFieldValue("name", types.NullableUTF8Value(in.Name)))
 	opts = append(opts, types.StructFieldValue("description", types.NullableUTF8Value(in.Description)))
 	opts = append(opts, types.StructFieldValue("stock", types.NullableUint32Value(in.Stock)))
+	opts = append(opts, types.StructFieldValue("price", types.NullableDoubleValue(in.Price)))
 	opts = append(opts, types.StructFieldValue("created_at", types.NullableDatetimeValueFromTime(in.CreatedAt)))
 	opts = append(opts, types.StructFieldValue("updated_at", types.NullableDatetimeValueFromTime(in.UpdatedAt)))
 	opts = append(opts, types.StructFieldValue("deleted_at", types.NullableDatetimeValueFromTime(in.DeletedAt)))
@@ -292,6 +301,7 @@ func (p *Products) Upsert(ctx context.Context, in UpsertProductDTOInput) (Upsert
 					named.Required("pictures", &picturesJson),
 					named.Required("metadata", &metadataJson),
 					named.Required("stock", &out.Stock),
+					named.Required("price", &out.Price),
 					named.Required("created_at", &out.CreatedAt),
 					named.Required("updated_at", &out.UpdatedAt),
 					named.Optional("deleted_at", &out.DeletedAt),
@@ -398,6 +408,7 @@ SELECT
    ca.pictures    AS pictures,
    ca.metadata    AS metadata,
    ca.stock       AS stock,
+   ca.price       AS price,
    ca.created_at  AS created_at,
    ca.updated_at  AS updated_at,
 FROM 
@@ -432,6 +443,7 @@ type ListProductsDTOOutputItem struct {
 	Pictures    []ListProductsDTOOutputPicture
 	Metadata    map[string]any
 	Stock       uint32
+	Price       float64
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

@@ -650,6 +650,7 @@ components:
         - id
         - name
         - seller_id
+        - price
         - picture_url
       additionalProperties: false
       properties:
@@ -659,6 +660,9 @@ components:
           type: string
         seller_id:
           type: string
+        price:
+          type: number
+          format: double
         picture_url:
           type: string
     GetProductRes:
@@ -671,6 +675,7 @@ components:
         - pictures
         - metadata
         - stock
+        - price
         - created_at
         - updated_at
       additionalProperties: false
@@ -683,12 +688,15 @@ components:
           type: string
         description:
           type: string
-        stock:
-          type: integer
         pictures:
           $ref: '#/components/schemas/GetProductResPictures'
         metadata:
           type: object
+        stock:
+          type: integer
+        price:
+          type: number
+          format: double
         created_at:
           type: string
         updated_at:
@@ -700,6 +708,7 @@ components:
         - description
         - metadata
         - stock
+        - price
       additionalProperties: false
       properties:
         name:
@@ -708,6 +717,9 @@ components:
           type: string
         stock:
           type: integer
+        price:
+          type: number
+          format: double
         metadata:
           type: object
     CreateProductRes:
@@ -720,6 +732,7 @@ components:
         - pictures
         - metadata
         - stock
+        - price
         - created_at
         - updated_at
       additionalProperties: false
@@ -732,12 +745,15 @@ components:
           type: string
         description:
           type: string
-        stock:
-          type: integer
         pictures:
           $ref: '#/components/schemas/GetProductResPictures'
         metadata:
           type: object
+        stock:
+          type: integer
+        price:
+          type: number
+          format: double
         created_at:
           type: string
         updated_at:
@@ -751,6 +767,9 @@ components:
           type: string
         description:
           type: string
+        price:
+          type: number
+          format: double
         stock_delta:
           type: integer
           description: |-
@@ -768,6 +787,9 @@ components:
           type: string
         description:
           type: string
+        price:
+          type: number
+          format: double
         stock:
           type: integer
         metadata:
@@ -780,7 +802,7 @@ components:
       properties:
         id:
           type: string
-
+    # Products / Pictures
     GetProductResPictures:
       type: array
       items:
@@ -815,6 +837,18 @@ components:
       properties:
         id:
           type: string
+
+    # Catalog
+
+    # Cart
+    # GetCartPositions
+    # SetCartPosition
+    # DeleteCartPosition
+    # ClearCart
+
+    # Order
+    # ListOrders
+
     # Errors
     Err:
       type: object
