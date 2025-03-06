@@ -1,12 +1,10 @@
 package domain
 
-import "context"
+import (
+	"context"
 
-type CheckUserCredentialsDTOOutput struct {
-	UserId   string
-	UserName string
-	UserType string
-}
+	"github.com/google/uuid"
+)
 
 type AccountProvider interface {
 	CreateAccount(context.Context, CreateAccountDTOInput) (CreateAccountDTOOutput, error)
@@ -17,20 +15,21 @@ type AccountProvider interface {
 }
 
 type CreateAccountDTOInput struct {
+	Id       uuid.UUID
 	Name     string
 	Password string
 	Email    string
 	Type     string
 }
 type CreateAccountDTOOutput struct {
-	Id    string
+	Id    uuid.UUID
 	Name  string
 	Email string
 	Type  string
 }
 
 type FindAccountDTOInput struct {
-	Id string
+	Id uuid.UUID
 }
 type FindAccountDTOOutput struct {
 	Name      string
@@ -43,7 +42,7 @@ type FindAccountByEmailDTOInput struct {
 	Email string
 }
 type FindAccountByEmailDTOOutput struct {
-	Id        string
+	Id        uuid.UUID
 	Name      string
 	Type      string
 	Activated bool
@@ -56,7 +55,7 @@ type CheckAccountCredentialsDTOInput struct {
 type CheckAccountCredentialsDTOOutput struct {
 	Ok        bool
 	Activated bool
-	AccountId string
+	AccountId uuid.UUID
 }
 
 type ActivateAccountsByEmailDTOInput struct {

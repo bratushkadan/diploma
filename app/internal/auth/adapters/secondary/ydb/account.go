@@ -8,6 +8,7 @@ import (
 	"github.com/bratushkadan/floral/internal/auth/core/domain"
 	"github.com/bratushkadan/floral/pkg/auth"
 	"github.com/bratushkadan/floral/pkg/resource/idhash"
+	"github.com/google/uuid"
 	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
@@ -48,13 +49,14 @@ func NewAccount(conf AccountConf) *Account {
 }
 
 var queryCreateAccount = fmt.Sprintf(`
+DECLARE $id AS String;
 DECLARE $name AS Utf8;
 DECLARE $password AS Utf8;
 DECLARE $email AS Utf8;
 DECLARE $type AS String;
 DECLARE $created_at AS Datetime;
-UPSERT INTO %s ( name, password, email, type, created_at )
-VALUES ( $name, $password, $email, $type, $created_at )
+UPSERT INTO %s ( id, name, password, email, type, created_at )
+VALUES ( $id, $name, $password, $email, $type, $created_at )
 RETURNING id, name, email, type
 `, tableAccounts)
 
@@ -68,6 +70,7 @@ func (a *Account) CreateAccount(ctx context.Context, in domain.CreateAccountDTOI
 
 	err = a.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
 		res, err := tx.Execute(ctx, queryCreateAccount, table.NewQueryParameters(
+			table.ValueParam("$id", types.StringValueFromString(in.Id.String())),
 			table.ValueParam("$name", types.UTF8Value(in.Name)),
 			table.ValueParam("$email", types.UTF8Value(in.Email)),
 			table.ValueParam("$password", types.UTF8Value(hashedPass)),
@@ -88,7 +91,7 @@ func (a *Account) CreateAccount(ctx context.Context, in domain.CreateAccountDTOI
 
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
-				var id int64
+				var id string
 				if err := res.ScanNamed(
 					named.Required("id", &id),
 					named.Required("name", &out.Name),
@@ -98,12 +101,10 @@ func (a *Account) CreateAccount(ctx context.Context, in domain.CreateAccountDTOI
 					return err
 				}
 
-				idStr, err := a.idHasher.EncodeInt64(id)
+				out.Id, err = uuid.Parse(id)
 				if err != nil {
-					return fmt.Errorf("failed to hash encode int64 id %d: %v", id, err)
+					return fmt.Errorf("failed to parse uuid from bytes: %w", err)
 				}
-
-				out.Id = idStr
 			}
 		}
 
@@ -117,11 +118,12 @@ func (a *Account) CreateAccount(ctx context.Context, in domain.CreateAccountDTOI
 		return out, fmt.Errorf("failed to run create account ydb query: %w", err)
 	}
 
+	fmt.Println("id out", out.Id.String())
 	return out, nil
 }
 
 var queryFindAccount = fmt.Sprintf(`
-DECLARE $id AS Int64;
+DECLARE $id AS String;
 SELECT
   name,
   email,
@@ -134,18 +136,13 @@ WHERE
 `, tableAccounts)
 
 func (a *Account) FindAccount(ctx context.Context, in domain.FindAccountDTOInput) (*domain.FindAccountDTOOutput, error) {
-	intId, err := a.idHasher.DecodeInt64(in.Id)
-	if err != nil {
-		return nil, err
-	}
-
 	var out *domain.FindAccountDTOOutput
 
 	readTx := table.TxControl(table.BeginTx(table.WithOnlineReadOnly()), table.CommitTx())
 
-	err = a.db.Table().Do(ctx, func(ctx context.Context, s table.Session) error {
+	err := a.db.Table().Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, queryFindAccount, table.NewQueryParameters(
-			table.ValueParam("$id", types.Int64Value(intId)),
+			table.ValueParam("$id", types.StringValueFromString(in.Id.String())),
 		))
 		if err != nil {
 			return err
@@ -207,23 +204,22 @@ func (a *Account) FindAccountByEmail(ctx context.Context, in domain.FindAccountB
 
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
-				var intId int64
-				var account domain.FindAccountByEmailDTOOutput
+				out = &domain.FindAccountByEmailDTOOutput{}
+				var id string
+				fmt.Println("scanning")
 				if err := res.ScanNamed(
-					named.Required("id", &intId),
-					named.Required("name", &account.Name),
-					named.Required("type", &account.Type),
-					named.Required("activated", &account.Activated),
+					named.Required("id", &id),
+					named.Required("name", &out.Name),
+					named.Required("type", &out.Type),
+					named.Required("activated", &out.Activated),
 				); err != nil {
 					return err
 				}
 
-				if id, err := a.idHasher.EncodeInt64(intId); err != nil {
-					return err
-				} else {
-					account.Id = id
+				out.Id, err = uuid.Parse(id)
+				if err != nil {
+					return fmt.Errorf("failed to parse uuid from bytes: %w", err)
 				}
-				out = &account
 			}
 		}
 
@@ -266,21 +262,19 @@ func (a *Account) CheckAccountCredentials(ctx context.Context, in domain.CheckAc
 
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
-				var password string
-				var intId int64
+				var password, id string
 				if err := res.ScanNamed(
-					named.Required("id", &intId),
+					named.Required("id", &id),
 					named.Required("password", &password),
 					named.Required("activated", &out.Activated),
 				); err != nil {
 					return err
 				}
 
-				id, err := a.idHasher.EncodeInt64(intId)
+				out.AccountId, err = uuid.Parse(id)
 				if err != nil {
-					return fmt.Errorf("failed to encode account int id: %w", err)
+					return fmt.Errorf("failed to parse uuid from bytes: %w", err)
 				}
-				out.AccountId = id
 
 				isPasswordMatch := a.ph.Check(in.Password, password)
 				out.Ok = isPasswordMatch

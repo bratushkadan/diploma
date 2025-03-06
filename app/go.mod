@@ -32,7 +32,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/ydb-platform/ydb-go-genproto v0.0.0-20241112172322-ea1f63298f77
 	github.com/ydb-platform/ydb-go-sdk-auth-environ v0.5.0
-	github.com/ydb-platform/ydb-go-sdk/v3 v3.99.4
+	github.com/ydb-platform/ydb-go-sdk/v3 v3.100.3
 	github.com/ydb-platform/ydb-go-yc v0.12.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.32.0

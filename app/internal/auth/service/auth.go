@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bratushkadan/floral/internal/auth/core/domain"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -89,6 +90,7 @@ func (svc *Auth) createAccount(ctx context.Context, req createAccountReq) (domai
 	}
 
 	out, err := svc.accProv.CreateAccount(ctx, domain.CreateAccountDTOInput{
+		Id:       uuid.New(),
 		Name:     acc.Name(),
 		Password: acc.Password(),
 		Email:    acc.Email(),
@@ -100,7 +102,7 @@ func (svc *Auth) createAccount(ctx context.Context, req createAccountReq) (domai
 	}
 
 	accountRes := domain.CreateUserRes{
-		Id:    out.Id,
+		Id:    out.Id.String(),
 		Name:  out.Name,
 		Email: out.Email,
 	}
@@ -215,7 +217,7 @@ func (svc *Auth) Authenticate(ctx context.Context, req domain.AuthenticateReq) (
 	}
 
 	token := domain.RefreshToken{
-		SubjectId: out.AccountId,
+		SubjectId: out.AccountId.String(),
 	}
 
 	// FIXME: clean Go transactions
@@ -322,12 +324,20 @@ func (svc *Auth) CreateAccessToken(ctx context.Context, req domain.CreateAccessT
 		return domain.CreateAccessTokenRes{}, domain.ErrTokenRevoked
 	}
 
+	subjectId, err := uuid.Parse(refreshToken.SubjectId)
+	if err != nil {
+		return domain.CreateAccessTokenRes{}, fmt.Errorf("invalid subject id: %w", domain.ErrInvalidRefreshToken)
+	}
+
 	acc, err := svc.accProv.FindAccount(ctx, domain.FindAccountDTOInput{
-		Id: refreshToken.SubjectId,
+		Id: subjectId,
 	})
 	if err != nil {
 		svc.l.Error("failed to find account for creating access token: %v", zap.Error(err))
 		return domain.CreateAccessTokenRes{}, err
+	}
+	if acc == nil {
+		return domain.CreateAccessTokenRes{}, domain.ErrUserNotFound
 	}
 
 	accessToken := domain.AccessToken{

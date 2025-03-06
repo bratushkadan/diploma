@@ -169,7 +169,7 @@ func (p *Token) Add(ctx context.Context, in domain.RefreshTokenAddDTOInput) (dom
 
 	if err := p.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
 		res, err := tx.Execute(ctx, queryAddRefreshToken, table.NewQueryParameters(
-			table.ValueParam("$account_id", types.UTF8Value(in.AccountId)),
+			table.ValueParam("$account_id", types.UTF8Value(in.AccountId.String())),
 			table.ValueParam("$created_at", types.DatetimeValueFromTime(in.CreatedAt)),
 			table.ValueParam("$expires_at", types.DatetimeValueFromTime(in.ExpiresAt)),
 		))

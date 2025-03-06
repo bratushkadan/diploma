@@ -3,6 +3,8 @@ package domain
 import (
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type RefreshTokenProvider interface {
@@ -26,7 +28,7 @@ type RefreshTokenListDTOOutputToken struct {
 }
 
 type RefreshTokenAddDTOInput struct {
-	AccountId string
+	AccountId uuid.UUID
 	CreatedAt time.Time
 	ExpiresAt time.Time
 }

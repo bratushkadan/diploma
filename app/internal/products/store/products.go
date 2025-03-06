@@ -472,7 +472,6 @@ func (p *Products) List(ctx context.Context, nextPage ListProductsNextPage) ([]L
 
 	var outProducts []ListProductsDTOOutputItem
 
-	p.l.Info("query ydb")
 	if err := p.db.Table().Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, queryListProducts, table.NewQueryParameters(tableParams...))
 		if err != nil {

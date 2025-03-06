@@ -8,7 +8,7 @@ YDB Schema:
 
 ```sql
 CREATE TABLE `auth/accounts` (
-    id BigSerial,
+    id Uuid NOT NULL,
     name Utf8 NOT NULL,
     password Utf8 NOT NULL,
     email Utf8 NOT NULL,

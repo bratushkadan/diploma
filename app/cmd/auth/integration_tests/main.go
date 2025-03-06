@@ -75,8 +75,8 @@ func main() {
 	}()
 
 	tokenProvider, err := authn.NewTokenProviderBuilder().
-		PrivateKeyPath(os.Getenv(setup.EnvKeyAuthTokenPrivateKeyPath)).
-		PublicKeyPath(os.Getenv(setup.EnvKeyAuthTokenPublicKeyPath)).
+		PrivateKeyString(os.Getenv(setup.EnvKeyAuthTokenPrivateKey)).
+		PublicKeyString(os.Getenv(setup.EnvKeyAuthTokenPublicKey)).
 		Build()
 	if err != nil {
 		logger.Fatal("failed to setup token provider", zap.Error(err))
@@ -131,14 +131,11 @@ func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logge
 		return fmt.Errorf("error creating account: %w", err)
 	} else {
 		logger.Info("response creating account", zap.Any("response", resp))
-
-		idInt64, err := accountIdHasher.DecodeInt64(resp.Id)
-		if err != nil {
-			return fmt.Errorf("failed to decode str id %s to in64: %w", resp.Id, err)
-		}
-		logger.Info("decoded string id to int64", zap.String("str_id", resp.Id), zap.Int64("id", idInt64))
 	}
-	accountId := resp.Id
+	accountId, err := uuid.Parse(resp.Id)
+	if err != nil {
+		return fmt.Errorf("failed to convert string id to uuid: %v", err)
+	}
 
 	logger.Info("find account")
 	acc, err := accAdapter.FindAccount(ctx, domain.FindAccountDTOInput{Id: accountId})
@@ -148,7 +145,7 @@ func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logge
 	if acc != nil {
 		logger.Info("found account", zap.Any("account", acc))
 	} else {
-		logger.Info("account not found", zap.String("id", resp.Id))
+		logger.Fatal("account not found", zap.String("id", resp.Id))
 	}
 
 	logger.Info("find account by email")
@@ -159,7 +156,7 @@ func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logge
 	if accByEmail != nil {
 		logger.Info("found account by email", zap.Any("account", accByEmail))
 	} else {
-		logger.Info("account not found", zap.String("id", resp.Id))
+		logger.Fatal("account not found", zap.String("id", resp.Id))
 	}
 
 	logger.Info("check account credentials")
@@ -299,7 +296,7 @@ func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logge
 
 	logger.Info("delete refresh tokens by account id")
 	deleteAccountTokensRes, err := refreshTokenAdapter.DeleteByAccountId(ctx, domain.RefreshTokenDeleteByAccountIdDTOInput{
-		Id: accByEmail.Id,
+		Id: accByEmail.Id.String(),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete account by id: %v", err)
@@ -311,7 +308,7 @@ func runAccountTests(ctx context.Context, accountIdHasher idhash.IdHasher, logge
 	}
 
 	accountRefreshTokensRes, err = refreshTokenAdapter.List(ctx, domain.RefreshTokenListDTOInput{
-		AccountId: accountId,
+		AccountId: accountId.String(),
 	})
 
 	if len(accountRefreshTokensRes.Tokens) != 0 {
