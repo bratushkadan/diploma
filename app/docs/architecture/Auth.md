@@ -4,9 +4,9 @@
 
 Service sequence diagram:
 
-[![](https://img.plantuml.biz/plantuml/svg/dPHFJi906CNtSue9Ardq0YuQ3i9cCeoHg8NqpyAT59K52XiJDqPFOD9egr1ikSBCZNmp1TEMMXC30Thvtkzxy-OhFSzdhXzSd1F6_P5BvOlCvKRToKzylyb8XJBHrvHvD21Zr0xvSCmSdtRa4qfYDJNBQgfcCa5rfkRgfkz07ycjNAa9zEkEbhCMEKhrHOYMYRgI7pA6B8DysNUgQDf05ho6VfKRBAOg12i79yD6bgQ9cW4K5If20ijcnrG-Qg8kLHCAR8uMCMwP_hHi04lhie4LOPPj2mx6Wn70eaoepAkOGlSN2AG0eETT2Y4zsiiDj87OmkiImIrRW7UOHQujcZgSyvSnYpTUSvIcEwywir-FHTjfsKjGTAx4UjzWunszIqOY8gnw18swglqk6GZFTqUNE57T-U0qOepOicN4MlUYOwnxckWPWgCfDlO_RCapRnp38lu82Fq0PlXSgMi4d-BUBNulpC3KZBdYn1NUAVL7PyBfDc9JPB60hKZ7akkTu0dS8le67EDSUDwUzkEO4T8Jpa3_Ptm3)](https://editor.plantuml.com/uml/dPHFJi906CNtSue9Ardq0YuQ3i9cCeoHg8NqpyAT59K52XiJDqPFOD9egr1ikSBCZNmp1TEMMXC30Thvtkzxy-OhFSzdhXzSd1F6_P5BvOlCvKRToKzylyb8XJBHrvHvD21Zr0xvSCmSdtRa4qfYDJNBQgfcCa5rfkRgfkz07ycjNAa9zEkEbhCMEKhrHOYMYRgI7pA6B8DysNUgQDf05ho6VfKRBAOg12i79yD6bgQ9cW4K5If20ijcnrG-Qg8kLHCAR8uMCMwP_hHi04lhie4LOPPj2mx6Wn70eaoepAkOGlSN2AG0eETT2Y4zsiiDj87OmkiImIrRW7UOHQujcZgSyvSnYpTUSvIcEwywir-FHTjfsKjGTAx4UjzWunszIqOY8gnw18swglqk6GZFTqUNE57T-U0qOepOicN4MlUYOwnxckWPWgCfDlO_RCapRnp38lu82Fq0PlXSgMi4d-BUBNulpC3KZBdYn1NUAVL7PyBfDc9JPB60hKZ7akkTu0dS8le67EDSUDwUzkEO4T8Jpa3_Ptm3)
+[![](https://img.plantuml.biz/plantuml/svg/dLJBJi905DtFLqnOoQ8_uABXGzXCoXY9MaWV2tSyL1OeR4pS6Fq2aufK2zZo2tV-o3DJC51BIGn9oJ3td7lkEPSs_41uGNXroOGJT3nEhvJHIjtJ5xvd5Aa1nVhCXSz3raLjssbtXHlm6ZsZPAw6vbeDrOXYLATgh6wRBl0HhIbHVU0NDGqN5N2KwiC0BMFLeq-Q0vO2Fcsw-zIyX5aw1UetMk5ogGRWoi2JOf2fQQ9688fo56EXPOjJJa-QKPUgFWTjXXPp_6Jwyrq1k5hi2aYOi6nREk1uD018f7YV8mSTOm5D29QNZGK3VhA57sAiuAipwLYs1DzV8pAmvNK8-PioRcR6PupIvKQhDknW9bfEnInXtddFquSI6H_elICaOj8gMb2AsvTVPotf1rxd6d7gpiKe87grYRvylofdWOq8HXGvoycEnc9IAOxOr_k80OVmwNygTonmyatA1MVqZgAPiJ2F3OzKtI2IdZPStU6SSCgQxk6iayg1olv0-Uv4WEbNHufdWfu9TijqL1EZiM239yyywP_pe7CXtNefxH91JY0bqfbcsZUyEzROcn8wuJZIzxTil_u8nXhIRUcttGy0)](https://editor.plantuml.com/uml/dLJBJi905DtFLqnOoQ8_uABXGzXCoXY9MaWV2tSyL1OeR4pS6Fq2aufK2zZo2tV-o3DJC51BIGn9oJ3td7lkEPSs_41uGNXroOGJT3nEhvJHIjtJ5xvd5Aa1nVhCXSz3raLjssbtXHlm6ZsZPAw6vbeDrOXYLATgh6wRBl0HhIbHVU0NDGqN5N2KwiC0BMFLeq-Q0vO2Fcsw-zIyX5aw1UetMk5ogGRWoi2JOf2fQQ9688fo56EXPOjJJa-QKPUgFWTjXXPp_6Jwyrq1k5hi2aYOi6nREk1uD018f7YV8mSTOm5D29QNZGK3VhA57sAiuAipwLYs1DzV8pAmvNK8-PioRcR6PupIvKQhDknW9bfEnInXtddFquSI6H_elICaOj8gMb2AsvTVPotf1rxd6d7gpiKe87grYRvylofdWOq8HXGvoycEnc9IAOxOr_k80OVmwNygTonmyatA1MVqZgAPiJ2F3OzKtI2IdZPStU6SSCgQxk6iayg1olv0-Uv4WEbNHufdWfu9TijqL1EZiM239yyywP_pe7CXtNefxH91JY0bqfbcsZUyEzROcn8wuJZIzxTil_u8nXhIRUcttGy0)
 
-[PlantUML Editor](https://editor.plantuml.com/uml/dPHFJi906CNtSue9Ardq0YuQ3i9cCeoHg8NqpyAT59K52XiJDqPFOD9egr1ikSBCZNmp1TEMMXC30Thvtkzxy-OhFSzdhXzSd1F6_P5BvOlCvKRToKzylyb8XJBHrvHvD21Zr0xvSCmSdtRa4qfYDJNBQgfcCa5rfkRgfkz07ycjNAa9zEkEbhCMEKhrHOYMYRgI7pA6B8DysNUgQDf05ho6VfKRBAOg12i79yD6bgQ9cW4K5If20ijcnrG-Qg8kLHCAR8uMCMwP_hHi04lhie4LOPPj2mx6Wn70eaoepAkOGlSN2AG0eETT2Y4zsiiDj87OmkiImIrRW7UOHQujcZgSyvSnYpTUSvIcEwywir-FHTjfsKjGTAx4UjzWunszIqOY8gnw18swglqk6GZFTqUNE57T-U0qOepOicN4MlUYOwnxckWPWgCfDlO_RCapRnp38lu82Fq0PlXSgMi4d-BUBNulpC3KZBdYn1NUAVL7PyBfDc9JPB60hKZ7akkTu0dS8le67EDSUDwUzkEO4T8Jpa3_Ptm3)
+[PlantUML Editor](https://editor.plantuml.com/uml/dLJBJi905DtFLqnOoQ8_uABXGzXCoXY9MaWV2tSyL1OeR4pS6Fq2aufK2zZo2tV-o3DJC51BIGn9oJ3td7lkEPSs_41uGNXroOGJT3nEhvJHIjtJ5xvd5Aa1nVhCXSz3raLjssbtXHlm6ZsZPAw6vbeDrOXYLATgh6wRBl0HhIbHVU0NDGqN5N2KwiC0BMFLeq-Q0vO2Fcsw-zIyX5aw1UetMk5ogGRWoi2JOf2fQQ9688fo56EXPOjJJa-QKPUgFWTjXXPp_6Jwyrq1k5hi2aYOi6nREk1uD018f7YV8mSTOm5D29QNZGK3VhA57sAiuAipwLYs1DzV8pAmvNK8-PioRcR6PupIvKQhDknW9bfEnInXtddFquSI6H_elICaOj8gMb2AsvTVPotf1rxd6d7gpiKe87grYRvylofdWOq8HXGvoycEnc9IAOxOr_k80OVmwNygTonmyatA1MVqZgAPiJ2F3OzKtI2IdZPStU6SSCgQxk6iayg1olv0-Uv4WEbNHufdWfu9TijqL1EZiM239yyywP_pe7CXtNefxH91JY0bqfbcsZUyEzROcn8wuJZIzxTil_u8nXhIRUcttGy0)
 
 ```plantuml
 @startuml
@@ -16,15 +16,17 @@ participant "Модуль подтверждения\nучетных запис�
 participant "Электронная почта" as e
 
 u->a: Запрос создания \nучетной записи
-a->>ec: Данные о созданной \nучетной записи
+a->>ec: Данные созданной \nучетной записи
 a-->>u: Ответ (данные созданной учетной записи)
 ec->e: Электронное письмо с ссылкой \nна подтверждение учетной записи
 u->e: Запрос электронного письма
 e->u: Ответ (электронное письмо)
 destroy e
 u->ec: Данные для подтверждения учетной записи
+ec-->>a: Данные подтвержденной учетной записи
 ec->u: Ответ (статус подтверждения учетной записи)
 destroy ec
+a-->>a: Добавление информации о\n подтверждении учетной записи
 
 u->a: Запрос на аутентификацию
 a-->u: Ответ (refresh token)
