@@ -1,0 +1,37 @@
+
+# Auth service
+
+
+Service sequence diagram:
+
+[![](https://img.plantuml.biz/plantuml/svg/dPHFJi906CNtSue9Ardq0YuQ3i9cCeoHg8NqpyAT59K52XiJDqPFOD9egr1ikSBCZNmp1TEMMXC30Thvtkzxy-OhFSzdhXzSd1F6_P5BvOlCvKRToKzylyb8XJBHrvHvD21Zr0xvSCmSdtRa4qfYDJNBQgfcCa5rfkRgfkz07ycjNAa9zEkEbhCMEKhrHOYMYRgI7pA6B8DysNUgQDf05ho6VfKRBAOg12i79yD6bgQ9cW4K5If20ijcnrG-Qg8kLHCAR8uMCMwP_hHi04lhie4LOPPj2mx6Wn70eaoepAkOGlSN2AG0eETT2Y4zsiiDj87OmkiImIrRW7UOHQujcZgSyvSnYpTUSvIcEwywir-FHTjfsKjGTAx4UjzWunszIqOY8gnw18swglqk6GZFTqUNE57T-U0qOepOicN4MlUYOwnxckWPWgCfDlO_RCapRnp38lu82Fq0PlXSgMi4d-BUBNulpC3KZBdYn1NUAVL7PyBfDc9JPB60hKZ7akkTu0dS8le67EDSUDwUzkEO4T8Jpa3_Ptm3)](https://editor.plantuml.com/uml/dPHFJi906CNtSue9Ardq0YuQ3i9cCeoHg8NqpyAT59K52XiJDqPFOD9egr1ikSBCZNmp1TEMMXC30Thvtkzxy-OhFSzdhXzSd1F6_P5BvOlCvKRToKzylyb8XJBHrvHvD21Zr0xvSCmSdtRa4qfYDJNBQgfcCa5rfkRgfkz07ycjNAa9zEkEbhCMEKhrHOYMYRgI7pA6B8DysNUgQDf05ho6VfKRBAOg12i79yD6bgQ9cW4K5If20ijcnrG-Qg8kLHCAR8uMCMwP_hHi04lhie4LOPPj2mx6Wn70eaoepAkOGlSN2AG0eETT2Y4zsiiDj87OmkiImIrRW7UOHQujcZgSyvSnYpTUSvIcEwywir-FHTjfsKjGTAx4UjzWunszIqOY8gnw18swglqk6GZFTqUNE57T-U0qOepOicN4MlUYOwnxckWPWgCfDlO_RCapRnp38lu82Fq0PlXSgMi4d-BUBNulpC3KZBdYn1NUAVL7PyBfDc9JPB60hKZ7akkTu0dS8le67EDSUDwUzkEO4T8Jpa3_Ptm3)
+
+[PlantUML Editor](https://editor.plantuml.com/uml/dPHFJi906CNtSue9Ardq0YuQ3i9cCeoHg8NqpyAT59K52XiJDqPFOD9egr1ikSBCZNmp1TEMMXC30Thvtkzxy-OhFSzdhXzSd1F6_P5BvOlCvKRToKzylyb8XJBHrvHvD21Zr0xvSCmSdtRa4qfYDJNBQgfcCa5rfkRgfkz07ycjNAa9zEkEbhCMEKhrHOYMYRgI7pA6B8DysNUgQDf05ho6VfKRBAOg12i79yD6bgQ9cW4K5If20ijcnrG-Qg8kLHCAR8uMCMwP_hHi04lhie4LOPPj2mx6Wn70eaoepAkOGlSN2AG0eETT2Y4zsiiDj87OmkiImIrRW7UOHQujcZgSyvSnYpTUSvIcEwywir-FHTjfsKjGTAx4UjzWunszIqOY8gnw18swglqk6GZFTqUNE57T-U0qOepOicN4MlUYOwnxckWPWgCfDlO_RCapRnp38lu82Fq0PlXSgMi4d-BUBNulpC3KZBdYn1NUAVL7PyBfDc9JPB60hKZ7akkTu0dS8le67EDSUDwUzkEO4T8Jpa3_Ptm3)
+
+```plantuml
+@startuml
+actor Пользователь as u
+participant "Модуль учетных\nзаписей" as a
+participant "Модуль подтверждения\nучетных записей" as ec
+participant "Электронная почта" as e
+
+u->a: Запрос создания \nучетной записи
+a->>ec: Данные о созданной \nучетной записи
+a-->>u: Ответ (данные созданной учетной записи)
+ec->e: Электронное письмо с ссылкой \nна подтверждение учетной записи
+u->e: Запрос электронного письма
+e->u: Ответ (электронное письмо)
+destroy e
+u->ec: Данные для подтверждения учетной записи
+ec->u: Ответ (статус подтверждения учетной записи)
+destroy ec
+
+u->a: Запрос на аутентификацию
+a-->u: Ответ (refresh token)
+u->a: Запрос ключа доступа
+a-->u: Ответ (access token)
+
+destroy a
+
+@enduml
+```
