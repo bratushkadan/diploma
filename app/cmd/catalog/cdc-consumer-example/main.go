@@ -241,6 +241,7 @@ func main() {
 			}
 
 			switch record.Payload.Operation {
+			// TODO: implement smarter upsert logic: empty stock is delete, not upsert in ElasticSearch
 			case CdcOperationUpsert:
 				var pictures []ProductsChangePicture
 				if err := json.Unmarshal([]byte(*record.Payload.After.PicturesJsonListStr), &pictures); err != nil {
@@ -250,8 +251,9 @@ func main() {
 				if err != nil {
 					return fmt.Errorf(`failed to decode base64 encoded bytes field "id": %v`, err)
 				}
+				uuidId := string(data)
 				bulkItem, err := newBulkProductUpsert(ProductChange{
-					Id:          string(data),
+					Id:          uuidId,
 					Name:        *record.Payload.After.Name,
 					Description: *record.Payload.After.Description,
 					Price:       *record.Payload.After.Price,
@@ -263,7 +265,12 @@ func main() {
 				}
 				blkBuf.WriteString(bulkItem)
 			case CdcOperationDelete:
-				bulkItemDel, err := newBulkProductDelete(ProductChange{Id: record.Payload.Before.Id})
+				data, err := base64.StdEncoding.DecodeString(record.Payload.Before.Id)
+				if err != nil {
+					return fmt.Errorf(`failed to decode base64 encoded bytes field "id": %v`, err)
+				}
+				uuidId := string(data)
+				bulkItemDel, err := newBulkProductDelete(ProductChange{Id: uuidId})
 				if err != nil {
 					logger.Fatal("failed to prepare bulk delete item", zap.Error(err))
 				}
