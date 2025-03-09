@@ -77,6 +77,8 @@ const CatalogQuery = `
 GET /products/_search
 {
   "query": {
+    "size": 20,
+    "from": 0,
     "function_score": {
       "query": { "match_all": {} },
       "functions": [
