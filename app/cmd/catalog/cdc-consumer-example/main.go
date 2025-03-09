@@ -3,19 +3,18 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/bratushkadan/floral/internal/auth/setup"
+	"github.com/bratushkadan/floral/internal/catalog/store"
 	"github.com/bratushkadan/floral/pkg/cfg"
 	"github.com/bratushkadan/floral/pkg/logging"
 	ydbpkg "github.com/bratushkadan/floral/pkg/ydb"
@@ -240,14 +239,11 @@ func main() {
 		log.Fatalf("Error setting up zap: %v", err)
 	}
 
-	client, err := opensearch.NewClient(opensearch.Config{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-		Addresses: []string{"https://localhost:9200"},
-		Username:  "admin",
-		Password:  "iAdnWfymi1(",
-	})
+	client, err := store.NewOpenSearchClientBuilder().
+		Username("admin").
+		Password("iAdnWfymi1(").
+		Addresses([]string{"https://localhost:9200"}).
+		Build()
 	if err != nil {
 		logger.Fatal("failed to setup OpenSearch client: %v", zap.Error(err))
 	}
