@@ -16,3 +16,16 @@ docker-compose up -d
 #### Open dashboard
 
 [Dashboard in web browser](http://localhost:5601)
+
+##### Console Queries
+
+List products:
+
+```sh
+GET /products/_search
+{
+  "query": {
+    "match_all": {}
+  }
+}
+```
