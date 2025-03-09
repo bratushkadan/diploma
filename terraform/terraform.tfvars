@@ -1,1 +1,1 @@
-ydb_additionals = true
+ydb_migrations_applied = true

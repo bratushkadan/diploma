@@ -14,8 +14,8 @@ variable "source_db_reader_sa_id" {
   nullable = false
 }
 
-variable "source_db_table_paths" {
-  type     = list(string)
+variable "source_db_table_path" {
+  type     = string
   nullable = false
 }
 
@@ -25,6 +25,19 @@ variable "changefeed_custom_name" {
 
 variable "target_db_path" {
   type     = string
+  nullable = false
+}
+variable "target_db_endpoint" {
+  type     = string
+  nullable = false
+}
+variable "target_topic" {
+  type = object({
+    partitions_count           = optional(number)
+    retention_period_hours     = optional(number)
+    partition_write_speed_kbps = optional(number)
+    consumers                  = map(object({ name = string }))
+  })
   nullable = false
 }
 variable "target_db_writer_sa_id" {
