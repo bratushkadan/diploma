@@ -511,13 +511,13 @@ paths:
         - catalog
       parameters:
         - name: next_page_token
-          in: path
+          in: query
           required: false
           schema:
             type: string
         - name: filter
           description: query search filter
-          in: path
+          in: query
           required: false
           schema:
             type: string
