@@ -20,6 +20,22 @@ locals {
           id    = ""
           sa_id = yandex_iam_service_account.auth_caller.id
         }
+        catalog = {
+          id    = ""
+          sa_id = yandex_iam_service_account.auth_caller.id
+        }
+        cart = {
+          id    = ""
+          sa_id = yandex_iam_service_account.auth_caller.id
+        }
+        orders = {
+          id    = ""
+          sa_id = yandex_iam_service_account.auth_caller.id
+        }
+        feedback = {
+          id    = ""
+          sa_id = yandex_iam_service_account.auth_caller.id
+        }
       }
     }
   }

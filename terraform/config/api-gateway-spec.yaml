@@ -1,18 +1,21 @@
 openapi: 3.0.0
 info:
-  version: 1.0.0
+  version: 0.1.0
   title: Ecom API
 
 tags:
   - name: auth
-    description: 'Service for authentication'
+    description: Authentication service
   - name: products
-    description: 'Products service'
-  - name: orders
-  - name: cart
+    description: Products service
   - name: catalog
-  - name: payments
+    description: Catalog service
+  - name: cart
+    description: Cart service
+  - name: orders
+    description: Orders service
   - name: feedback
+    description: Product reviews service
 
 paths:
   /api/v1/users/:createAccount:
@@ -47,6 +50,7 @@ paths:
         service_account_id: '${containers.auth.account.sa_id}'
   /api/v1/users/:createSellerAccount:
     post:
+      summary: Create seller account
       description: Create seller account
       tags:
         - auth
@@ -76,6 +80,7 @@ paths:
         service_account_id: '${containers.auth.account.sa_id}'
   /api/v1/users/:authenticate:
     post:
+      summary: Get refresh token
       description: Authenticate
       tags:
         - auth
@@ -105,7 +110,8 @@ paths:
         service_account_id: '${containers.auth.account.sa_id}'
   /api/v1/users/:replaceRefreshToken:
     post:
-      description: Authenticate
+      summary: Replace refresh token
+      description: Authenticate - replace old refresh token with the new one.
       tags:
         - auth
       requestBody:
@@ -134,7 +140,8 @@ paths:
         service_account_id: '${containers.auth.account.sa_id}'
   /api/v1/users/:createAccessToken:
     post:
-      description: Authenticate
+      summary: Get access token
+      description: Get access token
       tags:
         - auth
       requestBody:
@@ -496,6 +503,39 @@ paths:
         type: serverless_containers
         container_id: '${containers.products.id}'
         service_account_id: '${containers.products.sa_id}'
+  /api/v1/catalog:
+    get:
+      summary: Query catalog
+      operationId: catalog_get
+      tags:
+        - catalog
+      parameters:
+        - name: next_page_token
+          in: path
+          required: false
+          schema:
+            type: string
+        - name: filter
+          description: query search filter
+          in: path
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: Catalog data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogGetRes'
+        default:
+          $ref: '#/components/responses/Error'
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: '${containers.catalog.id}'
+        service_account_id: '${containers.catalog.sa_id}'
 
 components:
   securitySchemes:
@@ -839,6 +879,39 @@ components:
           type: string
 
     # Catalog
+    CatalogGetRes:
+      type: object
+      required:
+        - products
+        - next_page_token
+      additionalProperties: false
+      properties:
+        next_page_token:
+          type: string
+          nullable: true
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogGetResProduct'
+    CatalogGetResProduct:
+      type: object
+      required:
+        - id
+        - name
+        - picture
+        - price
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        picture:
+          type: string
+          description: url
+        price:
+          type: number
+          format: double
 
     # Cart
     # GetCartPositions

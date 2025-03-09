@@ -15,9 +15,15 @@ locals {
       account            = "0.0.7"
       email_confirmation = "0.0.7"
     }
+    products = "0.0.1-rc"
+    catalog  = "0.0.1-rc"
+    cart     = ""
+    orders   = ""
+    feedback = ""
   }
 
   // No way to get around circular dependencies with YMQ Trigger :(
+  // (without using a custom domain)
   email_confirmation_origin = "https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net"
 
   containers = {
@@ -28,6 +34,21 @@ locals {
       email_confirmation = {
         count = local.versions.auth.email_confirmation == "" ? 0 : 1
       }
+    }
+    products = {
+      count = local.versions.products == "" ? 0 : 1
+    }
+    catalog = {
+      count = local.versions.catalog == "" ? 0 : 1
+    }
+    cart = {
+      count = local.versions.cart == "" ? 0 : 1
+    }
+    orders = {
+      count = local.versions.orders == "" ? 0 : 1
+    }
+    feedback = {
+      count = local.versions.feedback == "" ? 0 : 1
     }
   }
 
