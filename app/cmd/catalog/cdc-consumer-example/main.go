@@ -73,6 +73,92 @@ type ProductsChangePicture struct {
 	Url string `json:"url"`
 }
 
+const CatalogQuery = `
+GET /products/_search
+{
+  "query": {
+    "function_score": {
+      "query": { "match_all": {} },
+      "functions": [
+        {
+          "field_value_factor": {
+            "field": "rating",
+            "factor": 1.5,
+            "modifier": "sqrt",
+            "missing": 3.5
+          }
+        },
+        {
+          "field_value_factor": {
+            "field": "purchases_30d",
+            "factor": 0.1,
+            "modifier": "log1p",
+            "missing": 0
+          }
+        },
+        {
+          "field_value_factor": {
+            "field": "ad_boost",
+            "factor": 2.0,
+            "modifier": "none",
+            "missing": 1
+          }
+        }
+      ],
+      "score_mode": "sum",
+      "boost_mode": "multiply"
+    }
+  }
+}
+`
+
+// name^3 - priority of field "name" is increased 3 times to "description field"
+const CatalogSearchQuery = `
+GET /products/_search
+{
+  "query": {
+    "size": 20,
+    "from": 0,
+    "function_score": {
+    "query": {
+      "multi_match": {
+        "query": "пользовательский ввод",
+        "fields": ["name^3", "description"]
+      }
+    },
+      "functions": [
+        {
+          "field_value_factor": {
+            "field": "rating",
+            "factor": 1.5,
+            "modifier": "sqrt",
+            "missing": 3.5
+          }
+        },
+        {
+          "field_value_factor": {
+            "field": "purchases_30d",
+            "factor": 0.1,
+            "modifier": "log1p",
+            "missing": 0
+          }
+        },
+        {
+          "field_value_factor": {
+            "field": "ad_boost",
+            "factor": 2.0,
+            "modifier": "none",
+            "missing": 1
+          }
+        }
+      ],
+      "score_mode": "sum",
+      "boost_mode": "multiply"
+    }
+  }
+}
+`
+
 func createProductsIndex(ctx context.Context, client *opensearch.Client) error {
 	settings := strings.NewReader(`{
       "settings": {
@@ -234,14 +320,12 @@ func main() {
 	if err := ydbtopic.ConsumeBatch(ctx, reader, func(data [][]byte) error {
 		var blkBuf bytes.Buffer
 		for _, msg := range data {
-			// FIXME: decode id to uuid
 			var record ProductChangeCdcMessage
 			if err := json.Unmarshal(msg, &record); err != nil {
 				log.Fatal("failed to unmarshal product message", zap.Error(err))
 			}
 
 			switch record.Payload.Operation {
-			// TODO: implement smarter upsert logic: empty stock is delete, not upsert in ElasticSearch
 			case CdcOperationUpsert:
 				var pictures []ProductsChangePicture
 				if err := json.Unmarshal([]byte(*record.Payload.After.PicturesJsonListStr), &pictures); err != nil {
@@ -252,18 +336,29 @@ func main() {
 					return fmt.Errorf(`failed to decode base64 encoded bytes field "id": %v`, err)
 				}
 				uuidId := string(data)
-				bulkItem, err := newBulkProductUpsert(ProductChange{
-					Id:          uuidId,
-					Name:        *record.Payload.After.Name,
-					Description: *record.Payload.After.Description,
-					Price:       *record.Payload.After.Price,
-					Stock:       *record.Payload.After.Stock,
-					Pictures:    pictures,
-				})
-				if err != nil {
-					logger.Fatal("failed to prepare bulk item", zap.Error(err))
+
+				isDeleted := record.Payload.After.DeletedAtUnixMs != nil
+				isOutOfStock := *record.Payload.After.Stock == 0
+				if isDeleted || isOutOfStock {
+					bulkItem, err := newBulkProductDelete(ProductChange{Id: uuidId})
+					if err != nil {
+						logger.Fatal("failed to prepare bulk delete item", zap.Error(err))
+					}
+					blkBuf.WriteString(bulkItem)
+				} else {
+					bulkItem, err := newBulkProductUpsert(ProductChange{
+						Id:          uuidId,
+						Name:        *record.Payload.After.Name,
+						Description: *record.Payload.After.Description,
+						Price:       *record.Payload.After.Price,
+						Stock:       *record.Payload.After.Stock,
+						Pictures:    pictures,
+					})
+					if err != nil {
+						logger.Fatal("failed to prepare bulk item", zap.Error(err))
+					}
+					blkBuf.WriteString(bulkItem)
 				}
-				blkBuf.WriteString(bulkItem)
 			case CdcOperationDelete:
 				data, err := base64.StdEncoding.DecodeString(record.Payload.Before.Id)
 				if err != nil {
