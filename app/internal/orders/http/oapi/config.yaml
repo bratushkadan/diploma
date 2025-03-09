@@ -1,0 +1,33 @@
+package: oapi_codegen
+# import-mapping: []
+generate:
+  gin-server: true
+  models: true
+  embedded-spec: true
+
+output: generated/server.gen.go
+output-options:
+  include-tags:
+    - orders
+  user-templates:
+    # Honor to the author of https://github.com/oapi-codegen/oapi-codegen/issues/1332
+    #
+    # Important note - since we are overriding the default templates, we need to update them manually when the
+    # openapi-generator version changes. Keep in mind - templates are patched, so you probably need to re-patch them
+    # after updating.
+    #
+    #  See the template sources here: https://github.com/oapi-codegen/oapi-codegen/tree/main/pkg/codegen/templates/gin
+    gin/gin-interface.tmpl: |
+      // Method & Path constants for routes.
+      {{range .}}{{.SummaryAsComment }}
+      const {{.OperationId}}Method = "{{.Method}}"
+      const {{.OperationId}}Path = "{{.Path | swaggerUriToGinUri }}"
+      {{end}}
+
+      // ServerInterface represents all server handlers.
+      type ServerInterface interface {
+      {{range .}}{{.SummaryAsComment }}
+      // ({{.Method}} {{.Path}})
+      {{.OperationId}}(c *gin.Context{{genParamArgs .PathParams}}{{if .RequiresParamObject}}, params {{.OperationId}}Params{{end}})
+      {{end}}
+      }
