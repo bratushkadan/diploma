@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE `products/products` (
-    id Uuid NOT NULL,
+    id String NOT NULL,
     seller_id Utf8 NOT NULL,
     name Utf8 NOT NULL,
     description Utf8 NOT NULL,

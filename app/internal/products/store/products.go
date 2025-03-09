@@ -60,7 +60,7 @@ func (b *ProductsBuilder) Build() (*Products, error) {
 }
 
 var queryGetProduct = template.ReplaceAllPairs(`
-DECLARE $id AS Uuid;
+DECLARE $id AS String;
 
 SELECT 
     id,
@@ -109,7 +109,7 @@ func (p *Products) Get(ctx context.Context, id uuid.UUID) (*GetProductDTOOutput,
 
 	if err := p.db.Table().Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, queryGetProduct, table.NewQueryParameters(
-			table.ValueParam("$id", types.UuidValue(id)),
+			table.ValueParam("$id", types.StringValueFromString(id.String())),
 		))
 		if err != nil {
 			return err
@@ -119,9 +119,10 @@ func (p *Products) Get(ctx context.Context, id uuid.UUID) (*GetProductDTOOutput,
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
 				var out GetProductDTOOutput
+				var strId string
 				var picturesJson, metadataJson []byte
 				if err := res.ScanNamed(
-					named.Required("id", &out.Id),
+					named.Required("id", &strId),
 					named.Required("seller_id", &out.SellerId),
 					named.Required("name", &out.Name),
 					named.Required("description", &out.Description),
@@ -141,6 +142,10 @@ func (p *Products) Get(ctx context.Context, id uuid.UUID) (*GetProductDTOOutput,
 				if err := json.Unmarshal(metadataJson, &out.Metadata); err != nil {
 					return errors.New("failed to unmarshal product metadata json field")
 				}
+				out.Id, err = uuid.Parse(strId)
+				if err != nil {
+					return errors.New("failed to parse uuid from string id")
+				}
 				outProduct = &out
 			}
 		}
@@ -155,7 +160,7 @@ func (p *Products) Get(ctx context.Context, id uuid.UUID) (*GetProductDTOOutput,
 
 var queryUpsertProduct = template.ReplaceAllPairs(`
 DECLARE $s AS Struct<
-    id:Optional<Uuid>,
+    id:Optional<String>,
     seller_id:Optional<Utf8>,
     name:Optional<Utf8>,
     description:Optional<Utf8>,
@@ -248,7 +253,8 @@ func (p *Products) Upsert(ctx context.Context, in UpsertProductDTOInput) (Upsert
 
 	var opts []types.StructValueOption
 
-	opts = append(opts, types.StructFieldValue("id", types.NullableUUIDTypedValue(&in.Id)))
+	strId := in.Id.String()
+	opts = append(opts, types.StructFieldValue("id", types.NullableStringValueFromString(&strId)))
 	opts = append(opts, types.StructFieldValue("seller_id", types.NullableUTF8Value(in.SellerId)))
 	opts = append(opts, types.StructFieldValue("name", types.NullableUTF8Value(in.Name)))
 	opts = append(opts, types.StructFieldValue("description", types.NullableUTF8Value(in.Description)))
@@ -292,9 +298,10 @@ func (p *Products) Upsert(ctx context.Context, in UpsertProductDTOInput) (Upsert
 
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
+				var strId string
 				var picturesJson, metadataJson []byte
 				if err := res.ScanNamed(
-					named.Required("id", &out.Id),
+					named.Required("id", &strId),
 					named.Required("seller_id", &out.SellerId),
 					named.Required("name", &out.Name),
 					named.Required("description", &out.Description),
@@ -315,6 +322,10 @@ func (p *Products) Upsert(ctx context.Context, in UpsertProductDTOInput) (Upsert
 				if err := json.Unmarshal(metadataJson, &out.Metadata); err != nil {
 					return errors.New("failed to unmarshal product metadata json field")
 				}
+				out.Id, err = uuid.Parse(strId)
+				if err != nil {
+					return errors.New("failed to parse uuid from string id")
+				}
 			}
 		}
 
@@ -327,7 +338,7 @@ func (p *Products) Upsert(ctx context.Context, in UpsertProductDTOInput) (Upsert
 }
 
 var queryDeleteProduct = template.ReplaceAllPairs(`
-DECLARE $id AS Uuid;
+DECLARE $id AS String;
 DECLARE $deleted_at AS Datetime;
 
 $existing = (
@@ -364,7 +375,7 @@ func (p *Products) Delete(ctx context.Context, in DeleteProductDTOInput) (*Delet
 
 	if err := p.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
 		res, err := tx.Execute(ctx, queryDeleteProduct, table.NewQueryParameters(
-			table.ValueParam("$id", types.UuidValue(in.Id)),
+			table.ValueParam("$id", types.StringValueFromString(in.Id.String())),
 			table.ValueParam("$deleted_at", types.DatetimeValueFromTime(in.DeletedAt)),
 		))
 		if err != nil {
@@ -375,10 +386,15 @@ func (p *Products) Delete(ctx context.Context, in DeleteProductDTOInput) (*Delet
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
 				var outV DeleteProductDTOOutput
+				var strId string
 				if err := res.ScanNamed(
-					named.Required("id", &outV.Id),
+					named.Required("id", &strId),
 				); err != nil {
 					return err
+				}
+				outV.Id, err = uuid.Parse(strId)
+				if err != nil {
+					return errors.New("failed to parse uuid from string id")
 				}
 				out = &outV
 			}
@@ -397,7 +413,7 @@ DECLARE $seller_id AS Optional<Utf8>;
 DECLARE $in_stock AS Optional<Bool>;
 
 DECLARE $page_created_at AS Optional<Datetime>;
-DECLARE $page_id AS Optional<Uuid>;
+DECLARE $page_id AS Optional<String>;
 DECLARE $page_size AS Uint64;
 
 SELECT 
@@ -467,7 +483,12 @@ func (p *Products) List(ctx context.Context, nextPage ListProductsNextPage) ([]L
 	tableParams = append(tableParams, table.ValueParam("$seller_id", types.NullableUTF8Value(nextPage.SellerId)))
 	tableParams = append(tableParams, table.ValueParam("$in_stock", types.NullableBoolValue(nextPage.InStock)))
 	tableParams = append(tableParams, table.ValueParam("$page_created_at", types.NullableDatetimeValueFromTime(nextPage.CreatedAt)))
-	tableParams = append(tableParams, table.ValueParam("$page_id", types.NullableUUIDTypedValue(nextPage.Id)))
+	if nextPage.Id != nil {
+		strId := nextPage.Id.String()
+		tableParams = append(tableParams, table.ValueParam("$page_id", types.NullableStringValueFromString(&strId)))
+	} else {
+		tableParams = append(tableParams, table.ValueParam("$page_id", types.NullableStringValueFromString(nil)))
+	}
 	tableParams = append(tableParams, table.ValueParam("$page_size", types.Uint64Value(uint64(nextPage.PageSize))))
 
 	var outProducts []ListProductsDTOOutputItem
@@ -482,9 +503,10 @@ func (p *Products) List(ctx context.Context, nextPage ListProductsNextPage) ([]L
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
 				var out ListProductsDTOOutputItem
+				var strId string
 				var picturesJson, metadataJson []byte
 				if err := res.ScanNamed(
-					named.Required("id", &out.Id),
+					named.Required("id", &strId),
 					named.Required("seller_id", &out.SellerId),
 					named.Required("name", &out.Name),
 					named.Required("description", &out.Description),
@@ -501,6 +523,10 @@ func (p *Products) List(ctx context.Context, nextPage ListProductsNextPage) ([]L
 				}
 				if err := json.Unmarshal(metadataJson, &out.Metadata); err != nil {
 					return errors.New("failed to unmarshal product metadata json field")
+				}
+				out.Id, err = uuid.Parse(strId)
+				if err != nil {
+					return errors.New("failed to parse uuid from string id")
 				}
 				outProducts = append(outProducts, out)
 			}
