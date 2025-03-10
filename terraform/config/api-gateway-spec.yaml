@@ -898,7 +898,6 @@ components:
       required:
         - id
         - name
-        - picture
         - price
       additionalProperties: false
       properties:
@@ -909,6 +908,7 @@ components:
         picture:
           type: string
           description: url
+          nullable: true
         price:
           type: number
           format: double

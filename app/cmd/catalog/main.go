@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
@@ -22,9 +25,13 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	Port = cfg.EnvDefault("PORT", "8080")
+)
+
 func main() {
-	productsCdcTopic := "products-cdc-target"
-	productsCdcTopicConsumer := "catalog"
+	//productsCdcTopic := "products-cdc-target"
+	//productsCdcTopicConsumer := "catalog"
 
 	env := cfg.AssertEnv()
 	_ = env
@@ -51,10 +58,11 @@ func main() {
 
 	store := store.NewStoreBuilder().
 		OpenSearchClient(client).
+		Logger(logger).
 		Build()
 	service := service.NewCatalog(store, logger)
 
-	impl := presentation.ApiImpl{Logger: logger, Service: service}
+	apiImpl := presentation.ApiImpl{Logger: logger, Service: service}
 
 	gin.SetMode(gin.ReleaseMode)
 	gin.DefaultWriter = io.Discard
@@ -80,11 +88,42 @@ func main() {
 
 	// TODO: determine why additionalProperties: false is not respected
 	r.Use(middleware.OapiRequestValidatorWithOptions(swagger, &middleware.Options{
-		ErrorHandler: impl.ErrorHandlerValidation,
+		ErrorHandler: apiImpl.ErrorHandlerValidation,
 		Options: openapi3filter.Options{
 			// TODO: do some explorations
 			AuthenticationFunc: openapi3filter.NoopAuthenticationFunc,
 		},
 	}))
 
+	oapi_codegen.RegisterHandlersWithOptions(r, apiImpl, oapi_codegen.GinServerOptions{
+		ErrorHandler: apiImpl.ErrorHandler,
+		Middlewares:  []oapi_codegen.MiddlewareFunc{},
+	})
+
+	r.NoRoute(xgin.HandleNotFound())
+
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%s", Port),
+		Handler: r.Handler(),
+	}
+
+	go func() {
+		<-ctx.Done()
+
+		logger.Info("got shutdown signal")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := srv.Shutdown(ctx); err != nil {
+			logger.Error("failed to shut down http listener", zap.Error(err))
+		}
+	}()
+
+	if err := srv.ListenAndServe(); err != nil {
+		if !errors.Is(err, http.ErrServerClosed) {
+			logger.Fatal("listen", zap.Error(err))
+		}
+	}
+	logger.Info("shutdown server")
 }

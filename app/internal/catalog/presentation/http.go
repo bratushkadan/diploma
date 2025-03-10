@@ -19,18 +19,23 @@ type ApiImpl struct {
 	Service *service.Catalog
 }
 
-func (a *ApiImpl) CatalogGet(c *gin.Context, params oapi_codegen.CatalogGetParams) {
+func (a ApiImpl) CatalogGet(c *gin.Context, params oapi_codegen.CatalogGetParams) {
 	// params.NextPageToken
-	if params.Filter == nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "filter must be provided"})
-	}
 
-	a.Service
+	res, err := a.Service.Search(c.Request.Context(), service.SearchReq{
+		Term:          params.Filter,
+		NextPageToken: params.NextPageToken,
+	})
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, res)
 }
 
 func (*ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {
-	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: message}))
+	c.AbortWithStatusJSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: message}))
 }
 func (*ApiImpl) ErrorHandler(c *gin.Context, err error, code int) {
-	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: err.Error()}))
+	c.AbortWithStatusJSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: err.Error()}))
 }
