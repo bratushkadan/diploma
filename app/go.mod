@@ -12,7 +12,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression v1.7.69
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.40.0
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.32.19
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.77.1
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.47.0
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.37.14
 	github.com/aws/smithy-go v1.22.2
 	github.com/getkin/kin-openapi v0.127.0
