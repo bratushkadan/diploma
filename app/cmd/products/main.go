@@ -85,6 +85,16 @@ func main() {
 		logger.Fatal("failed to setup picture store", zap.Error(err))
 	}
 
+	// data, err := os.ReadFile("/Users/bratushkadan/Downloads/2f1953c20244cb8392e14e204a6b5e70.jpg")
+	// if err != nil {
+	// 	logger.Fatal("failed to read file", zap.Error(err))
+	// }
+	// resp, err := pictureStore.Upload(context.Background(), "file", bytes.NewReader(data))
+	// if err != nil {
+	// 	logger.Fatal("failed to upload file to s3", zap.Error(err))
+	// }
+	// fmt.Printf("resp: %+v", resp)
+
 	gin.SetMode(gin.ReleaseMode)
 	gin.DefaultWriter = io.Discard
 	r := gin.Default()
@@ -117,6 +127,9 @@ func main() {
 		logger.Fatal("failed to setup swagger spec")
 	}
 
+	openapi3filter.RegisterBodyDecoder("image/jpg", openapi3filter.FileBodyDecoder)
+	openapi3filter.RegisterBodyDecoder("image/jpeg", openapi3filter.FileBodyDecoder)
+	openapi3filter.RegisterBodyDecoder("image/png", openapi3filter.FileBodyDecoder)
 	// TODO: determine why additionalProperties: false is not respected
 	r.Use(middleware.OapiRequestValidatorWithOptions(swagger, &middleware.Options{
 		ErrorHandler: apiImpl.ErrorHandlerValidation,

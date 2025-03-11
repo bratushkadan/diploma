@@ -2,18 +2,14 @@ package service
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"time"
 
 	oapi_codegen "github.com/bratushkadan/floral/internal/products/presentation/generated"
 	"github.com/bratushkadan/floral/internal/products/store"
+	"github.com/bratushkadan/floral/pkg/token"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -70,7 +66,7 @@ func (s *Products) ListProducts(ctx context.Context, req ListProductsReq) (oapi_
 
 	var page store.ListProductsNextPage
 	if req.NextPageToken != nil {
-		token, err := decryptToken(*req.NextPageToken, s.encryptNextPageTokenSecretKey)
+		token, err := token.DecryptToken(*req.NextPageToken, s.encryptNextPageTokenSecretKey)
 		if err != nil {
 			s.l.Info("error decoding next page token", zap.Error(err))
 			return oapi_codegen.ListProductsRes{}, fmt.Errorf("%w: %w", ErrInvalidListProductsNextPageToken, err)
@@ -153,7 +149,7 @@ func (s *Products) ListProducts(ctx context.Context, req ListProductsReq) (oapi_
 			return oapi_codegen.ListProductsRes{}, fmt.Errorf("failed to serialize next page token: %w", err)
 		}
 
-		token, err := encryptToken(string(tokenBytes), s.encryptNextPageTokenSecretKey)
+		token, err := token.EncryptToken(string(tokenBytes), s.encryptNextPageTokenSecretKey)
 		if err != nil {
 			return oapi_codegen.ListProductsRes{}, fmt.Errorf("failed to encrypt next page token: %w", err)
 		}
@@ -318,48 +314,4 @@ func (s *Products) DeleteProduct(ctx context.Context, id uuid.UUID) (oapi_codege
 
 func ptr[T any](v T) *T {
 	return &v
-}
-
-// Encrypt token using AES encryption
-func encryptToken(token string, key string) (string, error) {
-	block, err := aes.NewCipher([]byte(key))
-	if err != nil {
-		return "", err
-	}
-
-	ciphertext := make([]byte, aes.BlockSize+len(token))
-	iv := ciphertext[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return "", err
-	}
-
-	stream := cipher.NewCFBEncrypter(block, iv)
-	stream.XORKeyStream(ciphertext[aes.BlockSize:], []byte(token))
-
-	return hex.EncodeToString(ciphertext), nil
-}
-
-// Decrypt token using AES encryption
-func decryptToken(encryptedToken, key string) (string, error) {
-	ciphertext, err := hex.DecodeString(encryptedToken)
-	if err != nil {
-		return "", err
-	}
-
-	block, err := aes.NewCipher([]byte(key))
-	if err != nil {
-		return "", err
-	}
-
-	if len(ciphertext) < aes.BlockSize {
-		return "", fmt.Errorf("ciphertext block size is too short")
-	}
-
-	iv := ciphertext[:aes.BlockSize]
-	ciphertext = ciphertext[aes.BlockSize:]
-
-	stream := cipher.NewCFBDecrypter(block, iv)
-	stream.XORKeyStream(ciphertext, ciphertext)
-
-	return string(ciphertext), nil
 }

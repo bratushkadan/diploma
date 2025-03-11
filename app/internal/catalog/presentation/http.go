@@ -20,8 +20,6 @@ type ApiImpl struct {
 }
 
 func (a ApiImpl) CatalogGet(c *gin.Context, params oapi_codegen.CatalogGetParams) {
-	// params.NextPageToken
-
 	res, err := a.Service.Search(c.Request.Context(), service.SearchReq{
 		Term:          params.Filter,
 		NextPageToken: params.NextPageToken,

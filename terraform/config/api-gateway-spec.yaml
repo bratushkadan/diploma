@@ -452,6 +452,9 @@ paths:
                   format: binary
                 caption:
                   type: string
+            encoding:
+              file:
+                contentType: image/jpeg, image/png
       responses:
         200:
           description: Data of uploaded picture

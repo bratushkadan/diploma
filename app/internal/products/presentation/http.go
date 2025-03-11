@@ -421,6 +421,8 @@ func (a *ApiImpl) ProductsUploadPicture(c *gin.Context, productId string) {
 		return
 	}
 
+	fmt.Println("file.Size", float64(file.Size)/MiB)
+
 	if file.Size > MaxProductPictureSize {
 		c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 0, Message: fmt.Sprintf("picture size (%.2f MiB) exceeds max size of %d MiB", float64(file.Size)/MiB, MaxProductPictureSizeMiB)}},
@@ -440,6 +442,30 @@ func (a *ApiImpl) ProductsUploadPicture(c *gin.Context, productId string) {
 	picId := uuid.NewString()
 	picPath := a.getPictureS3Path(productId, picId+ext)
 
+	// data, err := io.ReadAll(f)
+	// if err != nil {
+	// 	c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+	// 		Errors: []oapi_codegen.Err{{Code: 0, Message: "failed to read form picture file"}},
+	// 	})
+	// 	return
+	// }
+
+	// if err := os.WriteFile("pic.jpg", data, 0775); err != nil {
+	// 	c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+	// 		Errors: []oapi_codegen.Err{{Code: 0, Message: "failed to write form picture file"}},
+	// 	})
+	// 	return
+	// }
+	// pictureUploadRes, err := a.PictureStore.Upload(c.Request.Context(), picPath, bytes.NewReader(data))
+
+	// data, err = os.ReadFile("/Users/bratushkadan/Downloads/479dd76f0e3e65ecf0c2120d54bc9a27.jpg")
+	// if err != nil {
+	// 	c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+	// 		Errors: []oapi_codegen.Err{{Code: 0, Message: "failed to read file from downloads"}},
+	// 	})
+	// 	return
+	// }
+	// pictureUploadRes, err := a.PictureStore.Upload(c.Request.Context(), picPath, bytes.NewReader(data))
 	pictureUploadRes, err := a.PictureStore.Upload(c.Request.Context(), picPath, f)
 	if err != nil {
 		a.Logger.Error("failed to upload file to s3", zap.Error(err))

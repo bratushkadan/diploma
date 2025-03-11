@@ -3,10 +3,12 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
 
+	"github.com/bratushkadan/floral/pkg/token"
 	"github.com/opensearch-project/opensearch-go"
 	"github.com/opensearch-project/opensearch-go/opensearchapi"
 	"go.uber.org/zap"
@@ -77,12 +79,51 @@ type ProductsOpenSearchResp struct {
 	} `json:"hits"`
 }
 
+type NextPage struct {
+	// OpenSearch size (max number of documents returned per query).
+	Size int
+	// OpenSearch offset.
+	From int
+	// OpenSearch query.
+	Query *string
+}
+
+var (
+	ErrInvalidNextPageToken = errors.New("invalid next page token")
+)
+
 func (s *Store) Search(ctx context.Context, in SearchDTOInput) (SearchDTOOutput, error) {
-	var content io.Reader
-	if in.Term != nil {
-		content = strings.NewReader(newCatalogSearchQuery(20, 0, *in.Term))
+	var page NextPage
+
+	if in.NextPageToken != nil {
+		token, err := token.DecryptToken(*in.NextPageToken, "puqsyuv4jxjd74rs43yj3lyegcji2qpe")
+		if err != nil {
+			return SearchDTOOutput{}, fmt.Errorf("%w: failed to decrypt next page token: %w", ErrInvalidNextPageToken, err)
+		}
+
+		if err := json.Unmarshal([]byte(token), &page); err != nil {
+			return SearchDTOOutput{}, fmt.Errorf("%w: failed to deserialize next page token: %w", ErrInvalidNextPageToken, err)
+		}
 	} else {
-		content = strings.NewReader(newCatalogQuery(20, 0))
+		page.Size = 20
+	}
+
+	if page.Query == nil && in.Term != nil {
+		page.Query = in.Term
+	}
+
+	var content io.Reader
+	if page.Query != nil {
+		content = strings.NewReader(newCatalogSearchQuery(
+			page.Size+1,
+			page.From,
+			*page.Query,
+		))
+	} else {
+		content = strings.NewReader(newCatalogQuery(
+			page.Size+1,
+			page.From,
+		))
 	}
 
 	req := opensearchapi.SearchRequest{
@@ -107,20 +148,49 @@ func (s *Store) Search(ctx context.Context, in SearchDTOInput) (SearchDTOOutput,
 		return SearchDTOOutput{}, fmt.Errorf("failed to unmarshal OpenSearch search products response: %v", err)
 	}
 
-	products := make([]SearchDTOOutputProduct, 0, len(hits.Hits.Hits))
+	targetLen := min(page.Size, len(hits.Hits.Hits))
+	products := make([]SearchDTOOutputProduct, targetLen)
 
-	for _, hit := range hits.Hits.Hits {
-		products = append(products, SearchDTOOutputProduct{
+	for i := range targetLen {
+		hit := hits.Hits.Hits[i]
+		products[i] = SearchDTOOutputProduct{
 			Id:      hit.Id,
 			Name:    hit.Source.Name,
 			Price:   hit.Source.Price,
 			Picture: hit.Source.Picture,
-		})
+		}
 	}
 
-	return SearchDTOOutput{
+	out := SearchDTOOutput{
 		Products: products,
-	}, nil
+	}
+
+	if len(hits.Hits.Hits) > page.Size {
+		page.From += targetLen
+
+		data, err := json.Marshal(&page)
+		if err != nil {
+			return SearchDTOOutput{}, fmt.Errorf("failed to serialize next page token for search products: %v", err)
+		}
+
+		fmt.Println(string(data))
+
+		token, err := token.EncryptToken(string(data), "puqsyuv4jxjd74rs43yj3lyegcji2qpe")
+		if err != nil {
+			return SearchDTOOutput{}, fmt.Errorf("%w: failed to encrypt next page token for search products: %w", ErrInvalidNextPageToken, err)
+		}
+
+		out.NextPageToken = &token
+	}
+
+	return out, nil
+}
+
+func min(a, b int) int {
+	if a > b {
+		return b
+	}
+	return a
 }
 
 func newCatalogQuery(limit, offset int) string {

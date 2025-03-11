@@ -41,6 +41,8 @@ func (c *Catalog) Get(ctx context.Context, nextPageToken *string) (oapi_codegen.
 		})
 	}
 
+	res.NextPageToken = out.NextPageToken
+
 	return res, nil
 }
 
@@ -59,7 +61,8 @@ func (c *Catalog) Search(ctx context.Context, req SearchReq) (oapi_codegen.Catal
 	}
 
 	res := oapi_codegen.CatalogGetRes{
-		Products: make([]oapi_codegen.CatalogGetResProduct, 0, len(out.Products)),
+		Products:      make([]oapi_codegen.CatalogGetResProduct, 0, len(out.Products)),
+		NextPageToken: out.NextPageToken,
 	}
 
 	for _, p := range out.Products {

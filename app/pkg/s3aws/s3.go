@@ -36,6 +36,7 @@ func New(ctx context.Context, accessKeyId, secretAccessKey string) (*s3.Client, 
 		ctx,
 		config.WithRegion("ru-central1"),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKeyId, secretAccessKey, "")),
+		// config.WithClientLogMode(aws.LogRequest|aws.LogResponse|aws.LogRetries),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load AWS SDK config: %v", err)
