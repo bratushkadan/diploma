@@ -188,6 +188,8 @@ func main() {
 		doc["stock"] = p.Stock
 		if len(p.Pictures) > 0 {
 			doc["picture"] = p.Pictures[0].Url
+		} else {
+			doc["picture"] = nil
 		}
 		docData, err := json.Marshal(docVal)
 		if err != nil {
