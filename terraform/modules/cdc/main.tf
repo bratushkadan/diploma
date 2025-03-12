@@ -52,7 +52,7 @@ resource "yandex_ydb_topic" "cdc_target_topic" {
   database_endpoint = var.target_db_endpoint
   name              = "${var.name}-cdc-target"
 
-  supported_codecs       = ["raw", "gzip"]
+  supported_codecs       = []
   partitions_count       = local.target_topic.partitions_count
   retention_period_hours = local.target_topic.retention_period_hours
 
@@ -63,5 +63,10 @@ resource "yandex_ydb_topic" "cdc_target_topic" {
     content {
       name = consumer.value.name
     }
+  }
+
+  lifecycle {
+    // For Trigger
+    ignore_changes = [consumer]
   }
 }

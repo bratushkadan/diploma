@@ -36,3 +36,10 @@ const (
 const (
 	EnvKeyYmqTriggerHttpEndpointsEnabled = "YMQ_TRIGGER_HTTP_ENDPOINTS_ENABLED"
 )
+
+// Catalog service
+const (
+	EnvKeyOpenSearchUser      = "OPENSEARCH_USER"
+	EnvKeyOpenSearchPassword  = "OPENSEARCH_PASSWORD"
+	EnvKeyOpenSearchEndpoints = "OPENSEARCH_ENDPOINTS"
+)

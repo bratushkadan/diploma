@@ -2,6 +2,12 @@ resource "yandex_iam_service_account" "app" {
   name        = "${local.common_name}-app"
   description = "application sa"
 }
+resource "yandex_resourcemanager_folder_iam_member" "folder_editor" {
+  folder_id = local.folder_id
+
+  role   = "editor"
+  member = "serviceAccount:${yandex_iam_service_account.app.id}"
+}
 
 resource "yandex_iam_service_account" "auth_caller" {
   name        = "${local.common_name}-auth-caller"
@@ -62,7 +68,14 @@ resource "yandex_resourcemanager_folder_iam_member" "app_yds_writer" {
   role   = "yds.writer"
   member = "serviceAccount:${yandex_iam_service_account.app.id}"
 }
-// For Serverless Containers
+# https://yandex.cloud/ru/docs/functions/concepts/trigger/data-streams-trigger
+resource "yandex_resourcemanager_folder_iam_member" "app_yds_admin" {
+  folder_id = local.folder_id
+
+  role   = "yds.admin"
+  member = "serviceAccount:${yandex_iam_service_account.app.id}"
+}
+# For Serverless Containers
 resource "yandex_resourcemanager_folder_iam_member" "app_images_puller" {
   folder_id = local.folder_id
 
@@ -139,4 +152,19 @@ resource "yandex_container_repository" "auth_account_repository" {
 }
 resource "yandex_container_repository" "auth_email_confirmation_repository" {
   name = "${yandex_container_registry.default.id}/auth/email-confirmation"
+}
+resource "yandex_container_repository" "products_repository" {
+  name = "${yandex_container_registry.default.id}/products"
+}
+resource "yandex_container_repository" "catalog_repository" {
+  name = "${yandex_container_registry.default.id}/catalog"
+}
+resource "yandex_container_repository" "cart_repository" {
+  name = "${yandex_container_registry.default.id}/cart"
+}
+resource "yandex_container_repository" "orders_repository" {
+  name = "${yandex_container_registry.default.id}/orders"
+}
+resource "yandex_container_repository" "feedback_repository" {
+  name = "${yandex_container_registry.default.id}/feedback"
 }

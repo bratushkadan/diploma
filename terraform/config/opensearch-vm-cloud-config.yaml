@@ -1,0 +1,32 @@
+#cloud-config
+ssh_pwauth: no
+users:
+  - name: bratushkadan
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDYkUCZ4cRMVFj4hL87WesAl5MAfVxRO4QkVGU7AmECJ+4KZQu5la6low8s6UzntShP5cm9c8VxW7WCYe8Vt7b1sAr6Z3f4AbxTq8sgFVJUL9Gp0n0uXThqtsnn0ZxnYoQE7tb6f4g7rs0DK0hlY2VE0ZAiAJF//oBTF5NiE0t/kngokJqJ8I+mRNrGXD2OaQM4RhP6TEU1aZccwh1iHX4SEsEmTAyp9ewoU1aalv1VH/HQVIbglhFwgfhVXFKni3X1WY2oXm3UrayaoeFmffG9MFWQ/viT+X0sNObtKK69Llr6pWTHm0GIPgqJD8FBBU/CR9QN7jWxVESyT47xf6uMfkDTNyEFStJIKcEv2AVRRFrxqwjTq8Rwt9iPPOGMWvQ3Fho0EO2S1zjBCAnMYRfr35lELmf1IfGCabln6EYACnydhLhtfB0x6gqARvG4iSguw9awPsgCmVSD6w3a7ZzSp9agz8L6u45G3TSR7L2EVIPYDKKR0x7tGgMnV0Q5R1c/9bmGp1xLzsSC8DuFOulLQHgnP66XlYhSNyDsQmMXpUg0mx3ncr85hi5pDfYMGnK7/nOoq5Fs6oLd73utHVuH1dm8fbNEzVmLP9YCPHUzOfuwiqhdgizM7pSlUQau1iHiWm1SuA+PuoFeRaNdgfyDik6B1to0EV92sx2iqmDP/Q== bratushkadan@yandex-team.ru"
+write_files:
+  - path: /etc/sysctl.d/99-opensearch.conf
+    permissions: "0644"
+    content: |
+      vm.max_map_count=262144
+device_aliases:
+  opensearch_data: /dev/disk/by-id/virtio-${data_disk_device_name}
+disk_setup:
+  opensearch_data:
+    layout:
+      - 100
+    overwrite: false
+    table_type: gpt
+fs_setup:
+  - device: opensearch_data.1
+    filesystem: ext4
+    label: opensearch-data
+mounts:
+  - - opensearch_data.1
+    - /usr/share/opensearch/data
+runcmd:
+  - sysctl --system
+  - chown -R 1000:1000 /usr/share/opensearch/data
+  - chmod -R 770 /usr/share/opensearch/data

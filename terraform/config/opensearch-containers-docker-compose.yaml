@@ -1,0 +1,37 @@
+version: '3'
+services:
+  opensearch-node1:
+    image: opensearchproject/opensearch:2.19.0
+    container_name: opensearch-node1
+    environment:
+      - cluster.name=opensearch-cluster
+      - node.name=opensearch-node1
+      - discovery.seed_hosts=opensearch-node1
+      # - discovery.type=single-node
+      - cluster.initial_master_nodes=opensearch-node1
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${opensearch_password}
+      - bootstrap.memory_lock=true  # along with the memlock settings below, disables swapping
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536  # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        hard: 65536
+    volumes:
+      - /usr/share/opensearch/data:/usr/share/opensearch/data
+    network_mode: host
+    ports:
+      - 9200:9200
+      - 9600:9600  # required for Performance Analyzer
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.19.0
+    container_name: opensearch-dashboards
+    network_mode: host
+    ports:
+      - 5601:5601
+    # expose:
+    #   - "5601"
+    environment:
+      OPENSEARCH_HOSTS: '["https://localhost:9200"]'

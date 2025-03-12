@@ -221,7 +221,7 @@ Account:
 ```sh
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/auth/account/main.go
 TAG=0.0.6
-docker build -f build/auth/email_confirmation.Dockerfile -t "account:${TAG}" .
+docker build -f build/auth/account.Dockerfile -t "account:${TAG}" .
 rm bin
 ```
 

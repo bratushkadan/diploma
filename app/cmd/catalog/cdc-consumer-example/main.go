@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -19,8 +18,6 @@ import (
 	"github.com/bratushkadan/floral/pkg/logging"
 	ydbpkg "github.com/bratushkadan/floral/pkg/ydb"
 	ydbtopic "github.com/bratushkadan/floral/pkg/ydb/topic"
-	"github.com/opensearch-project/opensearch-go"
-	"github.com/opensearch-project/opensearch-go/opensearchapi"
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"go.uber.org/zap"
 )
@@ -72,69 +69,6 @@ type ProductsChangePicture struct {
 	Url string `json:"url"`
 }
 
-func createProductsIndex(ctx context.Context, client *opensearch.Client) error {
-	settings := strings.NewReader(`{
-      "settings": {
-        "index": {
-          "number_of_shards": 1,
-          "number_of_replicas": 0
-        }
-      },
-      "mappings": {
-        "properties": {
-          "name": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword"
-              }
-            }
-          },
-          "description": {
-            "type": "text"
-          },
-          "price": {
-            "type": "float"
-          },
-          "rating": {
-            "type": "float"
-          },
-          "picture": {
-            "type": "keyword",
-            "index": false
-          },
-          "purchases_alltime": {
-            "type": "long"
-          },
-          "purchases_30d": {
-            "type": "long"
-          },
-          "ad_boost": {
-            "type": "float"
-          },
-          "available": {
-            "type": "boolean"
-          },
-          "stock_qty": {
-            "type": "integer"
-          }
-        }
-      }
-    }`)
-
-	req := opensearchapi.IndicesCreateRequest{
-		Index: "products",
-		Body:  settings,
-	}
-
-	_, err := req.Do(ctx, client)
-	if err != nil {
-		return fmt.Errorf("failed to create products index: %w", err)
-	}
-
-	return nil
-}
-
 func main() {
 	topic := "products-cdc-target"
 	consumer := "catalog"
@@ -160,16 +94,10 @@ func main() {
 		logger.Fatal("failed to setup OpenSearch client: %v", zap.Error(err))
 	}
 
-	if err := createProductsIndex(ctx, client); err != nil {
-		logger.Fatal("failed to create products index", zap.Error(err))
-	}
-
-	const ProductIndex = "products"
-
 	newBulkProductUpsert := func(p ProductChange) (string, error) {
 		update := map[string]map[string]string{
 			"update": {
-				"_index": ProductIndex,
+				"_index": store.ProductsIndex,
 				"_id":    p.Id,
 			},
 		}
@@ -200,7 +128,7 @@ func main() {
 	newBulkProductDelete := func(p ProductChange) (string, error) {
 		update := map[string]map[string]string{
 			"delete": {
-				"_index": ProductIndex,
+				"_index": store.ProductsIndex,
 				"_id":    p.Id,
 			},
 		}

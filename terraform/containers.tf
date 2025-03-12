@@ -16,7 +16,7 @@ locals {
       email_confirmation = "0.0.7"
     }
     products = "0.0.1-rc"
-    catalog  = "0.0.1-rc"
+    catalog  = "0.0.2"
     cart     = ""
     orders   = ""
     feedback = ""
@@ -70,6 +70,10 @@ locals {
     "APP_AUTH_TOKEN_PUBLIC_KEY",
 
     "YMQ_TRIGGER_HTTP_ENDPOINTS_ENABLED",
+
+    "OPENSEARCH_USER",
+    "OPENSEARCH_PASSWORD",
+    "OPENSEARCH_ENDPOINTS",
 
     // LEGACY
     "SQS_ENDPOINT",
@@ -148,6 +152,8 @@ locals {
         },
       ]
     }
+    products = []
+    catalog  = []
   }
 }
 
@@ -302,5 +308,80 @@ resource "yandex_function_trigger" "auth_account_activation" {
     service_account_id = yandex_iam_service_account.app.id
     batch_cutoff       = "3"
     batch_size         = 5
+  }
+}
+
+resource "yandex_serverless_container" "catalog" {
+  count = local.containers.catalog.count
+
+  name        = "catalog"
+  description = "catalog container"
+
+  cores              = 1
+  core_fraction      = 50
+  memory             = 128
+  execution_timeout  = "10s"
+  service_account_id = yandex_iam_service_account.app.id
+  runtime {
+    type = "http"
+  }
+
+  image {
+    url = "cr.yandex/${yandex_container_repository.catalog_repository.name}:${local.versions.catalog}"
+    environment = {
+      (local.env.OPENSEARCH_USER)      = local.opensearch_creds.user
+      (local.env.OPENSEARCH_PASSWORD)  = local.opensearch_creds.password
+      (local.env.OPENSEARCH_ENDPOINTS) = "https://${yandex_compute_instance.opensearch.network_interface[0].ip_address}:9200"
+    }
+  }
+
+  dynamic "secrets" {
+    for_each = toset(local.lockbox.catalog)
+    content {
+      id                   = secrets.value.id
+      version_id           = secrets.value.version_id
+      key                  = secrets.value.key
+      environment_variable = secrets.value.environment_variable
+    }
+  }
+
+  connectivity {
+    network_id = yandex_vpc_network.this.id
+  }
+
+  depends_on = [
+    yandex_resourcemanager_folder_iam_member.app_lockbox_payload_viewer,
+    yandex_resourcemanager_folder_iam_member.app_images_puller,
+  ]
+}
+
+resource "yandex_serverless_container_iam_binding" "catalog" {
+  count        = local.containers.catalog.count
+  container_id = yandex_serverless_container.catalog[0].id
+  role         = "serverless.containers.invoker"
+
+  members = [
+    "serviceAccount:${yandex_iam_service_account.auth_caller.id}",
+  ]
+}
+
+
+resource "yandex_function_trigger" "catalog" {
+  count       = local.containers.catalog.count
+  name        = "catalog-products-sync"
+  description = "trigger for syncing products cdc"
+
+  container {
+    id                 = yandex_serverless_container.catalog[0].id
+    service_account_id = yandex_iam_service_account.auth_caller.id
+    path               = "/api/internal/v1/sync-catalog"
+  }
+
+  data_streams {
+    database           = regex("database=([^&]+)", module.cdc["products_products"].target_topic.database_endpoint)[0]
+    stream_name        = module.cdc["products_products"].target_topic.name
+    service_account_id = yandex_iam_service_account.app.id
+    batch_cutoff       = "1"
+    batch_size         = 50
   }
 }

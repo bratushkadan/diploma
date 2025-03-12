@@ -186,6 +186,17 @@ func (s *Store) Search(ctx context.Context, in SearchDTOInput) (SearchDTOOutput,
 	return out, nil
 }
 
+func (s *Store) Sync(ctx context.Context, bulkRequestJsonMultilineBody io.Reader) (*opensearchapi.Response, error) {
+	req := opensearchapi.BulkRequest{
+		Body: bulkRequestJsonMultilineBody,
+	}
+	blk, err := req.Do(ctx, s.opensearch)
+	if err != nil {
+		return nil, fmt.Errorf("failed to run bulk request products: %v", err)
+	}
+	return blk, nil
+}
+
 func min(a, b int) int {
 	if a > b {
 		return b

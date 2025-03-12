@@ -55,6 +55,11 @@ output "container_registry" {
           name = yandex_container_repository.auth_email_confirmation_repository.name
         }
       }
+      products = { name = yandex_container_repository.products_repository.name }
+      catalog  = { name = yandex_container_repository.catalog_repository.name }
+      cart     = { name = yandex_container_repository.cart_repository.name }
+      orders   = { name = yandex_container_repository.orders_repository.name }
+      feedback = { name = yandex_container_repository.feedback_repository.name }
     }
   }
 }

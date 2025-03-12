@@ -8,9 +8,11 @@ import (
 	"log"
 	"net/http"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/bratushkadan/floral/internal/auth/setup"
 	"github.com/bratushkadan/floral/internal/catalog/presentation"
 	oapi_codegen "github.com/bratushkadan/floral/internal/catalog/presentation/generated"
 	"github.com/bratushkadan/floral/internal/catalog/service"
@@ -26,18 +28,15 @@ import (
 )
 
 var (
-	Port = cfg.EnvDefault("PORT", "8080")
+	Port               = cfg.EnvDefault("PORT", "8080")
+	OpenSearchEndoints = cfg.EnvDefault(setup.EnvKeyOpenSearchEndpoints, "https://localhost:9200")
 )
 
 func main() {
-	//productsCdcTopic := "products-cdc-target"
-	//productsCdcTopicConsumer := "catalog"
-
-	env := cfg.AssertEnv()
-	_ = env
-	// env := cfg.AssertEnv(
-	// 	setup.EnvKeyYdbEndpoint,
-	// )
+	env := cfg.AssertEnv(
+		setup.EnvKeyOpenSearchUser,
+		setup.EnvKeyOpenSearchPassword,
+	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer cancel()
@@ -48,9 +47,9 @@ func main() {
 	}
 
 	client, err := store.NewOpenSearchClientBuilder().
-		Username("admin").
-		Password("iAdnWfymi1(").
-		Addresses([]string{"https://localhost:9200"}).
+		Username(env[setup.EnvKeyOpenSearchUser]).
+		Password(env[setup.EnvKeyOpenSearchPassword]).
+		Addresses(strings.Split(OpenSearchEndoints, ",")).
 		Build()
 	if err != nil {
 		logger.Fatal("failed to setup OpenSearch client: %v", zap.Error(err))
@@ -80,6 +79,8 @@ func main() {
 	readinessHandler := xgin.HandleReadiness(ctx)
 	r.GET("/ready", readinessHandler)
 	r.GET("/health", readinessHandler)
+
+	r.POST("/api/internal/v1/sync-catalog", apiImpl.CatalogSync)
 
 	swagger, err := oapi_codegen.GetSwagger()
 	if err != nil {

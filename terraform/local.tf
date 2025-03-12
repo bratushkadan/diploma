@@ -4,6 +4,9 @@ locals {
 
   common_name = "ecom"
 
+  opensearch_subnet_cidr                    = "172.16.0.0/24"
+  opensearch_instance_data_disk_device_name = "opensearch-data"
+
   ydb_tables = {
     # auth = {
     #   accounts = {

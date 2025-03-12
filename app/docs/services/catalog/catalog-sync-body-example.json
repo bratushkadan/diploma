@@ -1,0 +1,266 @@
+{
+    "messages": [
+      {
+        "payload": {
+          "after": {
+            "created_at": 1741504258000,
+            "deleted_at": null,
+            "description": "Крупа булгур",
+            "id": "ZDkyYzU4OGMtZGNiNS00ZmNiLTk2MDUtY2IyZjdhNTJlOTNl",
+            "metadata": "{}",
+            "name": "Булгур",
+            "pictures": "[]",
+            "price": 129.99,
+            "seller_id": "974813e5-5bec-4cec-b842-3d3e5d5692b2",
+            "stock": 13,
+            "updated_at": 1741671270000
+          },
+          "before": null,
+          "op": "u",
+          "source": {
+            "db": "",
+            "name": "products-cdc-target",
+            "snapshot": "false",
+            "table": "products/products",
+            "ts_ms": 1741767367386,
+            "version": "1.1.2.Final"
+          },
+          "transaction": null,
+          "ts_ms": 1741767367386
+        },
+        "schema": {
+          "fields": [
+            {
+              "field": "before",
+              "fields": [
+                {
+                  "field": "id",
+                  "optional": false,
+                  "type": "bytes"
+                },
+                {
+                  "field": "seller_id",
+                  "optional": true,
+                  "type": "string"
+                },
+                {
+                  "field": "name",
+                  "optional": true,
+                  "type": "string"
+                },
+                {
+                  "field": "description",
+                  "optional": true,
+                  "type": "string"
+                },
+                {
+                  "field": "pictures",
+                  "name": "io.debezium.data.Json",
+                  "optional": true,
+                  "type": "string",
+                  "version": 1
+                },
+                {
+                  "field": "metadata",
+                  "name": "io.debezium.data.Json",
+                  "optional": true,
+                  "type": "string",
+                  "version": 1
+                },
+                {
+                  "field": "stock",
+                  "optional": true,
+                  "type": "int32"
+                },
+                {
+                  "field": "price",
+                  "optional": true,
+                  "type": "double"
+                },
+                {
+                  "field": "created_at",
+                  "name": "io.debezium.time.Timestamp",
+                  "optional": true,
+                  "type": "int64",
+                  "version": 1
+                },
+                {
+                  "field": "updated_at",
+                  "name": "io.debezium.time.Timestamp",
+                  "optional": true,
+                  "type": "int64",
+                  "version": 1
+                },
+                {
+                  "field": "deleted_at",
+                  "name": "io.debezium.time.Timestamp",
+                  "optional": true,
+                  "type": "int64",
+                  "version": 1
+                }
+              ],
+              "name": "products-cdc-target..products/products.Value",
+              "optional": true,
+              "type": "struct"
+            },
+            {
+              "field": "after",
+              "fields": [
+                {
+                  "field": "id",
+                  "optional": false,
+                  "type": "bytes"
+                },
+                {
+                  "field": "seller_id",
+                  "optional": true,
+                  "type": "string"
+                },
+                {
+                  "field": "name",
+                  "optional": true,
+                  "type": "string"
+                },
+                {
+                  "field": "description",
+                  "optional": true,
+                  "type": "string"
+                },
+                {
+                  "field": "pictures",
+                  "name": "io.debezium.data.Json",
+                  "optional": true,
+                  "type": "string",
+                  "version": 1
+                },
+                {
+                  "field": "metadata",
+                  "name": "io.debezium.data.Json",
+                  "optional": true,
+                  "type": "string",
+                  "version": 1
+                },
+                {
+                  "field": "stock",
+                  "optional": true,
+                  "type": "int32"
+                },
+                {
+                  "field": "price",
+                  "optional": true,
+                  "type": "double"
+                },
+                {
+                  "field": "created_at",
+                  "name": "io.debezium.time.Timestamp",
+                  "optional": true,
+                  "type": "int64",
+                  "version": 1
+                },
+                {
+                  "field": "updated_at",
+                  "name": "io.debezium.time.Timestamp",
+                  "optional": true,
+                  "type": "int64",
+                  "version": 1
+                },
+                {
+                  "field": "deleted_at",
+                  "name": "io.debezium.time.Timestamp",
+                  "optional": true,
+                  "type": "int64",
+                  "version": 1
+                }
+              ],
+              "name": "products-cdc-target..products/products.Value",
+              "optional": true,
+              "type": "struct"
+            },
+            {
+              "field": "source",
+              "fields": [
+                {
+                  "field": "version",
+                  "optional": false,
+                  "type": "string"
+                },
+                {
+                  "field": "connector",
+                  "optional": false,
+                  "type": "string"
+                },
+                {
+                  "field": "name",
+                  "optional": false,
+                  "type": "string"
+                },
+                {
+                  "field": "ts_ms",
+                  "optional": false,
+                  "type": "int64"
+                },
+                {
+                  "default": "false",
+                  "field": "snapshot",
+                  "name": "io.debezium.data.Enum",
+                  "optional": true,
+                  "parameters": {
+                    "allowed": "true,last,false"
+                  },
+                  "type": "string",
+                  "version": 1
+                },
+                {
+                  "field": "db",
+                  "optional": false,
+                  "type": "string"
+                },
+                {
+                  "field": "table",
+                  "optional": false,
+                  "type": "string"
+                }
+              ],
+              "optional": false,
+              "type": "struct"
+            },
+            {
+              "field": "op",
+              "optional": false,
+              "type": "string"
+            },
+            {
+              "field": "ts_ms",
+              "optional": true,
+              "type": "int64"
+            },
+            {
+              "field": "transaction",
+              "fields": [
+                {
+                  "field": "id",
+                  "optional": false,
+                  "type": "string"
+                },
+                {
+                  "field": "total_order",
+                  "optional": false,
+                  "type": "int64"
+                },
+                {
+                  "field": "data_collection_order",
+                  "optional": false,
+                  "type": "int64"
+                }
+              ],
+              "optional": true,
+              "type": "struct"
+            }
+          ],
+          "name": "products-cdc-target..products/products.Envelope",
+          "optional": false,
+          "type": "struct"
+        }
+      }
+    ]
+}
