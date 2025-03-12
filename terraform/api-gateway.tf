@@ -8,7 +8,7 @@ locals {
       containers = {
         auth = {
           account = {
-            id    = local.containers.auth.account.count > 0 ? yandex_serverless_container.auth_account[0].id : "wt"
+            id    = local.containers.auth.account.count > 0 ? yandex_serverless_container.auth_account[0].id : ""
             sa_id = yandex_iam_service_account.auth_caller.id
           }
           email_confirmation = {
@@ -17,23 +17,27 @@ locals {
           }
         }
         products = {
-          id    = ""
+          id = ""
+          # id    = local.containers.products.count > 0 ? yandex_serverless_container.products[0].id : ""
           sa_id = yandex_iam_service_account.auth_caller.id
         }
         catalog = {
-          id    = ""
+          id    = local.containers.catalog.count > 0 ? yandex_serverless_container.catalog[0].id : ""
           sa_id = yandex_iam_service_account.auth_caller.id
         }
         cart = {
-          id    = ""
+          id = ""
+          # id    = local.containers.cart.count > 0 ? yandex_serverless_container.cart[0].id : ""
           sa_id = yandex_iam_service_account.auth_caller.id
         }
         orders = {
-          id    = ""
+          id = ""
+          # id    = local.containers.orders.count > 0 ? yandex_serverless_container.orders[0].id : ""
           sa_id = yandex_iam_service_account.auth_caller.id
         }
         feedback = {
-          id    = ""
+          id = ""
+          # id    = local.containers.feedback.count > 0 ? yandex_serverless_container.feedback[0].id : ""
           sa_id = yandex_iam_service_account.auth_caller.id
         }
       }

@@ -85,7 +85,6 @@ func (c *Catalog) Search(ctx context.Context, req SearchReq) (oapi_codegen.Catal
 
 func (c *Catalog) Sync(ctx context.Context, body api.DataStreamProductChangeCdcMessages) error {
 	var blkBuf bytes.Buffer
-	blkBuf.WriteByte('\n')
 	for _, record := range body.Messages {
 		switch record.Payload.Operation {
 		case api.CdcOperationUpsert:
@@ -145,8 +144,6 @@ func (c *Catalog) Sync(ctx context.Context, body api.DataStreamProductChangeCdcM
 		}
 		blkBuf.WriteByte('\n')
 	}
-
-	fmt.Println(blkBuf.String())
 
 	blk, err := c.store.Sync(ctx, &blkBuf)
 	if err != nil {

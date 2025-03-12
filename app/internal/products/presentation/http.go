@@ -421,8 +421,6 @@ func (a *ApiImpl) ProductsUploadPicture(c *gin.Context, productId string) {
 		return
 	}
 
-	fmt.Println("file.Size", float64(file.Size)/MiB)
-
 	if file.Size > MaxProductPictureSize {
 		c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 0, Message: fmt.Sprintf("picture size (%.2f MiB) exceeds max size of %d MiB", float64(file.Size)/MiB, MaxProductPictureSizeMiB)}},

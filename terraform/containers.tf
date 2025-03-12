@@ -16,7 +16,7 @@ locals {
       email_confirmation = "0.0.7"
     }
     products = "0.0.1-rc"
-    catalog  = "0.0.2"
+    catalog  = "0.0.3"
     cart     = ""
     orders   = ""
     feedback = ""

@@ -173,8 +173,6 @@ func (s *Store) Search(ctx context.Context, in SearchDTOInput) (SearchDTOOutput,
 			return SearchDTOOutput{}, fmt.Errorf("failed to serialize next page token for search products: %v", err)
 		}
 
-		fmt.Println(string(data))
-
 		token, err := token.EncryptToken(string(data), "puqsyuv4jxjd74rs43yj3lyegcji2qpe")
 		if err != nil {
 			return SearchDTOOutput{}, fmt.Errorf("%w: failed to encrypt next page token for search products: %w", ErrInvalidNextPageToken, err)
