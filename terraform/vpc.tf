@@ -30,9 +30,10 @@ resource "yandex_vpc_security_group_rule" "opensearch_ssh_ingress" {
 resource "yandex_vpc_security_group_rule" "opensearch_serverless_containers_ingress" {
   security_group_binding = yandex_vpc_security_group.this.id
   direction              = "ingress"
-  v4_cidr_blocks         = ["198.19.0.0/16"]
-  port                   = 9200
-  protocol               = "TCP"
+  # https://yandex.cloud/ru/docs/serverless-containers/concepts/networking
+  v4_cidr_blocks = ["198.19.0.0/16"]
+  port           = 9200
+  protocol       = "TCP"
 }
 resource "yandex_vpc_security_group_rule" "opensearch_egress" {
   security_group_binding = yandex_vpc_security_group.this.id
