@@ -48,6 +48,11 @@ generate_api_products:
 generate_api_catalog:
 	@yc serverless api-gateway get-spec auth-service-api-gw | yq -M 'del(.servers)' > ./internal/catalog/presentation/oapi/api.yaml && \
 		go generate ./internal/catalog/...
+.PHONY: generate_api_cart
+generate_api_cart:
+	@mkdir -p ./internal/cart/presentation/generated
+	@cat /Users/bratushkadan/projects/diploma/terraform/config/api-gateway-spec.yaml | yq -M 'del(.servers)' > ./internal/cart/presentation/oapi/api.yaml
+	@go generate ./internal/cart/...
 
 .PHONY: migrate_auth_create_pg
 migrate_auth_create_pg:

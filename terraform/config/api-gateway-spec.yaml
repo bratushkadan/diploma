@@ -165,7 +165,9 @@ paths:
         type: serverless_containers
         container_id: '${containers.auth.account.id}'
         service_account_id: '${containers.auth.account.sa_id}'
-  '${auth_email_confirmation_api_endpoint}':
+  # FIXME: return this when developing with internet connection
+  # '${auth_email_confirmation_api_endpoint}':
+  /api/v1/users/:confirm_email:
     x-yc-apigateway-cors:
       origin: true
       methods: POST
@@ -581,12 +583,6 @@ paths:
       parameters:
         - name: user_id
           description: user id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: product_id
-          description: product id
           in: path
           required: true
           schema:
@@ -1154,6 +1150,9 @@ components:
           type: string
         count:
           type: integer
+
+    # Orders
+    # Feedback
 
     # Errors
     Err:
