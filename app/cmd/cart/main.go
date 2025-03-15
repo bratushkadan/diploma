@@ -17,13 +17,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/bratushkadan/floral/internal/auth/setup"
-	"github.com/bratushkadan/floral/internal/products/presentation"
-	oapi_codegen "github.com/bratushkadan/floral/internal/products/presentation/generated"
-	"github.com/bratushkadan/floral/internal/products/service"
-	"github.com/bratushkadan/floral/internal/products/store"
+	"github.com/bratushkadan/floral/internal/cart/presentation"
+	oapi_codegen "github.com/bratushkadan/floral/internal/cart/presentation/generated"
+	"github.com/bratushkadan/floral/internal/cart/service"
+	"github.com/bratushkadan/floral/internal/cart/store"
 	"github.com/bratushkadan/floral/pkg/cfg"
 	"github.com/bratushkadan/floral/pkg/logging"
-	"github.com/bratushkadan/floral/pkg/s3aws"
 	xgin "github.com/bratushkadan/floral/pkg/xhttp/gin"
 	"github.com/bratushkadan/floral/pkg/xhttp/gin/middleware/auth"
 	ydbpkg "github.com/bratushkadan/floral/pkg/ydb"
@@ -46,10 +45,7 @@ func main() {
 
 	env := cfg.AssertEnv(
 		setup.EnvKeyYdbEndpoint,
-		setup.EnvKeyAwsAccessKeyId,
-		setup.EnvKeyAwsSecretAccessKey,
 		setup.EnvKeyAuthTokenPublicKey,
-		setup.EnvKeyStorePicturesBucket,
 	)
 
 	authMethod := cfg.EnvDefault(setup.EnvKeyYdbAuthMethod, ydbpkg.YdbAuthMethodMetadata)
@@ -61,28 +57,16 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		if err := db.Close(ctx); err != nil {
-			logger.Error("failed to close ydb", zap.Error(err))
+			logger.Error("close ydb", zap.Error(err))
 		}
 	}()
 
-	productsStore, err := store.NewProductsBuilder().
+	store, err := store.NewBuilder().
 		Logger(logger).
-		YDBDriver(db).
+		Ydb(db).
 		Build()
 	if err != nil {
-		logger.Fatal("failed to setup products store", zap.Error(err))
-	}
-
-	s3client, err := s3aws.New(ctx, env[setup.EnvKeyAwsAccessKeyId], env[setup.EnvKeyAwsSecretAccessKey])
-	if err != nil {
-		logger.Fatal("failed to setup s3 client", zap.Error(err))
-	}
-	pictureStore, err := store.NewPicturesBuilder().
-		Bucket(env[setup.EnvKeyStorePicturesBucket]).
-		S3Client(s3client).
-		Build()
-	if err != nil {
-		logger.Fatal("failed to setup picture store", zap.Error(err))
+		logger.Fatal("new cart store", zap.Error(err))
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -102,10 +86,15 @@ func main() {
 	r.GET("/ready", readinessHandler)
 	r.GET("/health", readinessHandler)
 
-	// base32 </dev/urandom | head -c32
-	svc := service.New(productsStore, pictureStore, logger, "puqsyuv4jxjd74rs43yj3lyegcji2qpe")
+	svc, err := service.NewBuilder().
+		Logger(logger).
+		Store(store).
+		Build()
+	if err != nil {
+		logger.Fatal("new cart service", zap.Error(err))
+	}
 
-	apiImpl := &presentation.ApiImpl{Logger: logger, ProductsService: svc, PictureStore: pictureStore}
+	apiImpl := &presentation.ApiImpl{Logger: logger, CartService: svc}
 
 	bearerAuthenticator, err := auth.NewJwtBearerAuthenticator(env[setup.EnvKeyAuthTokenPublicKey])
 	if err != nil {
@@ -117,9 +106,6 @@ func main() {
 		logger.Fatal("failed to setup swagger spec")
 	}
 
-	openapi3filter.RegisterBodyDecoder("image/jpg", openapi3filter.FileBodyDecoder)
-	openapi3filter.RegisterBodyDecoder("image/jpeg", openapi3filter.FileBodyDecoder)
-	openapi3filter.RegisterBodyDecoder("image/png", openapi3filter.FileBodyDecoder)
 	// TODO: determine why additionalProperties: false is not respected
 	r.Use(middleware.OapiRequestValidatorWithOptions(swagger, &middleware.Options{
 		ErrorHandler: apiImpl.ErrorHandlerValidation,
@@ -133,29 +119,25 @@ func main() {
 		Authenticator(bearerAuthenticator).
 		Routes(
 			auth.NewRequiredRoute(
-				oapi_codegen.ProductsCreateMethod,
-				oapi_codegen.ProductsCreatePath,
+				oapi_codegen.CartGetCartPositionsMethod,
+				oapi_codegen.CartGetCartPositionsPath,
 			),
 			auth.NewRequiredRoute(
-				oapi_codegen.ProductsUpdateMethod,
-				oapi_codegen.ProductsUpdatePath,
+				oapi_codegen.CartClearCartMethod,
+				oapi_codegen.CartClearCartPath,
 			),
 			auth.NewRequiredRoute(
-				oapi_codegen.ProductsDeleteMethod,
-				oapi_codegen.ProductsDeletePath,
+				oapi_codegen.CartSetCartPositionMethod,
+				oapi_codegen.CartSetCartPositionPath,
 			),
 			auth.NewRequiredRoute(
-				oapi_codegen.ProductsUploadPictureMethod,
-				oapi_codegen.ProductsUploadPicturePath,
-			),
-			auth.NewRequiredRoute(
-				oapi_codegen.ProductsDeletePictureMethod,
-				oapi_codegen.ProductsDeletePicturePath,
+				oapi_codegen.CartDeleteCartPositionMethod,
+				oapi_codegen.CartDeleteCartPositionPath,
 			),
 		).
 		Build()
 	if err != nil {
-		logger.Fatal("failed to setup auth middleware", zap.Error(err))
+		logger.Fatal("build auth middleware", zap.Error(err))
 	}
 
 	oapi_codegen.RegisterHandlersWithOptions(r, apiImpl, oapi_codegen.GinServerOptions{
