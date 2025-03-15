@@ -34,7 +34,8 @@ CREATE TABLE `products/products` (
 
 ## Run
 
-### Setup env
+### Setup env and run
+
 ```sh
 TF_OUTPUT=$(../terraform/tf output -json -no-color)
 export YDB_ENDPOINT="$(echo "${TF_OUTPUT}" | jq -cMr .ydb.value.full_endpoint)"
@@ -50,6 +51,7 @@ INFRA_TOKENS_SECRET="$(yc lockbox payload get "${INFRA_TOKENS_SECRET_ID}")"
 export APP_AUTH_TOKEN_PUBLIC_KEY="$(echo $INFRA_TOKENS_SECRET | yq -M '.entries.[] | select(.key == "auth_token_public.key").text_value')"
 go run cmd/products/main.go
 ```
+
 ## CURLs for testing
 
 ### Get access token
