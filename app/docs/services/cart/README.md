@@ -11,14 +11,18 @@ CREATE TABLE `cart/cart` (
     user_id Utf8 NOT NULL,
     product_id Utf8 NOT NULL,
     count Uint32 NOT NULL,
-    -- name Utf8 NOT NULL,
-    -- pictures Json NOT NULL,
-    -- price Double NOT NULL,
     PRIMARY KEY (user_id, product_id),
 );
 ```
 
+## SEED(s) use cases
+
+- Add product to cart (or change count of products in cart)
+- Delete product from cart
+
 ## Details
+
+No more than 50 distinct items in cart.
 
 If a user has products from one seller in their cart and a product from another seller is added to the cart, cart is first cleared and then product from another seller is added.
 
