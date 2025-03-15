@@ -540,6 +540,164 @@ paths:
         container_id: '${containers.catalog.id}'
         service_account_id: '${containers.catalog.sa_id}'
 
+  ### Cart
+  /api/v1/cart/{user_id}/positions:
+    get:
+      summary: Get cart positions
+      operationId: cart_get_cart_positions
+      tags:
+        - cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          description: user id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Cart positions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartGetCartPositionsRes'
+        default:
+          $ref: '#/components/responses/Error'
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: '${containers.cart.id}'
+        service_account_id: '${containers.cart.sa_id}'
+    delete:
+      summary: Clear cart
+      operationId: cart_clear_cart
+      tags:
+        - cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          description: user id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: product_id
+          description: product id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Clear cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartClearCartRes'
+        default:
+          $ref: '#/components/responses/Error'
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: '${containers.cart.id}'
+        service_account_id: '${containers.cart.sa_id}'
+  /api/v1/cart/{user_id}/positions/{product_id}:
+    put:
+      summary: Set cart position
+      operationId: cart_set_cart_position
+      tags:
+        - cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          description: user id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: product_id
+          description: product id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: count
+          description: product positions count
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        200:
+          description: Set cart position
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartSetCartPositionRes'
+        default:
+          $ref: '#/components/responses/Error'
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: '${containers.cart.id}'
+        service_account_id: '${containers.cart.sa_id}'
+    delete:
+      summary: Delete cart position
+      operationId: cart_delete_cart_position
+      tags:
+        - cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          description: user id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: product_id
+          description: product id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Delete cart position
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDeleteCartPositionRes'
+        default:
+          $ref: '#/components/responses/Error'
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: '${containers.cart.id}'
+        service_account_id: '${containers.cart.sa_id}'
+
+  ### Order
+  # GetOrder
+  # ListOrders
+  # UpdateOrder (change state, e.g. cancel, promote to new state, etc)
+  # ProcessPayment (process payment, thus change order's status)
+
+  ### Feedback
+  # GetRating
+  # (?) ListRating
+  # GetReviews
+  # AddReview (rating + text)
+  # EditReview (rating + text)
+  # DeleteReview
 components:
   securitySchemes:
     # TODO: jwtHeaderAuth
@@ -915,15 +1073,87 @@ components:
         price:
           type: number
           format: double
-
     # Cart
-    # GetCartPositions
-    # SetCartPosition
-    # DeleteCartPosition
-    # ClearCart
-
-    # Order
-    # ListOrders
+    CartGetCartPositionsRes:
+      type: object
+      required:
+        - positions
+      additionalProperties: false
+      properties:
+        positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartGetCartPositionsResPosition'
+    CartGetCartPositionsResPosition:
+      type: object
+      required:
+        - product_id
+        - count
+      additionalProperties: false
+      properties:
+        product_id:
+          type: string
+        count:
+          type: integer
+    CartClearCartRes:
+      type: object
+      required:
+        - deleted_positions
+      additionalProperties: false
+      properties:
+        deleted_positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartClearCartResPosition'
+    CartClearCartResPosition:
+      type: object
+      required:
+        - product_id
+        - count
+      additionalProperties: false
+      properties:
+        product_id:
+          type: string
+        count:
+          type: integer
+    CartSetCartPositionRes:
+      type: object
+      required:
+        - set_position
+      additionalProperties: false
+      properties:
+        set_position:
+          $ref: '#/components/schemas/CartSetCartPositionResPosition'
+    CartSetCartPositionResPosition:
+      type: object
+      required:
+        - product_id
+        - count
+      additionalProperties: false
+      properties:
+        product_id:
+          type: string
+        count:
+          type: integer
+    CartDeleteCartPositionRes:
+      type: object
+      required:
+        - deleted_position
+      additionalProperties: false
+      properties:
+        deleted_position:
+          $ref: '#/components/schemas/CartDeleteCartPositionResPosition'
+    CartDeleteCartPositionResPosition:
+      type: object
+      required:
+        - product_id
+        - count
+      additionalProperties: false
+      properties:
+        product_id:
+          type: string
+        count:
+          type: integer
 
     # Errors
     Err:
