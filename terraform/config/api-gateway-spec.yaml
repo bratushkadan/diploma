@@ -18,6 +18,10 @@ tags:
     description: Product reviews service
 
 paths:
+  # /api/v1/users/
+  #  get: # List
+  # /api/v1/users/${user_id}:
+  #  get: # Get
   /api/v1/users/:createAccount:
     post:
       summary: Create user account
