@@ -11,11 +11,6 @@ const (
 	tableCart = "`cart/cart`"
 )
 
-type Cart struct {
-	db     *ydb.Driver
-	logger *zap.Logger
-}
-
 type CartBuilder struct {
 	store Cart
 }
@@ -43,4 +38,9 @@ func (b *CartBuilder) Build() (*Cart, error) {
 	}
 
 	return &b.store, nil
+}
+
+type Cart struct {
+	db     *ydb.Driver
+	logger *zap.Logger
 }
