@@ -682,18 +682,26 @@ paths:
         service_account_id: '${containers.cart.sa_id}'
 
   ### Order
-  # GetOrder
+  # GetOrderOperation, CreateOrderOperation
+  # /api/v1/order/operations/{operation_id}
+  # ListOrderOperations
+  # /api/v1/order/operations/
+  # GetOrder, UpdateOrder (change state, e.g. cancel, promote to new state, etc)
+  # /api/v1/order/orders/{order_id}
   # ListOrders
-  # UpdateOrder (change state, e.g. cancel, promote to new state, etc)
+  # /api/v1/order/orders/
   # ProcessPayment (process payment, thus change order's status)
+  # /api/v1/order/processPayment/${provider} (e.g. yoomoney)
 
   ### Feedback
+  # (?) ListRating - get rating by list of ids (max 20)
+  # /api/v1/feedback/products/rating
   # GetRating
-  # (?) ListRating
-  # GetReviews
-  # AddReview (rating + text)
-  # EditReview (rating + text)
-  # DeleteReview
+  # /api/v1/feedback/products/{product_id}/rating
+  # GetReviews, AddReview (rating + text)
+  # /api/v1/feedback/products/{product_id}/reviews
+  # GetReview, EditReview (rating + text), DeleteReview
+  # /api/v1/feedback/reviews/{product_id}/reviews/{review_id}
 components:
   securitySchemes:
     # TODO: jwtHeaderAuth
