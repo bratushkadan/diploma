@@ -36,6 +36,26 @@ CREATE TABLE `orders/payments` (
 
 Orders that are older than one hour and are not paid online (if not paid by cash) are cancelled. Order cancellation is scheduled regularly.
 
+## Architecture diagrams
+
+### Order State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Created
+    Created --> Cancelled
+    Created --> Paid
+    Paid --> Processed
+    Paid --> Cancelled
+    Processed --> Cancelled
+    Processed --> Shipped
+    Shipped --> Completed
+    Shipped --> Delivered
+    Delivered --> Completed
+    Cancelled --> [*]
+    Completed --> [*]
+```
+
 ## Run
 
 ### Setup env and run
