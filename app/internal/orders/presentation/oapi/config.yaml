@@ -9,6 +9,7 @@ output: generated/server.gen.go
 output-options:
   include-tags:
     - orders
+  skip-prune: true
   user-templates:
     # Honor to the author of https://github.com/oapi-codegen/oapi-codegen/issues/1332
     #

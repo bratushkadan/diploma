@@ -22,6 +22,18 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// AuthenticateReq defines model for AuthenticateReq.
+type AuthenticateReq struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// AuthenticateRes defines model for AuthenticateRes.
+type AuthenticateRes struct {
+	ExpiresAt    string `json:"expires_at"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 // CartClearCartRes defines model for CartClearCartRes.
 type CartClearCartRes struct {
 	DeletedPositions []CartClearCartResPosition `json:"deleted_positions"`
@@ -66,10 +78,137 @@ type CartSetCartPositionResPosition struct {
 	ProductId string `json:"product_id"`
 }
 
+// CatalogGetRes defines model for CatalogGetRes.
+type CatalogGetRes struct {
+	NextPageToken *string                `json:"next_page_token"`
+	Products      []CatalogGetResProduct `json:"products"`
+}
+
+// CatalogGetResProduct defines model for CatalogGetResProduct.
+type CatalogGetResProduct struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+
+	// Picture url
+	Picture *string `json:"picture"`
+	Price   float64 `json:"price"`
+}
+
+// CreateAccessTokenReq defines model for CreateAccessTokenReq.
+type CreateAccessTokenReq struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+// CreateAccessTokenRes defines model for CreateAccessTokenRes.
+type CreateAccessTokenRes struct {
+	AccessToken string `json:"access_token"`
+	ExpiresAt   string `json:"expires_at"`
+}
+
+// CreateProductReq defines model for CreateProductReq.
+type CreateProductReq struct {
+	Description string                 `json:"description"`
+	Metadata    map[string]interface{} `json:"metadata"`
+	Name        string                 `json:"name"`
+	Price       float64                `json:"price"`
+	Stock       int                    `json:"stock"`
+}
+
+// CreateProductRes defines model for CreateProductRes.
+type CreateProductRes struct {
+	CreatedAt   string                 `json:"created_at"`
+	Description string                 `json:"description"`
+	Id          string                 `json:"id"`
+	Metadata    map[string]interface{} `json:"metadata"`
+	Name        string                 `json:"name"`
+	Pictures    GetProductResPictures  `json:"pictures"`
+	Price       float64                `json:"price"`
+	SellerId    string                 `json:"seller_id"`
+	Stock       int                    `json:"stock"`
+	UpdatedAt   string                 `json:"updated_at"`
+}
+
+// CreateSellerAccountReq defines model for CreateSellerAccountReq.
+type CreateSellerAccountReq struct {
+	AccessToken string `json:"access_token"`
+	Seller      struct {
+		Email    string `json:"email"`
+		Name     string `json:"name"`
+		Password string `json:"password"`
+	} `json:"seller"`
+}
+
+// CreateSellerAccountRes defines model for CreateSellerAccountRes.
+type CreateSellerAccountRes struct {
+	Email *string `json:"email,omitempty"`
+	Name  string  `json:"name"`
+}
+
+// CreateUserAccountReq defines model for CreateUserAccountReq.
+type CreateUserAccountReq struct {
+	Email    string `json:"email"`
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
+// CreateUserAccountRes defines model for CreateUserAccountRes.
+type CreateUserAccountRes struct {
+	Email *string `json:"email,omitempty"`
+	Name  string  `json:"name"`
+}
+
+// DeleteProductPictureRes defines model for DeleteProductPictureRes.
+type DeleteProductPictureRes struct {
+	Id string `json:"id"`
+}
+
+// DeleteProductRes defines model for DeleteProductRes.
+type DeleteProductRes struct {
+	Id string `json:"id"`
+}
+
 // Err defines model for Err.
 type Err struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+}
+
+// GetProductRes defines model for GetProductRes.
+type GetProductRes struct {
+	CreatedAt   string                 `json:"created_at"`
+	Description string                 `json:"description"`
+	Id          string                 `json:"id"`
+	Metadata    map[string]interface{} `json:"metadata"`
+	Name        string                 `json:"name"`
+	Pictures    GetProductResPictures  `json:"pictures"`
+	Price       float64                `json:"price"`
+	SellerId    string                 `json:"seller_id"`
+	Stock       int                    `json:"stock"`
+	UpdatedAt   string                 `json:"updated_at"`
+}
+
+// GetProductResPicture defines model for GetProductResPicture.
+type GetProductResPicture struct {
+	Id  string `json:"id"`
+	Url string `json:"url"`
+}
+
+// GetProductResPictures defines model for GetProductResPictures.
+type GetProductResPictures = []GetProductResPicture
+
+// ListProductsRes defines model for ListProductsRes.
+type ListProductsRes struct {
+	NextPageToken *string                  `json:"next_page_token"`
+	Products      []ListProductsResProduct `json:"products"`
+}
+
+// ListProductsResProduct defines model for ListProductsResProduct.
+type ListProductsResProduct struct {
+	Id         string  `json:"id"`
+	Name       string  `json:"name"`
+	PictureUrl string  `json:"picture_url"`
+	Price      float64 `json:"price"`
+	SellerId   string  `json:"seller_id"`
 }
 
 // PrivateClearCartsContentsReq defines model for PrivateClearCartsContentsReq.
@@ -79,6 +218,27 @@ type PrivateClearCartsContentsReq struct {
 
 // PrivateClearCartsContentsRes defines model for PrivateClearCartsContentsRes.
 type PrivateClearCartsContentsRes struct {
+	Message *string `json:"message,omitempty"`
+}
+
+// PrivateFeedbackProcessCompletedOrderReq defines model for PrivateFeedbackProcessCompletedOrderReq.
+type PrivateFeedbackProcessCompletedOrderReq struct {
+	Messages []PrivateFeedbackProcessCompletedOrderReqMessage `json:"messages"`
+}
+
+// PrivateFeedbackProcessCompletedOrderReqMessage defines model for PrivateFeedbackProcessCompletedOrderReqMessage.
+type PrivateFeedbackProcessCompletedOrderReqMessage struct {
+	OrderId  string                                          `json:"order_id"`
+	Products PrivateFeedbackProcessCompletedOrderReqProducts `json:"products"`
+}
+
+// PrivateFeedbackProcessCompletedOrderReqProducts defines model for PrivateFeedbackProcessCompletedOrderReqProducts.
+type PrivateFeedbackProcessCompletedOrderReqProducts struct {
+	Id string `json:"id"`
+}
+
+// PrivateFeedbackProcessCompletedOrderRes defines model for PrivateFeedbackProcessCompletedOrderRes.
+type PrivateFeedbackProcessCompletedOrderRes struct {
 	Message *string `json:"message,omitempty"`
 }
 
@@ -96,6 +256,83 @@ type PrivatePublishCartsContentsReqItem struct {
 // PrivatePublishCartsContentsRes defines model for PrivatePublishCartsContentsRes.
 type PrivatePublishCartsContentsRes struct {
 	Message string `json:"message"`
+}
+
+// PrivateReserveProductsReq defines model for PrivateReserveProductsReq.
+type PrivateReserveProductsReq struct {
+	Messages []PrivateReserveProductsReqMessage `json:"messages"`
+}
+
+// PrivateReserveProductsReqMessage defines model for PrivateReserveProductsReqMessage.
+type PrivateReserveProductsReqMessage struct {
+	OrderId  string                           `json:"order_id"`
+	Products PrivateReserveProductsReqProduct `json:"products"`
+}
+
+// PrivateReserveProductsReqProduct defines model for PrivateReserveProductsReqProduct.
+type PrivateReserveProductsReqProduct struct {
+	Count int    `json:"count"`
+	Id    string `json:"id"`
+}
+
+// PrivateReserveProductsRes defines model for PrivateReserveProductsRes.
+type PrivateReserveProductsRes struct {
+	Message string `json:"message"`
+}
+
+// PrivateUnreserveProductsReq defines model for PrivateUnreserveProductsReq.
+type PrivateUnreserveProductsReq struct {
+	Messages []PrivateReserveProductsReqProduct `json:"messages"`
+}
+
+// PrivateUnreserveProductsReqProduct defines model for PrivateUnreserveProductsReqProduct.
+type PrivateUnreserveProductsReqProduct struct {
+	Count int    `json:"count"`
+	Id    string `json:"id"`
+}
+
+// PrivateUnreserveProductsRes defines model for PrivateUnreserveProductsRes.
+type PrivateUnreserveProductsRes struct {
+	Message string `json:"message"`
+}
+
+// ReplaceRefreshTokenReq defines model for ReplaceRefreshTokenReq.
+type ReplaceRefreshTokenReq struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+// ReplaceRefreshTokenRes defines model for ReplaceRefreshTokenRes.
+type ReplaceRefreshTokenRes struct {
+	ExpiresAt    string `json:"expires_at"`
+	RefreshToken string `json:"refresh_token"`
+}
+
+// UpdateProductReq defines model for UpdateProductReq.
+type UpdateProductReq struct {
+	Description *string                 `json:"description,omitempty"`
+	Metadata    *map[string]interface{} `json:"metadata,omitempty"`
+	Name        *string                 `json:"name,omitempty"`
+	Price       *float64                `json:"price,omitempty"`
+
+	// StockDelta The amount of "in stock" product count change, either of:
+	// - positive: stock amount is increased (seller releases more products)
+	// - negative: stock amount is decreased (item purchased)
+	StockDelta *int `json:"stock_delta,omitempty"`
+}
+
+// UpdateProductRes defines model for UpdateProductRes.
+type UpdateProductRes struct {
+	Description *string                 `json:"description,omitempty"`
+	Metadata    *map[string]interface{} `json:"metadata,omitempty"`
+	Name        *string                 `json:"name,omitempty"`
+	Price       *float64                `json:"price,omitempty"`
+	Stock       *int                    `json:"stock,omitempty"`
+}
+
+// UploadProductPictureRes defines model for UploadProductPictureRes.
+type UploadProductPictureRes struct {
+	Id  string `json:"id"`
+	Url string `json:"url"`
 }
 
 // Error defines model for Error.
@@ -375,27 +612,41 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"H4sIAAAAAAAC/+xbb2/bvBH/KgK3F3sAJUpbYB38Lsu6oNiKGkkLDGgDg5HONhtJVEjKjWf4uz8gKUqy",
+	"RFqSY7tO0He2RN7f393xSGqFQppkNIVUcDRaIQY8oykH9ecDY5TJHyFNBaRC/sRZFpMQC0LT4AenqXzG",
+	"wzkkWL2NIiJf4XjMaAZMEElpimMOPspqj1YIJHH1iwhI1I+/MpiiEfpLUMkUaNo8+MAYWvtILDNAI4QZ",
+	"w0u0XvuIwWNOGERo9M2QvCuH0fsfEAq0lgMj4CEjmZQOjfRQSXDMyAILkORHK/R0JvCMS1qZfj7BGUF3",
+	"cn4hiBx1mYs5pEKaAW7gcajiCSax/FEIyQUj6UzKkmHOf1IWWV42NVU0ajPaOvsNMflQMZ8ywoBPsLDK",
+	"ymDKgM8ngj5A2i3w5nC/Tt0m+hVm4ioGzOSP4bJHEIOAaJJRrqb0h1mT8big0Im9Nss+epXkh+kX0jyt",
+	"u4WkAmag8JwxGuWhmJAeKKqN9QuaLqH/pdSTv4zIz/dKH19Y+VZO6XDCMHVejDOuQdRF58NdsVtgWPj2",
+	"jo/uuNhG/dQ9crsp+3CHcBCD4qLN0BkUG6T7K/BCbC9wTGfXsEORSOFJTDI8g6qGpXkc4/sY0EiwHHxL",
+	"hdZiDQmbmoBjPbs7VgwXvyVkpxEMj2G2sLrERylOwL5SIaHIGeisXl9X5UwuS3rYkYRq9pSyRK4wUERz",
+	"OaEcm+bJvYRNwzQKD0osQ8RqEQZYwGUYAudfpN2Gr9Ketb7pKdNQxGI12SmSv33N1pB4g1j3gkxJX4Br",
+	"uDU3QGIRPAGBIyxw7WXF243C3ijyERc0fLDlpYZZCmzVBa6JZ+h0g6801VAnh2p65Fp3d1nSEck7GliH",
+	"eWeWuwZR6Ts2k4Z6COIY2MShgNN/PsqzyG0xW/6oOPl2f5d6b3G9X/fUhhBuUNwqxpehKmjDo6gz/rVi",
+	"aoHXs+V0u753L1pYsEdL2lqYKGn9Tb16W4/vre92GMFZetwifuXPcO9BvWTcY2rnto0Diy6nZWzdvhUp",
+	"p8g3w2Xssw4lUbcAR+VcbFQNWpFHYE+cCXCOZz28oUhU421ybZSA3yXvd8lDNgvtpy2RTUY/teXIvrL1",
+	"b+qsmrWaOh/9l3AzkJ9of9oQ8UAdqoPLUXrUiR0t+wvULR1qPepMCNXFstmqOJAod4n5lT584cMXFL3z",
+	"uzOx+84Tka2C8n0KOliifwNE9zh8GDMq15VXNMnUtvBnFgHb2Yr9Y6qnGJ8KpbtireR/dwBbfKosP8Ak",
+	"VM52la16DtqDmUze2JaDcm6irJTsEMYa1zQ7wmrv+RL/2jgc5/cx4fP9JLHB4efg/lFActiQ28Z4b3vp",
+	"fTBVxkIVIPvTh59iLboBDmwB1VLjWGBrMz5Kdnez/XX5vC1Tuah0J/BnpW03x6OG27ajql20OMkI+5qy",
+	"04mxvt3Ks2LMpvFLxJdFj9NC2A1kMQ7hRp+kncqxnVWqF3WX6qvaphlwdJeQtP70zYke5k0iiDWTzSPo",
+	"L3PwcCLjxKNT7zsiqafGf0deUXE8FUVeOMfpDHwPiJgD8+h09D098/RViQWM9CxDinCPpCEDzCHy/qYb",
+	"e49BLB9wL6EMDHX+hySTwgzbyURQkpHpz8tyFs7l/z8qVeunk10O5a/FoY7TWYv+McXRQXb/n7+3qDaL",
+	"wpwRsbyV9UszuwfMgF3mYq5YS5jOAUfq9EsbEP3vTL6mjPwfF1uypqZl5D+w1JdYSTqlSjwiYvnuQ0gT",
+	"73L8EfloAYzrALg4f3N+IXWhGaQyu47Qu/OL8wt17CPmSqAAZyQoMnCweBOEmIlRGANmZ8VlX3NPTLQj",
+	"TG35eHIK98rRih1Tsn+M5CDVL6jNoWqINCJw8U8aLQfdK+6xPLBvmK3X2ne1W81vLy6OwZvbrh2b2uup",
+	"cFKvpziPhYtPKXig72IreOVJgtnS7QdTYOULVVmfzgpPnyk0CJbD2rdDINPNXg8QFG1hg72HuQcLJXu5",
+	"6rIiw3SVR8GGayfiOOhwNdAHx8cQF+0ImmmxARWoDo6PMr0RNQnNTtREvdB36/sQNEV0VKxWd5iZp/3m",
+	"FpgPVsXuyDrYuBarLxOr9rgF3zLgVU5lOAEBTNqvdR+OA/NUuVBJX+bfKuVX25ZVcdEHOxW+moXo7oB4",
+	"bd26tyC0yjm7wrOojspY9br47U4qZ8tuLXhKdC5D6dEZFvATL8/UgkE7yZgDk7TY1EDqKIYtSAgTrG80",
+	"6Of4B7wH8j57+Hucvb2YPv7j/btpVXgVhlis4VzQU0e8TeYLHJMIC/2tTPEHburpTMFu7aMZCDugmpef",
+	"Xx2ubHfWbfDCTHhVGB4YYtcgFMBqHF8J1HrkuGBVXbJedyW89gcTR0eo3+RgujkXk4075KcTCfZPaSyx",
+	"oAduAvTQEWHl+WrSb5Y70m/j84dXi20nnzIr6L0Rw/QxB7asuJp3boYJSUmSJ2qTodXLHzqyLF/hWMLq",
+	"tpn0Dx1TbYavsciob1DQaFV7WDs5sjxt1p+uIUHtal7vscGqRVzGJw9GuPZ1rHVASNMpYcmkvMraNFNY",
+	"fL+cgJjTiMuG6/PtF3WaRWYyfEzaaRJufgliZ29GFacGrhEbt6Kt41h7C1uOW5cobCaF2ofDhKZeAbUq",
+	"DUjToXYuKZvX1oQSCO1JxcdL7TkGUbYpTNjGq5akOVjdhLCIpPtVtxYegwWBn5aZpuVF67v1nwEAAP//",
+	"/u3Opz8/AAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

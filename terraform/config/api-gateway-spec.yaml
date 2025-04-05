@@ -1122,6 +1122,90 @@ components:
       properties:
         id:
           type: string
+    PrivateReserveProductsReqMessage:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - products
+        - order_id
+      additionalProperties: false
+      properties:
+        products:
+          $ref: '#/components/schemas/PrivateReserveProductsReqProduct'
+        order_id:
+          type: string
+    PrivateReserveProductsReqProduct:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - id
+        - seller_id
+        - name
+        - count
+        - price
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        seller_id:
+          type: string
+        name:
+          type: string
+        count:
+          type: integer
+        price:
+          type: number
+          format: double
+        picture:
+          type: string
+    PrivateReserveProductsRes:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - message
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+
+    PrivateUnreserveProductsReq:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - messages
+      additionalProperties: false
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateReserveProductsReqProduct'
+    PrivateUnreserveProductsReqProduct:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - id
+        - count
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        count:
+          type: integer
+    PrivateUnreserveProductsRes:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - message
+      additionalProperties: false
+      properties:
+        message:
+          type: string
     # Products / Pictures
     GetProductResPictures:
       type: array
@@ -1169,77 +1253,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PrivateReserveProductsReqMessage'
-    PrivateReserveProductsReqMessage:
-      x-tags:
-        - private_api
-      type: object
-      required:
-        - products
-        - order_id
-      additionalProperties: false
-      properties:
-        products:
-          $ref: '#/components/schemas/PrivateReserveProductsReqProduct'
-        order_id:
-          type: string
-    PrivateReserveProductsReqProduct:
-      x-tags:
-        - private_api
-      type: object
-      required:
-        - id
-        - count
-      additionalProperties: false
-      properties:
-        id:
-          type: string
-        count:
-          type: integer
-    PrivateUnreserveProductsReq:
-      x-tags:
-        - private_api
-      type: object
-      required:
-        - messages
-      additionalProperties: false
-      properties:
-        messages:
-          type: array
-          items:
-            $ref: '#/components/schemas/PrivateReserveProductsReqProduct'
-    PrivateUnreserveProductsReqProduct:
-      x-tags:
-        - private_api
-      type: object
-      required:
-        - id
-        - count
-      additionalProperties: false
-      properties:
-        id:
-          type: string
-        count:
-          type: integer
-    PrivateReserveProductsRes:
-      x-tags:
-        - private_api
-      type: object
-      required:
-        - message
-      additionalProperties: false
-      properties:
-        message:
-          type: string
-    PrivateUnreserveProductsRes:
-      x-tags:
-        - private_api
-      type: object
-      required:
-        - message
-      additionalProperties: false
-      properties:
-        message:
-          type: string
 
     # Catalog
     CatalogGetRes:
@@ -1356,7 +1369,7 @@ components:
           type: string
         count:
           type: integer
-    PrivatePublishCartsContentsReq:
+    PrivatePublishCartPositionsReq:
       x-tags:
         - private_api
       type: object
@@ -1367,21 +1380,21 @@ components:
         messages:
           type: array
           items:
-            $ref: '#/components/schemas/PrivatePublishCartsContentsReqItem'
-    PrivatePublishCartsContentsReqItem:
+            $ref: '#/components/schemas/PrivatePublishCartsPositionsReqItem'
+    PrivatePublishCartPositionsReqItem:
       x-tags:
         - private_api
       type: object
       required:
-        - order_id
-        - user_id
+        - id
+        - count
       additionalProperties: false
       properties:
         id:
           type: string
         count:
           type: integer
-    PrivatePublishCartsContentsRes:
+    PrivatePublishCartPositionsRes:
       x-tags:
         - private_api
       type: object
@@ -1391,7 +1404,7 @@ components:
       properties:
         message:
           type: string
-    PrivateClearCartsContentsReq:
+    PrivateClearCartPositionsReq:
       x-tags:
         - private_api
       type: object
@@ -1401,7 +1414,7 @@ components:
       properties:
         message:
           type: string
-    PrivateClearCartsContentsRes:
+    PrivateClearCartPositionsRes:
       x-tags:
         - private_api
       type: object
@@ -1411,6 +1424,17 @@ components:
           type: string
 
     # Orders
+    PrivateOrderProcessPublishedCartPositionsReq:
+    PrivateOrderProcessPublishedCartPositionsReqMessage:
+    PrivateOrderProcessPublishedCartPositionsReqCartPosition:
+    PrivateOrderProcessPublishedCartPositionsRes:
+    PrivateOrderProcessReservedProductsReq:
+    PrivateOrderProcessReservedProductsReqMessage:
+    PrivateOrderProcessReservedProductsReqProduct:
+    PrivateOrderProcessReservedProductsRes:
+    PrivateOrderProcessReservedProductsReq:
+    # TODO:
+    # PrivateOrderProcessProductsReservationFailureReq:
     # Feedback
     PrivateFeedbackProcessCompletedOrderReq:
       x-tags:
