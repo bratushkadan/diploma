@@ -8,16 +8,29 @@ YDB Schema:
 
 ```sql
 CREATE TABLE `orders/orders` (
-  order_id String NOT NULL,
+  id String NOT NULL,
   user_id String NOT NULL,
-  -- contents of order
-  contents Json NOT NULL,
+  -- contents of order - JOIN table order_items
+  -- contents Json NOT NULL,
   -- For ease of designing and implementing business processes only online payments are allowed
   -- online_payment Bool NOT NULL DEFAULT false,
   status String NOT NULL,
   PRIMARY KEY order_id,
   INDEX idx_user_id GLOBAL ASYNC on (user_id)
 );
+```
+
+```sql
+CREATE TABLE `orders/order_items` (
+  order_id String NOT NULL,
+  product_id String NOT NULL,
+  name Utf8 NOT NULL,
+  seller_id Utf8 NOT NULL,
+  count Uint32 NOT NULL,
+  Price Double NOT NULL,
+  Picture Utf8,
+  PRIMARY KEY (order_id, product_id)
+)
 ```
 
 `contents` field schema:
