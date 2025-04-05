@@ -18,6 +18,7 @@ tags:
     description: Product reviews service
 
 paths:
+  # TODO:
   # /api/v1/users/
   #  get: # List
   # /api/v1/users/{user_id}:
@@ -169,8 +170,6 @@ paths:
         type: serverless_containers
         container_id: '${containers.auth.account.id}'
         service_account_id: '${containers.auth.account.sa_id}'
-  # FIXME: return this when developing with internet connection
-  # '${auth_email_confirmation_api_endpoint}':
   /api/v1/users/:confirm_email:
     x-yc-apigateway-cors:
       origin: true
@@ -594,23 +593,23 @@ paths:
   /api/private/v1/cart:publish-contents:
     x-private-api: true
     post:
-      summary: Publish carts contents as events/messages
+      summary: Publish carts contents
       description: Publish carts contents as events/messages
       tags:
         - cart
-      operationId: carts_publish_contents
+      operationId: private_cart_publish_contents
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PrivatePublishCartsContentsReq'
+              $ref: '#/components/schemas/PrivatePublishCartPositionsReq'
       responses:
         200:
-          description: Products data
+          description: Cart positions
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PrivatePublishCartsContentsRes'
+                $ref: '#/components/schemas/PrivatePublishCartPositionsRes'
         default:
           $ref: '#/components/responses/Error'
   /api/private/v1/cart:clear-contents:
@@ -625,14 +624,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PrivateClearCartsContentsReq'
+              $ref: '#/components/schemas/PrivateClearCartPositionsReq'
       responses:
         200:
-          description: Products data
+          description: Clear cart contents success response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PrivateClearCartsContentsRes'
+                $ref: '#/components/schemas/PrivateClearCartPositionsRes'
         default:
           $ref: '#/components/responses/Error'
   /api/v1/cart/{user_id}/positions:
@@ -774,6 +773,94 @@ paths:
         service_account_id: '${containers.cart.sa_id}'
 
   ### Order
+  /api/private/v1/order:process-published-cart-positions:
+    x-private-api: true
+    post:
+      summary: Process published cart positions
+      description: Process published cart positions
+      tags:
+        - orders
+      operationId: private_orders_published_cart_positions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivateOrderProcessPublishedCartPositionsReq'
+      responses:
+        200:
+          description: Published cart positions processing response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivateOrderProcessPublishedCartPositionsRes'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/private/v1/order:process-reserved-products:
+    x-private-api: true
+    post:
+      summary: Process reserved products
+      description: Process reserved products
+      tags:
+        - orders
+      operationId: private_orders_process_reserved_products
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivateOrderProcessReservedProductsReq'
+      responses:
+        200:
+          description: Reserved products processing response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivateOrderProcessReservedProductsRes'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/private/v1/order:cancel-orders:
+    x-private-api: true
+    post:
+      summary: Cancel orders
+      description: Cancel orders
+      tags:
+        - orders
+      operationId: private_orders_cancel_orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivateOrderCancelOrdersReq'
+      responses:
+        200:
+          description: Cancel order response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivateOrderCancelOrdersRes'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/private/v1/order:batch-cancel-unpaid-orders:
+    x-private-api: true
+    post:
+      summary: Batch cancel unpaid orders
+      description: Batch cancel unpaid orders
+      tags:
+        - orders
+      operationId: private_orders_batch_cancel_unpaid_orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivateOrderBatchCancelUnpaidOrdersReq'
+      responses:
+        200:
+          description: Batch cancel unpaid orders operation start response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivateOrderBatchCancelUnpaidOrdersRes'
+        default:
+          $ref: '#/components/responses/Error'
   # GetOrderOperation, CreateOrderOperation
   # /api/v1/order/operations/{operation_id}
   # ListOrderOperations
@@ -829,7 +916,7 @@ components:
       # scheme: bearer
       # bearerFormat: JWT
   schemas:
-    # Auth (Users/Email)
+    ### Auth (Users/Email)
     CreateUserAccountReq:
       type: object
       required:
@@ -949,7 +1036,7 @@ components:
         expires_at:
           type: string
 
-    # Products
+    ### Products
     ListProductsRes:
       type: object
       required:
@@ -1122,55 +1209,48 @@ components:
       properties:
         id:
           type: string
+    PrivateReserveProductsReq:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - messages
+      additionalProperties: false
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateReserveProductsReqMessage'
     PrivateReserveProductsReqMessage:
       x-tags:
         - private_api
       type: object
       required:
-        - products
         - order_id
+        - products
       additionalProperties: false
       properties:
-        products:
-          $ref: '#/components/schemas/PrivateReserveProductsReqProduct'
         order_id:
           type: string
+        products:
+          $ref: '#/components/schemas/PrivateReserveProductsReqProduct'
     PrivateReserveProductsReqProduct:
       x-tags:
         - private_api
       type: object
       required:
         - id
-        - seller_id
-        - name
         - count
-        - price
       additionalProperties: false
       properties:
         id:
           type: string
-        seller_id:
-          type: string
-        name:
-          type: string
         count:
           type: integer
-        price:
-          type: number
-          format: double
-        picture:
-          type: string
     PrivateReserveProductsRes:
       x-tags:
         - private_api
       type: object
-      required:
-        - message
-      additionalProperties: false
-      properties:
-        message:
-          type: string
-
     PrivateUnreserveProductsReq:
       x-tags:
         - private_api
@@ -1180,6 +1260,21 @@ components:
       additionalProperties: false
       properties:
         messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateUnreserveProductsReqMessage'
+    PrivateUnreserveProductsReqMessage:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - order_id
+        - products
+      additionalProperties: false
+      properties:
+        order_id:
+          type: string
+        products:
           type: array
           items:
             $ref: '#/components/schemas/PrivateReserveProductsReqProduct'
@@ -1200,12 +1295,6 @@ components:
       x-tags:
         - private_api
       type: object
-      required:
-        - message
-      additionalProperties: false
-      properties:
-        message:
-          type: string
     # Products / Pictures
     GetProductResPictures:
       type: array
@@ -1241,20 +1330,8 @@ components:
       properties:
         id:
           type: string
-    PrivateReserveProductsReq:
-      x-tags:
-        - private_api
-      type: object
-      required:
-        - messages
-      additionalProperties: false
-      properties:
-        messages:
-          type: array
-          items:
-            $ref: '#/components/schemas/PrivateReserveProductsReqMessage'
 
-    # Catalog
+    ### Catalog
     CatalogGetRes:
       type: object
       required:
@@ -1288,7 +1365,7 @@ components:
         price:
           type: number
           format: double
-    # Cart
+    ### Cart
     CartGetCartPositionsRes:
       type: object
       required:
@@ -1380,17 +1457,30 @@ components:
         messages:
           type: array
           items:
-            $ref: '#/components/schemas/PrivatePublishCartsPositionsReqItem'
+            $ref: '#/components/schemas/PrivatePublishCartPositionsReqItem'
+    PrivatePublishCartPositionsReqMessage:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - order_id
+        - cart_positions
+      additionalProperties: false
+      properties:
+        order_id:
+          type: string
+        cart_positions:
+          $ref: '#/components/schemas/PrivatePublishCartPositionsReqItem'
     PrivatePublishCartPositionsReqItem:
       x-tags:
         - private_api
       type: object
       required:
-        - id
+        - product_id
         - count
       additionalProperties: false
       properties:
-        id:
+        product_id:
           type: string
         count:
           type: integer
@@ -1398,44 +1488,157 @@ components:
       x-tags:
         - private_api
       type: object
-      required:
-        - message
-      additionalProperties: false
-      properties:
-        message:
-          type: string
     PrivateClearCartPositionsReq:
       x-tags:
         - private_api
       type: object
       required:
-        - message
+        - messages
       additionalProperties: false
       properties:
-        message:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateClearCartPositionsReqMessage'
+    PrivateClearCartPositionsReqMessage:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - user_id
+      additionalProperties: false
+      properties:
+        user_id:
           type: string
     PrivateClearCartPositionsRes:
       x-tags:
         - private_api
       type: object
+
+    ### Orders
+    PrivateOrderProcessPublishedCartPositionsReq:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - messages
       additionalProperties: false
       properties:
-        message:
-          type: string
-
-    # Orders
-    PrivateOrderProcessPublishedCartPositionsReq:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateOrderProcessPublishedCartPositionsReqMessage'
     PrivateOrderProcessPublishedCartPositionsReqMessage:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - cart_positions
+        - order_id
+      additionalProperties: false
+      properties:
+        cart_positions:
+          $ref: '#/components/schemas/PrivateOrderProcessPublishedCartPositionsReqCartPosition'
+        order_id:
+          type: string
     PrivateOrderProcessPublishedCartPositionsReqCartPosition:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - product_id
+        - count
+      additionalProperties: false
+      properties:
+        product_id:
+          type: string
+        count:
+          type: integer
     PrivateOrderProcessPublishedCartPositionsRes:
+      x-tags:
+        - private_api
+      type: object
     PrivateOrderProcessReservedProductsReq:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - messages
+      additionalProperties: false
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateOrderProcessReservedProductsReqMessage'
     PrivateOrderProcessReservedProductsReqMessage:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - products
+        - order_id
+      additionalProperties: false
+      properties:
+        products:
+          $ref: '#/components/schemas/PrivateOrderProcessReservedProductsReqProduct'
+        order_id:
+          type: string
     PrivateOrderProcessReservedProductsReqProduct:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - id
+        - seller_id
+        - name
+        - count
+        - price
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        seller_id:
+          type: string
+        name:
+          type: string
+        count:
+          type: integer
+        price:
+          type: number
+          format: double
+        picture:
+          type: string
     PrivateOrderProcessReservedProductsRes:
-    PrivateOrderProcessReservedProductsReq:
+      x-tags:
+        - private_api
+      type: object
+    PrivateOrderBatchCancelUnpaidOrdersReq:
+      # batch-size
+      x-tags:
+        - private_api
+      type: object
+    PrivateOrderBatchCancelUnpaidOrdersRes:
+      x-tags:
+        - private_api
+      type: object
+    PrivateOrderCancelOrdersReq:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - order_id
+      additionalProperties: false
+      properties:
+        order_id:
+          type: string
+    PrivateOrderCancelOrdersRes:
+      x-tags:
+        - private_api
+      type: object
     # TODO:
     # PrivateOrderProcessProductsReservationFailureReq:
-    # Feedback
+
+    ### Feedback
     PrivateFeedbackProcessCompletedOrderReq:
       x-tags:
         - private_api
@@ -1481,7 +1684,7 @@ components:
         message:
           type: string
 
-    # Errors
+    ### Errors
     Err:
       type: object
       required:
