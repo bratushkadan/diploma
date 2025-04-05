@@ -266,13 +266,50 @@ paths:
         type: serverless_containers
         container_id: '${containers.auth.email_confirmation.id}'
         service_account_id: '${containers.auth.email_confirmation.sa_id}'
-  /api/private/v1/products:
+  /api/private/v1/products:reserve:
     x-private-api: true
-    get:
+    post:
+      summary: Reserve products
+      description: Reserve products
+      tags:
+        - products
+      operationId: products_reserve
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivateReserveProductsReq'
+      responses:
+        200:
+          description: Products data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivateReserveProductsRes'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/private/v1/products:unreserve:
+    x-private-api: true
+    post:
       summary: List products
       description: List products
       tags:
         - products
+      operationId: products_unreserve
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivateUnreserveProductsReq'
+      responses:
+        200:
+          description: Products data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivateUnreserveProductsRes'
+        default:
+          $ref: '#/components/responses/Error'
   /api/v1/products:
     get:
       summary: List products
@@ -845,6 +882,7 @@ components:
           type: string
         expires_at:
           type: string
+
     # Products
     ListProductsRes:
       type: object
@@ -1053,6 +1091,68 @@ components:
       properties:
         id:
           type: string
+    PrivateReserveProductsReq:
+      type: object
+      required:
+        - messages
+      additionalProperties: false
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateReserveProductsReqProduct'
+      x-tags:
+        - private_api
+    PrivateReserveProductsReqProduct:
+      type: object
+      x-tags:
+        - private_api
+      required:
+        - id
+        - count
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        count:
+          type: integer
+    PrivateUnreserveProductsReq:
+      type: object
+      required:
+        - messages
+      additionalProperties: false
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateReserveProductsReqProduct'
+      x-tags:
+        - private_api
+    PrivateUnreserveProductsReqProduct:
+      type: object
+      x-tags:
+        - private_api
+      required:
+        - id
+        - count
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        count:
+          type: integer
+    PrivateReserveProductsRes:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+    PrivateUnreserveProductsRes:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
 
     # Catalog
     CatalogGetRes:
@@ -1174,9 +1274,6 @@ components:
     # Feedback
 
     # Errors
-    PrivateErr:
-      x-tags:
-        - private_api
     Err:
       type: object
       required:

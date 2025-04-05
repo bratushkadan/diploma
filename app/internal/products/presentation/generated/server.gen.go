@@ -100,6 +100,32 @@ type ListProductsResProduct struct {
 	SellerId   string  `json:"seller_id"`
 }
 
+// PrivateReserveProductsReq defines model for PrivateReserveProductsReq.
+type PrivateReserveProductsReq struct {
+	Messages []PrivateReserveProductsReqProduct `json:"messages"`
+}
+
+// PrivateReserveProductsReqProduct defines model for PrivateReserveProductsReqProduct.
+type PrivateReserveProductsReqProduct struct {
+	Count int    `json:"count"`
+	Id    string `json:"id"`
+}
+
+// PrivateReserveProductsRes defines model for PrivateReserveProductsRes.
+type PrivateReserveProductsRes struct {
+	Message *string `json:"message,omitempty"`
+}
+
+// PrivateUnreserveProductsReq defines model for PrivateUnreserveProductsReq.
+type PrivateUnreserveProductsReq struct {
+	Messages []PrivateReserveProductsReqProduct `json:"messages"`
+}
+
+// PrivateUnreserveProductsRes defines model for PrivateUnreserveProductsRes.
+type PrivateUnreserveProductsRes struct {
+	Message *string `json:"message,omitempty"`
+}
+
 // UpdateProductReq defines model for UpdateProductReq.
 type UpdateProductReq struct {
 	Description *string                 `json:"description,omitempty"`
@@ -149,6 +175,12 @@ type ProductsUploadPictureMultipartBody struct {
 	File    *openapi_types.File `json:"file,omitempty"`
 }
 
+// ProductsReserveJSONRequestBody defines body for ProductsReserve for application/json ContentType.
+type ProductsReserveJSONRequestBody = PrivateReserveProductsReq
+
+// ProductsUnreserveJSONRequestBody defines body for ProductsUnreserve for application/json ContentType.
+type ProductsUnreserveJSONRequestBody = PrivateUnreserveProductsReq
+
 // ProductsCreateJSONRequestBody defines body for ProductsCreate for application/json ContentType.
 type ProductsCreateJSONRequestBody = CreateProductReq
 
@@ -159,6 +191,14 @@ type ProductsUpdateJSONRequestBody = UpdateProductReq
 type ProductsUploadPictureMultipartRequestBody ProductsUploadPictureMultipartBody
 
 // Method & Path constants for routes.
+// Reserve products
+const ProductsReserveMethod = "POST"
+const ProductsReservePath = "/api/private/v1/products:reserve"
+
+// List products
+const ProductsUnreserveMethod = "POST"
+const ProductsUnreservePath = "/api/private/v1/products:unreserve"
+
 // List products
 const ProductsListMethod = "GET"
 const ProductsListPath = "/api/v1/products"
@@ -187,6 +227,12 @@ const ProductsDeletePicturePath = "/api/v1/products/:product_id/pictures/:id"
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Reserve products
+	// (POST /api/private/v1/products:reserve)
+	ProductsReserve(c *gin.Context)
+	// List products
+	// (POST /api/private/v1/products:unreserve)
+	ProductsUnreserve(c *gin.Context)
 	// List products
 	// (GET /api/v1/products)
 	ProductsList(c *gin.Context, params ProductsListParams)
@@ -218,6 +264,32 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// ProductsReserve operation middleware
+func (siw *ServerInterfaceWrapper) ProductsReserve(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ProductsReserve(c)
+}
+
+// ProductsUnreserve operation middleware
+func (siw *ServerInterfaceWrapper) ProductsUnreserve(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ProductsUnreserve(c)
+}
 
 // ProductsList operation middleware
 func (siw *ServerInterfaceWrapper) ProductsList(c *gin.Context) {
@@ -440,6 +512,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
+	router.POST(options.BaseURL+"/api/private/v1/products:reserve", wrapper.ProductsReserve)
+	router.POST(options.BaseURL+"/api/private/v1/products:unreserve", wrapper.ProductsUnreserve)
 	router.GET(options.BaseURL+"/api/v1/products", wrapper.ProductsList)
 	router.POST(options.BaseURL+"/api/v1/products", wrapper.ProductsCreate)
 	router.DELETE(options.BaseURL+"/api/v1/products/:product_id", wrapper.ProductsDelete)
@@ -452,34 +526,37 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"3nD8FLiZIrILSK7o4nzxXwAAAP//8LRy/UUmAAA=",
+	"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",
+	"L84X/wYAAP//cbv8qx4uAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
