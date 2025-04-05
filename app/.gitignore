@@ -2,3 +2,4 @@
 .env
 auth-token-private.key
 auth-token-public.key
+/public_private_api_oapi_spec.yaml

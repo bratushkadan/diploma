@@ -2,8 +2,13 @@ locals {
   opensearch_creds = yamldecode(file("${path.module}/opensearch-creds.yaml"))
 }
 
-data "yandex_compute_image" "container-optimized-image" {
-  family = "container-optimized-image"
+# data "yandex_compute_image" "container_optimized_image" {
+#   family = "container-optimized-image"
+# }
+
+locals {
+  # coi_id = yandex_compute_image.container_optimized_image
+  coi_id = "fd8r54pj9a0ic0ftsbvf"
 }
 
 resource "yandex_compute_disk" "opensearch_data" {
@@ -33,7 +38,7 @@ resource "yandex_compute_instance" "opensearch" {
   name = "opensearch"
   boot_disk {
     initialize_params {
-      image_id = data.yandex_compute_image.container-optimized-image.id
+      image_id = local.coi_id
     }
   }
   zone = "ru-central1-b"

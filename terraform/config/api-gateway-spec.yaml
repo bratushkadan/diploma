@@ -20,7 +20,7 @@ tags:
 paths:
   # /api/v1/users/
   #  get: # List
-  # /api/v1/users/${user_id}:
+  # /api/v1/users/{user_id}:
   #  get: # Get
   /api/v1/users/:createAccount:
     post:
@@ -266,6 +266,13 @@ paths:
         type: serverless_containers
         container_id: '${containers.auth.email_confirmation.id}'
         service_account_id: '${containers.auth.email_confirmation.sa_id}'
+  /api/private/v1/products:
+    x-private-api: true
+    get:
+      summary: List products
+      description: List products
+      tags:
+        - products
   /api/v1/products:
     get:
       summary: List products
@@ -695,7 +702,7 @@ paths:
   # ListOrders
   # /api/v1/order/orders/
   # ProcessPayment (process payment, thus change order's status)
-  # /api/v1/order/processPayment/${provider} (e.g. yoomoney)
+  # /api/v1/order/processPayment/{provider} (e.g. yoomoney)
 
   ### Feedback
   # (?) ListRating - get rating by list of ids (max 20)
@@ -1167,6 +1174,9 @@ components:
     # Feedback
 
     # Errors
+    PrivateErr:
+      x-tags:
+        - private_api
     Err:
       type: object
       required:
@@ -1181,6 +1191,9 @@ components:
 
   responses:
     # Common
+    PrivateErr:
+      x-tags:
+        - private_api
     Error:
       description: 'error'
       content:
