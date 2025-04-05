@@ -40,28 +40,36 @@ migrate_products_up:
 migrate_products_up_by_one:
 	@export SERVICE=products && \ scripts/migrate up-by-one
 
+# API Generation requires Terraform to be applied first
+# ../terraform/tf apply -target local_file.public_private_api_oapi_spec - generates file "public_private_api_oapi_spec.yaml" to use spec from.
+
+.PHONY: generate_api
+generate_api: generate_api_products generate_api_catalog generate_api_cart generate_api_orders generate_api_feedback
+
 .PHONY: generate_api_products
-generate_api_products:
-	@yc serverless api-gateway get-spec auth-service-api-gw | yq -M 'del(.servers)' > ./internal/products/presentation/oapi/api.yaml && \
-		go generate ./internal/products/...
+generate_api_products: public_private_api_oapi_spec.yaml
+	@mkdir -p ./internal/products/presentation/generated
+	@cat public_private_api_oapi_spec.yaml | yq -M 'del(.servers)' > ./internal/products/presentation/oapi/api.yaml
+	@go generate ./internal/products/...
 .PHONY: generate_api_catalog
 generate_api_catalog:
-	@yc serverless api-gateway get-spec auth-service-api-gw | yq -M 'del(.servers)' > ./internal/catalog/presentation/oapi/api.yaml && \
-		go generate ./internal/catalog/...
+	@mkdir -p ./internal/catalog/presentation/generated
+	@cat public_private_api_oapi_spec.yaml | yq -M 'del(.servers)' > ./internal/catalog/presentation/oapi/api.yaml
+	@go generate ./internal/catalog/...
 .PHONY: generate_api_cart
 generate_api_cart:
 	@mkdir -p ./internal/cart/presentation/generated
-	@cat /Users/bratushkadan/projects/diploma/terraform/config/api-gateway-spec.yaml | yq -M 'del(.servers)' > ./internal/cart/presentation/oapi/api.yaml
+	@cat public_private_api_oapi_spec.yaml | yq -M 'del(.servers)' > ./internal/cart/presentation/oapi/api.yaml
 	@go generate ./internal/cart/...
 .PHONY: generate_api_orders
 generate_api_orders:
 	@mkdir -p ./internal/orders/presentation/generated
-	@cat /Users/bratushkadan/projects/diploma/terraform/config/api-gateway-spec.yaml | yq -M 'del(.servers)' > ./internal/orders/presentation/oapi/api.yaml
+	@cat public_private_api_oapi_spec.yaml | yq -M 'del(.servers)' > ./internal/orders/presentation/oapi/api.yaml
 	@go generate ./internal/orders/...
 .PHONY: generate_api_feedback
 generate_api_feedback:
 	@mkdir -p ./internal/feedback/presentation/generated
-	@cat /Users/bratushkadan/projects/diploma/terraform/config/api-gateway-spec.yaml | yq -M 'del(.servers)' > ./internal/feedback/presentation/oapi/api.yaml
+	@cat public_private_api_oapi_spec.yaml | yq -M 'del(.servers)' > ./internal/feedback/presentation/oapi/api.yaml
 	@go generate ./internal/feedback/...
 
 .PHONY: migrate_auth_create_pg
