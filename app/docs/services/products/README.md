@@ -32,6 +32,11 @@ CREATE TABLE `products/products` (
   - Point lookups using *productId*.
 - Upload/Delete image for Product (limit is 2MiB due to serverless containers limitation of 3MiB request size, including http headers)
 
+## Private endpoints
+
+- Process reserve products (process "reserve products" event/message)
+- Process unreserve products (process "unreserve products" event/message)
+
 ## Run
 
 ### Setup env and run

@@ -30,6 +30,8 @@ OPENSEARCH_PASSWORD=
 go run cmd/catalog/main.go
 ```
 
+### CURLs for testing
+
 #### Test app locally
 
 ```sh
