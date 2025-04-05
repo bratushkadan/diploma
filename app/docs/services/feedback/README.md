@@ -22,7 +22,7 @@ CREATE TABLE `feedback/purchases` (
     user_id String NOT NULL,
     product_id String NOT NULL,
     order_id String NOT NULL,
-    purchased_at Datetime NOT NULL,
+    created_at Datetime NOT NULL,
     PRIMARY KEY (buyer_id, product_id, order_id)
 )
 ```

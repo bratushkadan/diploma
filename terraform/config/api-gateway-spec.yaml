@@ -786,6 +786,28 @@ paths:
   # /api/v1/order/processPayment/{provider} (e.g. yoomoney)
 
   ### Feedback
+  /api/private/v1/feedback/orders:process_completed_order:
+    x-private-api: true
+    post:
+      summary: Process completed order contents
+      description: Process completed order contents (so that user has a permission to leave feedback for a product)
+      tags:
+        - feedback
+      operationId: feedback_process_completed_order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivateFeedbackProcessCompletedOrderReq'
+      responses:
+        200:
+          description: Products data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivateFeedbackProcessCompletedOrderRes'
+        default:
+          $ref: '#/components/responses/Error'
   # (?) ListRating - get rating by list of ids (max 20)
   # /api/v1/feedback/products/rating
   # GetRating
@@ -1136,6 +1158,8 @@ components:
         id:
           type: string
     PrivateReserveProductsReq:
+      x-tags:
+        - private_api
       type: object
       required:
         - messages
@@ -1145,12 +1169,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PrivateReserveProductsReqMessage'
-      x-tags:
-        - private_api
     PrivateReserveProductsReqMessage:
-      type: object
       x-tags:
         - private_api
+      type: object
       required:
         - products
         - order_id
@@ -1161,9 +1183,9 @@ components:
         order_id:
           type: string
     PrivateReserveProductsReqProduct:
-      type: object
       x-tags:
         - private_api
+      type: object
       required:
         - id
         - count
@@ -1390,6 +1412,50 @@ components:
 
     # Orders
     # Feedback
+    PrivateFeedbackProcessCompletedOrderReq:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - messages
+      additionalProperties: false
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateFeedbackProcessCompletedOrderReqMessage'
+    PrivateFeedbackProcessCompletedOrderReqMessage:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - products
+        - user_id
+        - order_id
+      additionalProperties: false
+      properties:
+        products:
+          $ref: '#/components/schemas/PrivateFeedbackProcessCompletedOrderReqProducts'
+        order_id:
+          type: string
+    PrivateFeedbackProcessCompletedOrderReqProducts:
+      type: object
+      x-tags:
+        - private_api
+      required:
+        - id
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+    PrivateFeedbackProcessCompletedOrderRes:
+      x-tags:
+        - private_api
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
 
     # Errors
     Err:
