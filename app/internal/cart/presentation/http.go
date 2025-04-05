@@ -29,6 +29,10 @@ func (api *ApiImpl) CartDeleteCartPosition(c *gin.Context, userId string, produc
 func (api *ApiImpl) CartSetCartPosition(c *gin.Context, userId string, productId string, params oapi_codegen.CartSetCartPositionParams) {
 
 }
+
+func (api *ApiImpl) CartsClearContents(c *gin.Context)   {}
+func (api *ApiImpl) CartsPublishContents(c *gin.Context) {}
+
 func (*ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {
 	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: message}))
 }

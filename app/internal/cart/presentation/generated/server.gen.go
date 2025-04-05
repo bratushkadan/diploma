@@ -72,6 +72,32 @@ type Err struct {
 	Message string `json:"message"`
 }
 
+// PrivateClearCartsContentsReq defines model for PrivateClearCartsContentsReq.
+type PrivateClearCartsContentsReq struct {
+	Message string `json:"message"`
+}
+
+// PrivateClearCartsContentsRes defines model for PrivateClearCartsContentsRes.
+type PrivateClearCartsContentsRes struct {
+	Message *string `json:"message,omitempty"`
+}
+
+// PrivatePublishCartsContentsReq defines model for PrivatePublishCartsContentsReq.
+type PrivatePublishCartsContentsReq struct {
+	Messages []PrivatePublishCartsContentsReqItem `json:"messages"`
+}
+
+// PrivatePublishCartsContentsReqItem defines model for PrivatePublishCartsContentsReqItem.
+type PrivatePublishCartsContentsReqItem struct {
+	Count *int    `json:"count,omitempty"`
+	Id    *string `json:"id,omitempty"`
+}
+
+// PrivatePublishCartsContentsRes defines model for PrivatePublishCartsContentsRes.
+type PrivatePublishCartsContentsRes struct {
+	Message string `json:"message"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	Errors []Err `json:"errors"`
@@ -83,7 +109,21 @@ type CartSetCartPositionParams struct {
 	Count int `form:"count" json:"count"`
 }
 
+// CartsClearContentsJSONRequestBody defines body for CartsClearContents for application/json ContentType.
+type CartsClearContentsJSONRequestBody = PrivateClearCartsContentsReq
+
+// CartsPublishContentsJSONRequestBody defines body for CartsPublishContents for application/json ContentType.
+type CartsPublishContentsJSONRequestBody = PrivatePublishCartsContentsReq
+
 // Method & Path constants for routes.
+// Clear carts contents
+const CartsClearContentsMethod = "POST"
+const CartsClearContentsPath = "/api/private/v1/cart:clear-contents"
+
+// Publish carts contents as events/messages
+const CartsPublishContentsMethod = "POST"
+const CartsPublishContentsPath = "/api/private/v1/cart:publish-contents"
+
 // Clear cart
 const CartClearCartMethod = "DELETE"
 const CartClearCartPath = "/api/v1/cart/:user_id/positions"
@@ -102,6 +142,12 @@ const CartSetCartPositionPath = "/api/v1/cart/:user_id/positions/:product_id"
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Clear carts contents
+	// (POST /api/private/v1/cart:clear-contents)
+	CartsClearContents(c *gin.Context)
+	// Publish carts contents as events/messages
+	// (POST /api/private/v1/cart:publish-contents)
+	CartsPublishContents(c *gin.Context)
 	// Clear cart
 	// (DELETE /api/v1/cart/{user_id}/positions)
 	CartClearCart(c *gin.Context, userId string)
@@ -124,6 +170,32 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// CartsClearContents operation middleware
+func (siw *ServerInterfaceWrapper) CartsClearContents(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CartsClearContents(c)
+}
+
+// CartsPublishContents operation middleware
+func (siw *ServerInterfaceWrapper) CartsPublishContents(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CartsPublishContents(c)
+}
 
 // CartClearCart operation middleware
 func (siw *ServerInterfaceWrapper) CartClearCart(c *gin.Context) {
@@ -292,6 +364,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
+	router.POST(options.BaseURL+"/api/private/v1/cart:clear-contents", wrapper.CartsClearContents)
+	router.POST(options.BaseURL+"/api/private/v1/cart:publish-contents", wrapper.CartsPublishContents)
 	router.DELETE(options.BaseURL+"/api/v1/cart/:user_id/positions", wrapper.CartClearCart)
 	router.GET(options.BaseURL+"/api/v1/cart/:user_id/positions", wrapper.CartGetCartPositions)
 	router.DELETE(options.BaseURL+"/api/v1/cart/:user_id/positions/:product_id", wrapper.CartDeleteCartPosition)
@@ -301,24 +375,27 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/+RYX2/bNhD/Ksatj4rlbG96y7KgKPbQIO7DgMAwGOpss5VE5nhy5xn67gMp2bIlqo42",
-	"ZGizN5o83u/+/I538h6kzo0usGALyR4IrdGFRf/jjkiTW0hdMBbslsKYTEnBShfxZ6sLt2flBnPhT9NU",
-	"uSOR3ZM2SKycppXILEZgTrb2gE65XynG3C/eEa4ggZ/i1qa41m3jOyKoIuCdQUhAEIkdVFUEhM+lIkwh",
-	"eTyoXBzF9NNnlAyVE0zRSlLGWQdJLeoVNAAO/1YQ32YoyC0eajNHeJRihozp0mjrr7zcuS7wfaPhosd9",
-	"yL7zEQyqH+ef1GXNgQZAFYxr9GkxpNNS8lKlJ+eWSRXrns0nslGjc8jo37x7bnUw+d9n5SW5COK2SbmQ",
-	"hHHu/DDJeI98arodn4p/VhgB3BfXx+W6+Jb27z0j83PbxyfEIo+qiz7gYFGcqX65Az9E7F0vGmtfimHz",
-	"crRWrPGybV5FKx9ochFYlCUp3s1dzmrkJxSEdFPyxhed630bFCkSRFCI3Cn448oda1J/+bYObU0Z9Tvu",
-	"6vapipX2RirO3Nmd1Pnk5v4DRLBFsnVXnU2vpzPnlTZYCKMggV+ms+kMIjCCN96gWBgVb69jKYjjfWmR",
-	"liqt4rO3oX5R3coF0Vv1IYXkvJF5pSRyZHRzxOO+0+Kd6onPpPfaGdD63ODCaYyZSoxOhpluPhbR+Xj0",
-	"82w2ajgaMwGEZhZ/PnFxA3+2EmXGQ4qPlsZ37ajT0MMH65QYjwvnnC3zXNDuHCkCFmvrCeh+LiL482on",
-	"r4RRa8H4VeyuPJnrJB3CIVRRhzeBd/vjhp06FVOVVuBsoa2SuBTS19mQsBXLWv6QDKQtUobWLltRF46u",
-	"VVuRqVRwPb82P/ABn0u0/KtOd3W6XVTWyGGmdVvDmyNcqKOHeCeIJ219vjL33iN75p0gvnUOVtHFVzHe",
-	"t72puvRE9ufM/5y6URehMX8Q5Kz1fj8lEv4CCRRJLXjO3NculSDm23+wTTnwYHfGyTdL+kGc43MxqYfX",
-	"BvS5RNq1qIezYcBcFSovc0iuo97I+uolF/iqCdTbvNsmXrvY+oD/q7bEItNrSPYnmw3rbHi327EuicRG",
-	"SS4J7RjZeN9T7grXxokoeYMFOxpiUEDqYqUoX2IuVOYi0Q2TbP6ezJE3OrWQwP3H+SeIQJNau7o6vEdd",
-	"xYSC8UZKtPaT/oJFGP4g1Xy5DknMMcuQviVHaDIh8QFXhHZzRKyO9Oy+FjdtaJQuJg3d2vfBhQ76j8x9",
-	"k4n+hSMR+pdua+L07xwYFbpCHJL3nz1d4Y+UIgVM0n5/2IsJ4Vbh18DNFWL6JOQXqBbV3wEAAP//7aX5",
-	"xh4XAAA=",
+	"H4sIAAAAAAAC/9xZTW/jOA/+K4He9+jU6QywXfjW7RaDYg8TtHNYYBAEqswkam3LpeTMZAP/94Ukf8WW",
+	"G7vbFJ3eFIsiH4kPSVHZEybiVCSQKEmCPUGQqUgkmB/XiAL1gIlEQaL0kKZpxBlVXCT+gxSJ/ibZBmJq",
+	"ZsOQ6ykazVGkgIprTSsaSfBI2vi0J6CVmxFXEJvB/xFWJCD/82tMvtUt/WtEkntE7VIgAaGIdEfy3CMI",
+	"TxlHCEnwvVS5qMTE/QMwRXItGIJkyFONjgRW1CgoDGj7VxTVVQQU9eDWwhyxoxAiUBAuUyHNkuGbaxue",
+	"FxqO7rhrsrt5j/SqH7c/JjLLgcIATxSswbglRRFmTC152JiXCnmy7mBuyHqFzj7Qf5rt6VEJ+b97ZYgv",
+	"nHZrpxxxwrjt/DLO+AKqCV2Od8XLAsNhd3B8HI+L57S/d4/cHWIf7xAJalRcdA32BsWB6uEb+CXOXtei",
+	"sfhCcMOLQUq6huPYjIpa3oVrjnxLFVSpXl7Zui1v4Wkk4MGwevF45OdU0bW052qALWnKyeJ5oPI1gY5G",
+	"NM/uIy43r3N4w9Pc89ZvFMRHM11lc/F62zaGXy0QhwSgwBDQhl8m7ej19iPfUQzoiyewDLna3WkSWIv3",
+	"QBHwMlMbQx19Ud0ADQGJRxIaa81/T/W0QP6PuYOTmhYp/wt29q7Lk5UwsLmK9Nw1E/Hkcn5DPLIFlPYK",
+	"PDs7P5tpx4gUEo0qIJ/PZmcz4pGUqo0B5NOU+wVyf3vuM4oqYDpsp0VPUBZ2Ze9azTu2Ce+JXiInlbQx",
+	"hwb7TaiFjI9MIqhF9OGCVH+IcDeq/RgQY+7kmOfWp43m59Ns9ha2pas7mds6JCchVZSY6RXNItVnpwLu",
+	"X9d9TRbHFHf9fiiJqSdM8PycFp6eGjYozCD33BRIbYANIEERii3zEyonsDXYq8TlZEYZyW/Cjb7s/zbs",
+	"6EtaJ+fHGBe9kDTFxUoGCBJwa3LqyJVZMmxtQVF/XxSQ3D9oO2yzpkddtlXxaVIg0hgUoN5um9Ra9cRU",
+	"KZOjdbqsM3RZuJo1QgP0GnRo15PFCenVedVwEKpOES9lU1HMzGE1y9j3hd6cKxl12KTJtGPao2uq4Afd",
+	"Tc3twTqpPA7KE3u8ASHaLG45gyVl5uJhv9MHuAB+kT7+FqWfZqun3y8+r+o6aTiEEUi5rPRJkneNb2nE",
+	"Q6rsC1jxA26b2cfQLvfIGpSbUO3m8sPxyvUm4KIXRTWpw/DEFPsCyhCsYfGDUG1AjvP3dRObH0t43Qep",
+	"N2eo17ZQwO81ctCjv59IcD9VOmLBCh4S9NQR4bT5YdJvmvWk39bz0ofldq+dKitMbF9eGH3KAHe11XKu",
+	"32DMEx5nMQnOvU5jf/LIcrxyOsLqrp30Tx1TXYMfscgoGok1CfaNj+WN3P21XX+OifgpZypDkGNk/X1H",
+	"uY5P6Qc0UxtIlGYbOAWYSFYc4yXElEe2lTg8Jlb8KxmD2ohQ6v7o69033Z0iX+vwKdNOWzECVXDJGEj5",
+	"TTxC4jZfShXvZH0SdxBFgM/JIaQRZXALKwS5qSzmFQvbSeGyPhoukklBtToN6KMj3VxS9ZqdBRURuouu",
+	"LHG6a0pGuZagcsmblqQt/BVDQAck834o+3cxQdhy+OFYuQII7yl7JPki/zcAAP//TiJNmBUfAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
