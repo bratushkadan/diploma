@@ -10,7 +10,7 @@ YDB Schema:
 CREATE TABLE `feedback/reviews` (
     id String NOT NULL,
     product_id String NOT NULL,
-    buyer_id String NOT NULL,
+    user_id String NOT NULL,
     rating Double NOT NULL,
     review Utf8 NOT NULL,
     INDEX idx_product_id GLOBAL ASYNC ON (product_id)
@@ -19,7 +19,7 @@ CREATE TABLE `feedback/reviews` (
 
 ```sql
 CREATE TABLE `feedback/purchases` (
-    buyer_id String NOT NULL,
+    user_id String NOT NULL,
     product_id String NOT NULL,
     order_id String NOT NULL,
     purchased_at Datetime NOT NULL,
