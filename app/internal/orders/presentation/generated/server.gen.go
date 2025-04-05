@@ -8,19 +8,12 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"fmt"
-	"net/http"
 	"net/url"
 	"path"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gin-gonic/gin"
-	"github.com/oapi-codegen/runtime"
-	openapi_types "github.com/oapi-codegen/runtime/types"
-)
-
-const (
-	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
 // AuthenticateReq defines model for AuthenticateReq.
@@ -406,101 +399,49 @@ type Error struct {
 	Errors []Err `json:"errors"`
 }
 
-// ProductsListParams defines parameters for ProductsList.
-type ProductsListParams struct {
-	// Filter Filter, such as "seller.id=foo" or "seller.id=foo&name=bar&in_stock=*"
-	Filter *string `form:"filter,omitempty" json:"filter,omitempty"`
+// PrivateOrdersBatchCancelUnpaidOrdersJSONRequestBody defines body for PrivateOrdersBatchCancelUnpaidOrders for application/json ContentType.
+type PrivateOrdersBatchCancelUnpaidOrdersJSONRequestBody = PrivateOrderBatchCancelUnpaidOrdersReq
 
-	// MaxPageSize Max number of returned results
-	MaxPageSize   *int    `form:"maxPageSize,omitempty" json:"maxPageSize,omitempty"`
-	NextPageToken *string `form:"nextPageToken,omitempty" json:"nextPageToken,omitempty"`
-}
+// PrivateOrdersCancelOrdersJSONRequestBody defines body for PrivateOrdersCancelOrders for application/json ContentType.
+type PrivateOrdersCancelOrdersJSONRequestBody = PrivateOrderCancelOrdersReq
 
-// ProductsUploadPictureMultipartBody defines parameters for ProductsUploadPicture.
-type ProductsUploadPictureMultipartBody struct {
-	Caption *string             `json:"caption,omitempty"`
-	File    *openapi_types.File `json:"file,omitempty"`
-}
+// PrivateOrdersPublishedCartPositionsJSONRequestBody defines body for PrivateOrdersPublishedCartPositions for application/json ContentType.
+type PrivateOrdersPublishedCartPositionsJSONRequestBody = PrivateOrderProcessPublishedCartPositionsReq
 
-// ProductsReserveJSONRequestBody defines body for ProductsReserve for application/json ContentType.
-type ProductsReserveJSONRequestBody = PrivateReserveProductsReq
-
-// ProductsUnreserveJSONRequestBody defines body for ProductsUnreserve for application/json ContentType.
-type ProductsUnreserveJSONRequestBody = PrivateUnreserveProductsReq
-
-// ProductsCreateJSONRequestBody defines body for ProductsCreate for application/json ContentType.
-type ProductsCreateJSONRequestBody = CreateProductReq
-
-// ProductsUpdateJSONRequestBody defines body for ProductsUpdate for application/json ContentType.
-type ProductsUpdateJSONRequestBody = UpdateProductReq
-
-// ProductsUploadPictureMultipartRequestBody defines body for ProductsUploadPicture for multipart/form-data ContentType.
-type ProductsUploadPictureMultipartRequestBody ProductsUploadPictureMultipartBody
+// PrivateOrdersProcessReservedProductsJSONRequestBody defines body for PrivateOrdersProcessReservedProducts for application/json ContentType.
+type PrivateOrdersProcessReservedProductsJSONRequestBody = PrivateOrderProcessReservedProductsReq
 
 // Method & Path constants for routes.
-// Reserve products
-const ProductsReserveMethod = "POST"
-const ProductsReservePath = "/api/private/v1/products:reserve"
+// Batch cancel unpaid orders
+const PrivateOrdersBatchCancelUnpaidOrdersMethod = "POST"
+const PrivateOrdersBatchCancelUnpaidOrdersPath = "/api/private/v1/order:batch-cancel-unpaid-orders"
 
-// List products
-const ProductsUnreserveMethod = "POST"
-const ProductsUnreservePath = "/api/private/v1/products:unreserve"
+// Cancel orders
+const PrivateOrdersCancelOrdersMethod = "POST"
+const PrivateOrdersCancelOrdersPath = "/api/private/v1/order:cancel-orders"
 
-// List products
-const ProductsListMethod = "GET"
-const ProductsListPath = "/api/v1/products"
+// Process published cart positions
+const PrivateOrdersPublishedCartPositionsMethod = "POST"
+const PrivateOrdersPublishedCartPositionsPath = "/api/private/v1/order:process-published-cart-positions"
 
-// Create product
-const ProductsCreateMethod = "POST"
-const ProductsCreatePath = "/api/v1/products"
-
-const ProductsDeleteMethod = "DELETE"
-const ProductsDeletePath = "/api/v1/products/:product_id"
-
-// Get product
-const ProductsGetMethod = "GET"
-const ProductsGetPath = "/api/v1/products/:product_id"
-
-const ProductsUpdateMethod = "PATCH"
-const ProductsUpdatePath = "/api/v1/products/:product_id"
-
-// Upload a product picture
-const ProductsUploadPictureMethod = "POST"
-const ProductsUploadPicturePath = "/api/v1/products/:product_id/pictures"
-
-// Delete a product picture
-const ProductsDeletePictureMethod = "DELETE"
-const ProductsDeletePicturePath = "/api/v1/products/:product_id/pictures/:id"
+// Process reserved products
+const PrivateOrdersProcessReservedProductsMethod = "POST"
+const PrivateOrdersProcessReservedProductsPath = "/api/private/v1/order:process-reserved-products"
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// Reserve products
-	// (POST /api/private/v1/products:reserve)
-	ProductsReserve(c *gin.Context)
-	// List products
-	// (POST /api/private/v1/products:unreserve)
-	ProductsUnreserve(c *gin.Context)
-	// List products
-	// (GET /api/v1/products)
-	ProductsList(c *gin.Context, params ProductsListParams)
-	// Create product
-	// (POST /api/v1/products)
-	ProductsCreate(c *gin.Context)
-
-	// (DELETE /api/v1/products/{product_id})
-	ProductsDelete(c *gin.Context, productId string)
-	// Get product
-	// (GET /api/v1/products/{product_id})
-	ProductsGet(c *gin.Context, productId string)
-
-	// (PATCH /api/v1/products/{product_id})
-	ProductsUpdate(c *gin.Context, productId string)
-	// Upload a product picture
-	// (POST /api/v1/products/{product_id}/pictures)
-	ProductsUploadPicture(c *gin.Context, productId string)
-	// Delete a product picture
-	// (DELETE /api/v1/products/{product_id}/pictures/{id})
-	ProductsDeletePicture(c *gin.Context, productId string, id string)
+	// Batch cancel unpaid orders
+	// (POST /api/private/v1/order:batch-cancel-unpaid-orders)
+	PrivateOrdersBatchCancelUnpaidOrders(c *gin.Context)
+	// Cancel orders
+	// (POST /api/private/v1/order:cancel-orders)
+	PrivateOrdersCancelOrders(c *gin.Context)
+	// Process published cart positions
+	// (POST /api/private/v1/order:process-published-cart-positions)
+	PrivateOrdersPublishedCartPositions(c *gin.Context)
+	// Process reserved products
+	// (POST /api/private/v1/order:process-reserved-products)
+	PrivateOrdersProcessReservedProducts(c *gin.Context)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -512,8 +453,8 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(c *gin.Context)
 
-// ProductsReserve operation middleware
-func (siw *ServerInterfaceWrapper) ProductsReserve(c *gin.Context) {
+// PrivateOrdersBatchCancelUnpaidOrders operation middleware
+func (siw *ServerInterfaceWrapper) PrivateOrdersBatchCancelUnpaidOrders(c *gin.Context) {
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
@@ -522,11 +463,11 @@ func (siw *ServerInterfaceWrapper) ProductsReserve(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.ProductsReserve(c)
+	siw.Handler.PrivateOrdersBatchCancelUnpaidOrders(c)
 }
 
-// ProductsUnreserve operation middleware
-func (siw *ServerInterfaceWrapper) ProductsUnreserve(c *gin.Context) {
+// PrivateOrdersCancelOrders operation middleware
+func (siw *ServerInterfaceWrapper) PrivateOrdersCancelOrders(c *gin.Context) {
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
@@ -535,40 +476,11 @@ func (siw *ServerInterfaceWrapper) ProductsUnreserve(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.ProductsUnreserve(c)
+	siw.Handler.PrivateOrdersCancelOrders(c)
 }
 
-// ProductsList operation middleware
-func (siw *ServerInterfaceWrapper) ProductsList(c *gin.Context) {
-
-	var err error
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ProductsListParams
-
-	// ------------- Optional query parameter "filter" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "filter", c.Request.URL.Query(), &params.Filter)
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter filter: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	// ------------- Optional query parameter "maxPageSize" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "maxPageSize", c.Request.URL.Query(), &params.MaxPageSize)
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter maxPageSize: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	// ------------- Optional query parameter "nextPageToken" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "nextPageToken", c.Request.URL.Query(), &params.NextPageToken)
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter nextPageToken: %w", err), http.StatusBadRequest)
-		return
-	}
+// PrivateOrdersPublishedCartPositions operation middleware
+func (siw *ServerInterfaceWrapper) PrivateOrdersPublishedCartPositions(c *gin.Context) {
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
@@ -577,13 +489,11 @@ func (siw *ServerInterfaceWrapper) ProductsList(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.ProductsList(c, params)
+	siw.Handler.PrivateOrdersPublishedCartPositions(c)
 }
 
-// ProductsCreate operation middleware
-func (siw *ServerInterfaceWrapper) ProductsCreate(c *gin.Context) {
-
-	c.Set(BearerAuthScopes, []string{})
+// PrivateOrdersProcessReservedProducts operation middleware
+func (siw *ServerInterfaceWrapper) PrivateOrdersProcessReservedProducts(c *gin.Context) {
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
@@ -592,144 +502,7 @@ func (siw *ServerInterfaceWrapper) ProductsCreate(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.ProductsCreate(c)
-}
-
-// ProductsDelete operation middleware
-func (siw *ServerInterfaceWrapper) ProductsDelete(c *gin.Context) {
-
-	var err error
-
-	// ------------- Path parameter "product_id" -------------
-	var productId string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "product_id", c.Param("product_id"), &productId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter product_id: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	c.Set(BearerAuthScopes, []string{})
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.ProductsDelete(c, productId)
-}
-
-// ProductsGet operation middleware
-func (siw *ServerInterfaceWrapper) ProductsGet(c *gin.Context) {
-
-	var err error
-
-	// ------------- Path parameter "product_id" -------------
-	var productId string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "product_id", c.Param("product_id"), &productId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter product_id: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.ProductsGet(c, productId)
-}
-
-// ProductsUpdate operation middleware
-func (siw *ServerInterfaceWrapper) ProductsUpdate(c *gin.Context) {
-
-	var err error
-
-	// ------------- Path parameter "product_id" -------------
-	var productId string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "product_id", c.Param("product_id"), &productId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter product_id: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	c.Set(BearerAuthScopes, []string{})
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.ProductsUpdate(c, productId)
-}
-
-// ProductsUploadPicture operation middleware
-func (siw *ServerInterfaceWrapper) ProductsUploadPicture(c *gin.Context) {
-
-	var err error
-
-	// ------------- Path parameter "product_id" -------------
-	var productId string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "product_id", c.Param("product_id"), &productId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter product_id: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	c.Set(BearerAuthScopes, []string{})
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.ProductsUploadPicture(c, productId)
-}
-
-// ProductsDeletePicture operation middleware
-func (siw *ServerInterfaceWrapper) ProductsDeletePicture(c *gin.Context) {
-
-	var err error
-
-	// ------------- Path parameter "product_id" -------------
-	var productId string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "product_id", c.Param("product_id"), &productId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter product_id: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	// ------------- Path parameter "id" -------------
-	var id string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	c.Set(BearerAuthScopes, []string{})
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.ProductsDeletePicture(c, productId, id)
+	siw.Handler.PrivateOrdersProcessReservedProducts(c)
 }
 
 // GinServerOptions provides options for the Gin server.
@@ -759,63 +532,50 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
-	router.POST(options.BaseURL+"/api/private/v1/products:reserve", wrapper.ProductsReserve)
-	router.POST(options.BaseURL+"/api/private/v1/products:unreserve", wrapper.ProductsUnreserve)
-	router.GET(options.BaseURL+"/api/v1/products", wrapper.ProductsList)
-	router.POST(options.BaseURL+"/api/v1/products", wrapper.ProductsCreate)
-	router.DELETE(options.BaseURL+"/api/v1/products/:product_id", wrapper.ProductsDelete)
-	router.GET(options.BaseURL+"/api/v1/products/:product_id", wrapper.ProductsGet)
-	router.PATCH(options.BaseURL+"/api/v1/products/:product_id", wrapper.ProductsUpdate)
-	router.POST(options.BaseURL+"/api/v1/products/:product_id/pictures", wrapper.ProductsUploadPicture)
-	router.DELETE(options.BaseURL+"/api/v1/products/:product_id/pictures/:id", wrapper.ProductsDeletePicture)
+	router.POST(options.BaseURL+"/api/private/v1/order:batch-cancel-unpaid-orders", wrapper.PrivateOrdersBatchCancelUnpaidOrders)
+	router.POST(options.BaseURL+"/api/private/v1/order:cancel-orders", wrapper.PrivateOrdersCancelOrders)
+	router.POST(options.BaseURL+"/api/private/v1/order:process-published-cart-positions", wrapper.PrivateOrdersPublishedCartPositions)
+	router.POST(options.BaseURL+"/api/private/v1/order:process-reserved-products", wrapper.PrivateOrdersProcessReservedProducts)
 }
 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

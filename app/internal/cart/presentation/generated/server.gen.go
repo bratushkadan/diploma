@@ -211,15 +211,18 @@ type ListProductsResProduct struct {
 	SellerId   string  `json:"seller_id"`
 }
 
-// PrivateClearCartsContentsReq defines model for PrivateClearCartsContentsReq.
-type PrivateClearCartsContentsReq struct {
-	Message string `json:"message"`
+// PrivateClearCartPositionsReq defines model for PrivateClearCartPositionsReq.
+type PrivateClearCartPositionsReq struct {
+	Messages []PrivateClearCartPositionsReqMessage `json:"messages"`
 }
 
-// PrivateClearCartsContentsRes defines model for PrivateClearCartsContentsRes.
-type PrivateClearCartsContentsRes struct {
-	Message *string `json:"message,omitempty"`
+// PrivateClearCartPositionsReqMessage defines model for PrivateClearCartPositionsReqMessage.
+type PrivateClearCartPositionsReqMessage struct {
+	UserId string `json:"user_id"`
 }
+
+// PrivateClearCartPositionsRes defines model for PrivateClearCartPositionsRes.
+type PrivateClearCartPositionsRes = map[string]interface{}
 
 // PrivateFeedbackProcessCompletedOrderReq defines model for PrivateFeedbackProcessCompletedOrderReq.
 type PrivateFeedbackProcessCompletedOrderReq struct {
@@ -238,25 +241,85 @@ type PrivateFeedbackProcessCompletedOrderReqProducts struct {
 }
 
 // PrivateFeedbackProcessCompletedOrderRes defines model for PrivateFeedbackProcessCompletedOrderRes.
-type PrivateFeedbackProcessCompletedOrderRes struct {
-	Message *string `json:"message,omitempty"`
+type PrivateFeedbackProcessCompletedOrderRes = map[string]interface{}
+
+// PrivateOrderBatchCancelUnpaidOrdersReq defines model for PrivateOrderBatchCancelUnpaidOrdersReq.
+type PrivateOrderBatchCancelUnpaidOrdersReq = map[string]interface{}
+
+// PrivateOrderBatchCancelUnpaidOrdersRes defines model for PrivateOrderBatchCancelUnpaidOrdersRes.
+type PrivateOrderBatchCancelUnpaidOrdersRes = map[string]interface{}
+
+// PrivateOrderCancelOrdersReq defines model for PrivateOrderCancelOrdersReq.
+type PrivateOrderCancelOrdersReq struct {
+	OrderId string `json:"order_id"`
 }
 
-// PrivatePublishCartsContentsReq defines model for PrivatePublishCartsContentsReq.
-type PrivatePublishCartsContentsReq struct {
-	Messages []PrivatePublishCartsContentsReqItem `json:"messages"`
+// PrivateOrderCancelOrdersRes defines model for PrivateOrderCancelOrdersRes.
+type PrivateOrderCancelOrdersRes = map[string]interface{}
+
+// PrivateOrderProcessPublishedCartPositionsReq defines model for PrivateOrderProcessPublishedCartPositionsReq.
+type PrivateOrderProcessPublishedCartPositionsReq struct {
+	Messages []PrivateOrderProcessPublishedCartPositionsReqMessage `json:"messages"`
 }
 
-// PrivatePublishCartsContentsReqItem defines model for PrivatePublishCartsContentsReqItem.
-type PrivatePublishCartsContentsReqItem struct {
-	Count *int    `json:"count,omitempty"`
-	Id    *string `json:"id,omitempty"`
+// PrivateOrderProcessPublishedCartPositionsReqCartPosition defines model for PrivateOrderProcessPublishedCartPositionsReqCartPosition.
+type PrivateOrderProcessPublishedCartPositionsReqCartPosition struct {
+	Count     int    `json:"count"`
+	ProductId string `json:"product_id"`
 }
 
-// PrivatePublishCartsContentsRes defines model for PrivatePublishCartsContentsRes.
-type PrivatePublishCartsContentsRes struct {
-	Message string `json:"message"`
+// PrivateOrderProcessPublishedCartPositionsReqMessage defines model for PrivateOrderProcessPublishedCartPositionsReqMessage.
+type PrivateOrderProcessPublishedCartPositionsReqMessage struct {
+	CartPositions PrivateOrderProcessPublishedCartPositionsReqCartPosition `json:"cart_positions"`
+	OrderId       string                                                   `json:"order_id"`
 }
+
+// PrivateOrderProcessPublishedCartPositionsRes defines model for PrivateOrderProcessPublishedCartPositionsRes.
+type PrivateOrderProcessPublishedCartPositionsRes = map[string]interface{}
+
+// PrivateOrderProcessReservedProductsReq defines model for PrivateOrderProcessReservedProductsReq.
+type PrivateOrderProcessReservedProductsReq struct {
+	Messages []PrivateOrderProcessReservedProductsReqMessage `json:"messages"`
+}
+
+// PrivateOrderProcessReservedProductsReqMessage defines model for PrivateOrderProcessReservedProductsReqMessage.
+type PrivateOrderProcessReservedProductsReqMessage struct {
+	OrderId  string                                        `json:"order_id"`
+	Products PrivateOrderProcessReservedProductsReqProduct `json:"products"`
+}
+
+// PrivateOrderProcessReservedProductsReqProduct defines model for PrivateOrderProcessReservedProductsReqProduct.
+type PrivateOrderProcessReservedProductsReqProduct struct {
+	Count    int     `json:"count"`
+	Id       string  `json:"id"`
+	Name     string  `json:"name"`
+	Picture  *string `json:"picture,omitempty"`
+	Price    float64 `json:"price"`
+	SellerId string  `json:"seller_id"`
+}
+
+// PrivateOrderProcessReservedProductsRes defines model for PrivateOrderProcessReservedProductsRes.
+type PrivateOrderProcessReservedProductsRes = map[string]interface{}
+
+// PrivatePublishCartPositionsReq defines model for PrivatePublishCartPositionsReq.
+type PrivatePublishCartPositionsReq struct {
+	Messages []PrivatePublishCartPositionsReqItem `json:"messages"`
+}
+
+// PrivatePublishCartPositionsReqItem defines model for PrivatePublishCartPositionsReqItem.
+type PrivatePublishCartPositionsReqItem struct {
+	Count     int    `json:"count"`
+	ProductId string `json:"product_id"`
+}
+
+// PrivatePublishCartPositionsReqMessage defines model for PrivatePublishCartPositionsReqMessage.
+type PrivatePublishCartPositionsReqMessage struct {
+	CartPositions PrivatePublishCartPositionsReqItem `json:"cart_positions"`
+	OrderId       string                             `json:"order_id"`
+}
+
+// PrivatePublishCartPositionsRes defines model for PrivatePublishCartPositionsRes.
+type PrivatePublishCartPositionsRes = map[string]interface{}
 
 // PrivateReserveProductsReq defines model for PrivateReserveProductsReq.
 type PrivateReserveProductsReq struct {
@@ -276,13 +339,17 @@ type PrivateReserveProductsReqProduct struct {
 }
 
 // PrivateReserveProductsRes defines model for PrivateReserveProductsRes.
-type PrivateReserveProductsRes struct {
-	Message string `json:"message"`
-}
+type PrivateReserveProductsRes = map[string]interface{}
 
 // PrivateUnreserveProductsReq defines model for PrivateUnreserveProductsReq.
 type PrivateUnreserveProductsReq struct {
-	Messages []PrivateReserveProductsReqProduct `json:"messages"`
+	Messages []PrivateUnreserveProductsReqMessage `json:"messages"`
+}
+
+// PrivateUnreserveProductsReqMessage defines model for PrivateUnreserveProductsReqMessage.
+type PrivateUnreserveProductsReqMessage struct {
+	OrderId  string                             `json:"order_id"`
+	Products []PrivateReserveProductsReqProduct `json:"products"`
 }
 
 // PrivateUnreserveProductsReqProduct defines model for PrivateUnreserveProductsReqProduct.
@@ -292,9 +359,7 @@ type PrivateUnreserveProductsReqProduct struct {
 }
 
 // PrivateUnreserveProductsRes defines model for PrivateUnreserveProductsRes.
-type PrivateUnreserveProductsRes struct {
-	Message string `json:"message"`
-}
+type PrivateUnreserveProductsRes = map[string]interface{}
 
 // ReplaceRefreshTokenReq defines model for ReplaceRefreshTokenReq.
 type ReplaceRefreshTokenReq struct {
@@ -347,19 +412,19 @@ type CartSetCartPositionParams struct {
 }
 
 // CartsClearContentsJSONRequestBody defines body for CartsClearContents for application/json ContentType.
-type CartsClearContentsJSONRequestBody = PrivateClearCartsContentsReq
+type CartsClearContentsJSONRequestBody = PrivateClearCartPositionsReq
 
-// CartsPublishContentsJSONRequestBody defines body for CartsPublishContents for application/json ContentType.
-type CartsPublishContentsJSONRequestBody = PrivatePublishCartsContentsReq
+// PrivateCartPublishContentsJSONRequestBody defines body for PrivateCartPublishContents for application/json ContentType.
+type PrivateCartPublishContentsJSONRequestBody = PrivatePublishCartPositionsReq
 
 // Method & Path constants for routes.
 // Clear carts contents
 const CartsClearContentsMethod = "POST"
 const CartsClearContentsPath = "/api/private/v1/cart:clear-contents"
 
-// Publish carts contents as events/messages
-const CartsPublishContentsMethod = "POST"
-const CartsPublishContentsPath = "/api/private/v1/cart:publish-contents"
+// Publish carts contents
+const PrivateCartPublishContentsMethod = "POST"
+const PrivateCartPublishContentsPath = "/api/private/v1/cart:publish-contents"
 
 // Clear cart
 const CartClearCartMethod = "DELETE"
@@ -382,9 +447,9 @@ type ServerInterface interface {
 	// Clear carts contents
 	// (POST /api/private/v1/cart:clear-contents)
 	CartsClearContents(c *gin.Context)
-	// Publish carts contents as events/messages
+	// Publish carts contents
 	// (POST /api/private/v1/cart:publish-contents)
-	CartsPublishContents(c *gin.Context)
+	PrivateCartPublishContents(c *gin.Context)
 	// Clear cart
 	// (DELETE /api/v1/cart/{user_id}/positions)
 	CartClearCart(c *gin.Context, userId string)
@@ -421,8 +486,8 @@ func (siw *ServerInterfaceWrapper) CartsClearContents(c *gin.Context) {
 	siw.Handler.CartsClearContents(c)
 }
 
-// CartsPublishContents operation middleware
-func (siw *ServerInterfaceWrapper) CartsPublishContents(c *gin.Context) {
+// PrivateCartPublishContents operation middleware
+func (siw *ServerInterfaceWrapper) PrivateCartPublishContents(c *gin.Context) {
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
@@ -431,7 +496,7 @@ func (siw *ServerInterfaceWrapper) CartsPublishContents(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.CartsPublishContents(c)
+	siw.Handler.PrivateCartPublishContents(c)
 }
 
 // CartClearCart operation middleware
@@ -602,7 +667,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	}
 
 	router.POST(options.BaseURL+"/api/private/v1/cart:clear-contents", wrapper.CartsClearContents)
-	router.POST(options.BaseURL+"/api/private/v1/cart:publish-contents", wrapper.CartsPublishContents)
+	router.POST(options.BaseURL+"/api/private/v1/cart:publish-contents", wrapper.PrivateCartPublishContents)
 	router.DELETE(options.BaseURL+"/api/v1/cart/:user_id/positions", wrapper.CartClearCart)
 	router.GET(options.BaseURL+"/api/v1/cart/:user_id/positions", wrapper.CartGetCartPositions)
 	router.DELETE(options.BaseURL+"/api/v1/cart/:user_id/positions/:product_id", wrapper.CartDeleteCartPosition)
@@ -612,41 +677,44 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"/u3Opz8/AAA=",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
