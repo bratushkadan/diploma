@@ -13,7 +13,10 @@ CREATE TABLE `feedback/reviews` (
     user_id String NOT NULL,
     rating Double NOT NULL,
     review Utf8 NOT NULL,
+    created_at Datetime NOT NULL,
+    updated_at Datetime NOT NULL,
     INDEX idx_product_id GLOBAL ASYNC ON (product_id)
+    INDEX idx_created_at GLOBAL ASYNC ON (created_at)
 );
 ```
 

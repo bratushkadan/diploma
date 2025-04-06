@@ -3,8 +3,6 @@ locals {
 
   api_gateway = {
     spec_options = {
-      auth_email_confirmation_api_endpoint = local.auth_email_confirmation_api_endpoint
-
       containers = {
         auth = {
           account = {

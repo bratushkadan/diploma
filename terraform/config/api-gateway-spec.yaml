@@ -18,6 +18,7 @@ tags:
     description: Product reviews service
 
 paths:
+  ### Users
   # TODO:
   # /api/v1/users/
   #  get: # List
@@ -265,6 +266,7 @@ paths:
         type: serverless_containers
         container_id: '${containers.auth.email_confirmation.id}'
         service_account_id: '${containers.auth.email_confirmation.sa_id}'
+  ### Products
   /api/private/v1/products:reserve:
     x-private-api: true
     post:
@@ -861,15 +863,34 @@ paths:
                 $ref: '#/components/schemas/PrivateOrderBatchCancelUnpaidOrdersRes'
         default:
           $ref: '#/components/responses/Error'
-  # GetOrderOperation, CreateOrderOperation
-  # /api/v1/order/operations/{operation_id}
-  # ListOrderOperations
-  # /api/v1/order/operations/
+  # GetOrderOperation
+  /api/v1/order/operations/{operation_id}:
+    get:
+      # AUTH
+      # OrdersGetOperationRes
   # GetOrder, UpdateOrder (change state, e.g. cancel, promote to new state, etc)
-  # /api/v1/order/orders/{order_id}
-  # ListOrders
-  # /api/v1/order/orders/
-  # ProcessPayment (process payment, thus change order's status)
+  /api/v1/order/orders/{order_id}:
+    get:
+      # AUTH
+      # OrdersGetOrderRes
+    patch:
+      # AUTH
+      # OrdersUpdateOrderReq
+      # OrdersUpdateOrderRes
+  # CreateOrder, ListOrders
+  /api/v1/order/orders:
+    get:
+      {}
+      # AUTH
+      # OrdersListOrdersRes
+    post:
+      {}
+      # AUTH
+      # no req required, user_id will be inferred from the
+      # auth token
+      # OrdersCreateOrderRes
+  # TODO:
+  # ProcessPayment (process payment, thus change status of an order)
   # /api/v1/order/processPayment/{provider} (e.g. yoomoney)
 
   ### Feedback
@@ -895,14 +916,31 @@ paths:
                 $ref: '#/components/schemas/PrivateFeedbackProcessCompletedOrderRes'
         default:
           $ref: '#/components/responses/Error'
-  # (?) ListRating - get rating by list of ids (max 20)
-  # /api/v1/feedback/products/rating
+  /api/v1/feedback/products/rating:
+    get:
+      # @ ListRatings - get rating by list of ids (max 20)
+      # FeedbackListProductRatingsRes
   # GetRating
-  # /api/v1/feedback/products/{product_id}/rating
-  # GetReviews, AddReview (rating + text)
-  # /api/v1/feedback/products/{product_id}/reviews
+  /api/v1/feedback/products/{product_id}/rating:
+    get:
+      # FeedbackGetProductRatingRes
+  # ListReviews (max 20), AddReview (rating + text)
+  /api/v1/feedback/products/{product_id}/reviews:
+    get:
+      # FeedbackListProductReviewsRes
+    post:
+      # FeedbackCreateProductReviewReq
+      # FeedbackCreateProductReviewRes
   # GetReview, EditReview (rating + text), DeleteReview
-  # /api/v1/feedback/reviews/{product_id}/reviews/{review_id}
+  /api/v1/feedback/reviews/{product_id}/reviews/{review_id}:
+    get:
+      # FeedbackGetProductReviewRes
+    patch:
+      # FeedbackUpdateProductReviewReq
+      # FeedbackUpdateProductReviewRes
+    delete:
+      # FeedbackDeleteProductReviewRes
+
 components:
   securitySchemes:
     # TODO: jwtHeaderAuth
@@ -1226,11 +1264,11 @@ components:
         - private_api
       type: object
       required:
-        - order_id
+        - operation_id
         - products
       additionalProperties: false
       properties:
-        order_id:
+        operation_id:
           type: string
         products:
           $ref: '#/components/schemas/PrivateReserveProductsReqProduct'
@@ -1457,17 +1495,17 @@ components:
         messages:
           type: array
           items:
-            $ref: '#/components/schemas/PrivatePublishCartPositionsReqItem'
+            $ref: '#/components/schemas/PrivatePublishCartPositionsReqMessage'
     PrivatePublishCartPositionsReqMessage:
       x-tags:
         - private_api
       type: object
       required:
-        - order_id
+        - operation_id
         - cart_positions
       additionalProperties: false
       properties:
-        order_id:
+        operation_id:
           type: string
         cart_positions:
           $ref: '#/components/schemas/PrivatePublishCartPositionsReqItem'
@@ -1637,6 +1675,172 @@ components:
       type: object
     # TODO:
     # PrivateOrderProcessProductsReservationFailureReq:
+    OrdersGetOperationRes:
+      type: object
+      required:
+        - id
+        - type
+        - status
+        - created_at
+        - updated_at
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        order_id:
+          type: string
+    OrdersGetOrderRes:
+      type: object
+      required:
+        - id
+        - user_id
+        - status
+        - items
+        - created_at
+        - updated_at
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        status:
+          type: string
+        items:
+          $ref: '#/components/schemas/OrdersGetOrderResItem'
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    OrdersGetOrderResItem:
+      type: object
+      required:
+        - product_id
+        - seller_id
+        - name
+        - count
+        - price
+      additionalProperties: false
+      properties:
+        product_id:
+          type: string
+        seller_id:
+          type: string
+        name:
+          type: string
+        count:
+          type: integer
+        price:
+          type: number
+          format: double
+        picture_url:
+          type: string
+    OrdersUpdateOrderReq:
+      type: object
+      required:
+        - status
+      additionalProperties: false
+      properties:
+    OrdersUpdateOrderRes:
+      type: object
+      required:
+        - status
+        - updated_at
+      additionalProperties: false
+      properties:
+    OrdersListOrdersRes:
+      type: object
+      required:
+        - orders
+      additionalProperties: false
+      properties:
+        orders:
+          $ref: '#/components/schemas/OrdersListOrdersResOrder'
+    OrdersListOrdersResOrder:
+      type: object
+      required:
+        - id
+        - user_id
+        - status
+        - items
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        status:
+          type: string
+        items:
+          $ref: '#/components/schemas/OrdersListOrdersResItem'
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    OrdersListOrdersResItem:
+      type: object
+      required:
+        - product_id
+        - seller_id
+        - name
+        - count
+        - price
+      additionalProperties: false
+      properties:
+        product_id:
+          type: string
+        seller_id:
+          type: string
+        name:
+          type: string
+        count:
+          type: integer
+        price:
+          type: number
+          format: double
+        picture_url:
+          type: string
+    OrdersCreateOrderRes:
+      type: object
+      required:
+        - operation
+      additionalProperties: false
+      properties:
+        operation:
+          ref: '#/components/schemas/OrdersCreateOrderResOperation'
+    OrdersCreateOrderResOperation:
+      type: object
+      required:
+        - id
+        - type
+        - status
+        - user_id
+        - created_at
+        - updated_at
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        user_id:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        order_id:
+          type: string
 
     ### Feedback
     PrivateFeedbackProcessCompletedOrderReq:
@@ -1679,6 +1883,60 @@ components:
       x-tags:
         - private_api
       type: object
+    FeedbackListProductRatingsRes:
+      type: object
+      required:
+        -
+      additionalProperties: false
+      properties:
+    FeedbackGetProductRatingRes:
+      type: object
+      required:
+        -
+      additionalProperties: false
+      properties:
+    FeedbackListProductReviewsRes:
+      type: object
+      required:
+        -
+      additionalProperties: false
+      properties:
+    FeedbackCreateProductReviewReq:
+      type: object
+      required:
+        -
+      additionalProperties: false
+      properties:
+    FeedbackCreateProductReviewRes:
+      type: object
+      required:
+        -
+      additionalProperties: false
+      properties:
+    FeedbackGetProductReviewRes:
+      type: object
+      required:
+        -
+      additionalProperties: false
+      properties:
+    FeedbackUpdateProductReviewReq:
+      type: object
+      required:
+        -
+      additionalProperties: false
+      properties:
+    FeedbackUpdateProductReviewRes:
+      type: object
+      required:
+        -
+      additionalProperties: false
+      properties:
+    FeedbackDeleteProductReviewRes:
+      type: object
+      required:
+        -
+      additionalProperties: false
+      properties:
 
     ### Errors
     Err:

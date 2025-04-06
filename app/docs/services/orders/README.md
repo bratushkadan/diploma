@@ -15,7 +15,7 @@ CREATE TABLE `orders/orders` (
   -- For ease of designing and implementing business processes only online payments are allowed
   -- online_payment Bool NOT NULL DEFAULT false,
   status String NOT NULL,
-  PRIMARY KEY order_id,
+  PRIMARY KEY (order_id),
   INDEX idx_user_id GLOBAL ASYNC on (user_id)
 );
 ```
@@ -60,11 +60,27 @@ CREATE TABLE `orders/payments` (
 );
 ```
 
+```sql
+CREATE TABLE `orders/operations` (
+  id String NOT NULL,
+  type String NOT NULL,
+  status String NOT NULL,
+  user_id String NOT NULL,
+  order_id String,
+  created_at Timestamp NOT NULL,
+  updated_at Timestamp NOT NULL,
+  PRIMARY KEY (id),
+  INDEX idx_status GLOBAL ASYNC on (status),
+  INDEX idx_order_id GLOBAL ASYNC on (order_id)
+)
+```
+
 ## Private endpoints
 
 - Process cart contents ("cart contents" event/message)
 - Process reserved products contents ("reserved products contents" event/message)
-- Cancel unpaid orders (invoked by Serverless Trigger)
+- Cancel unpaid orders (invoked by *Timer* Serverless Trigger)
+- Update order in `cancelling` status ("unreserved products for order" event/message)
 
 ## General idea
 
