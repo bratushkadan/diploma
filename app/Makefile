@@ -40,6 +40,57 @@ migrate_products_up:
 migrate_products_up_by_one:
 	@export SERVICE=products && \ scripts/migrate up-by-one
 
+.PHONY: migrate_cart_create
+migrate_cart_create:
+	@export SERVICE=cart && \
+		sh -c "if [ -z "$$MIGRATION_NAME" ]; then echo 'Error: provide the \"MIGRATION_NAME\" env variable like MIGRATION_NAME=\"00001_create_first_table\"' >&2 && exit 1; else :; fi" && \
+		scripts/migrate create "$${MIGRATION_NAME}" sql
+.PHONY: migrate_cart_DANGER_DOWN
+migrate_cart_DANGER_DOWN:
+	@export SERVICE=cart && \
+		scripts/migrate down
+.PHONY: migrate_cart_up
+migrate_cart_up:
+	@export SERVICE=cart && \
+		scripts/migrate up
+.PHONY: migrate_cart_up_by_one
+migrate_cart_up_by_one:
+	@export SERVICE=cart && \ scripts/migrate up-by-one
+
+.PHONY: migrate_orders_create
+migrate_orders_create:
+	@export SERVICE=orders && \
+		sh -c "if [ -z "$$MIGRATION_NAME" ]; then echo 'Error: provide the \"MIGRATION_NAME\" env variable like MIGRATION_NAME=\"00001_create_first_table\"' >&2 && exit 1; else :; fi" && \
+		scripts/migrate create "$${MIGRATION_NAME}" sql
+.PHONY: migrate_orders_DANGER_DOWN
+migrate_orders_DANGER_DOWN:
+	@export SERVICE=orders && \
+		scripts/migrate down
+.PHONY: migrate_orders_up
+migrate_orders_up:
+	@export SERVICE=orders && \
+		scripts/migrate up
+.PHONY: migrate_orders_up_by_one
+migrate_orders_up_by_one:
+	@export SERVICE=orders && \ scripts/migrate up-by-one
+
+.PHONY: migrate_feedback_create
+migrate_feedback_create:
+	@export SERVICE=feedback && \
+		sh -c "if [ -z "$$MIGRATION_NAME" ]; then echo 'Error: provide the \"MIGRATION_NAME\" env variable like MIGRATION_NAME=\"00001_create_first_table\"' >&2 && exit 1; else :; fi" && \
+		scripts/migrate create "$${MIGRATION_NAME}" sql
+.PHONY: migrate_feedback_DANGER_DOWN
+migrate_feedback_DANGER_DOWN:
+	@export SERVICE=feedback && \
+		scripts/migrate down
+.PHONY: migrate_feedback_up
+migrate_feedback_up:
+	@export SERVICE=feedback && \
+		scripts/migrate up
+.PHONY: migrate_feedback_up_by_one
+migrate_feedback_up_by_one:
+	@export SERVICE=feedback && \ scripts/migrate up-by-one
+
 # API Generation requires Terraform to be applied first
 # ../terraform/tf apply -target local_file.public_private_api_oapi_spec - generates file "public_private_api_oapi_spec.yaml" to use spec from.
 
