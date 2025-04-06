@@ -174,6 +174,86 @@ type Err struct {
 	Message string `json:"message"`
 }
 
+// FeedbackCreateProductReviewReq defines model for FeedbackCreateProductReviewReq.
+type FeedbackCreateProductReviewReq struct {
+	Rating float64 `json:"rating"`
+	Review string  `json:"review"`
+}
+
+// FeedbackCreateProductReviewRes defines model for FeedbackCreateProductReviewRes.
+type FeedbackCreateProductReviewRes struct {
+	CreatedAt string  `json:"created_at"`
+	Id        string  `json:"id"`
+	ProductId string  `json:"product_id"`
+	Rating    float64 `json:"rating"`
+	Review    string  `json:"review"`
+	UpdatedAt string  `json:"updated_at"`
+	UserId    string  `json:"user_id"`
+}
+
+// FeedbackDeleteProductReviewRes defines model for FeedbackDeleteProductReviewRes.
+type FeedbackDeleteProductReviewRes struct {
+	Id string `json:"id"`
+}
+
+// FeedbackGetProductRatingRes defines model for FeedbackGetProductRatingRes.
+type FeedbackGetProductRatingRes struct {
+	ProductId string `json:"product_id"`
+	Rating    int    `json:"rating"`
+}
+
+// FeedbackGetProductReviewRes defines model for FeedbackGetProductReviewRes.
+type FeedbackGetProductReviewRes struct {
+	CreatedAt string  `json:"created_at"`
+	Id        string  `json:"id"`
+	ProductId string  `json:"product_id"`
+	Rating    float64 `json:"rating"`
+	Review    string  `json:"review"`
+	UpdatedAt string  `json:"updated_at"`
+	UserId    string  `json:"user_id"`
+}
+
+// FeedbackListProductRatingsRes defines model for FeedbackListProductRatingsRes.
+type FeedbackListProductRatingsRes struct {
+	Ratings []FeedbackListProductRatingsResRating `json:"ratings"`
+}
+
+// FeedbackListProductRatingsResRating defines model for FeedbackListProductRatingsResRating.
+type FeedbackListProductRatingsResRating struct {
+	ProductId *string `json:"product_id,omitempty"`
+	Rating    int     `json:"rating"`
+}
+
+// FeedbackListProductReviewsRes defines model for FeedbackListProductReviewsRes.
+type FeedbackListProductReviewsRes struct {
+	NextPageToken *string                               `json:"next_page_token"`
+	Reviews       []FeedbackListProductReviewsResReview `json:"reviews"`
+}
+
+// FeedbackListProductReviewsResReview defines model for FeedbackListProductReviewsResReview.
+type FeedbackListProductReviewsResReview struct {
+	CreatedAt string  `json:"created_at"`
+	Id        string  `json:"id"`
+	ProductId string  `json:"product_id"`
+	Rating    float64 `json:"rating"`
+	Review    string  `json:"review"`
+	UpdatedAt string  `json:"updated_at"`
+	UserId    string  `json:"user_id"`
+}
+
+// FeedbackUpdateProductReviewReq defines model for FeedbackUpdateProductReviewReq.
+type FeedbackUpdateProductReviewReq struct {
+	Rating *float64 `json:"rating,omitempty"`
+	Review *string  `json:"review,omitempty"`
+}
+
+// FeedbackUpdateProductReviewRes defines model for FeedbackUpdateProductReviewRes.
+type FeedbackUpdateProductReviewRes struct {
+	Id     string   `json:"id"`
+	Rating *float64 `json:"rating,omitempty"`
+	Review *string  `json:"review,omitempty"`
+}
+
 // GetProductRes defines model for GetProductRes.
 type GetProductRes struct {
 	CreatedAt   string                 `json:"created_at"`
@@ -210,6 +290,89 @@ type ListProductsResProduct struct {
 	PictureUrl string  `json:"picture_url"`
 	Price      float64 `json:"price"`
 	SellerId   string  `json:"seller_id"`
+}
+
+// OrdersCreateOrderRes defines model for OrdersCreateOrderRes.
+type OrdersCreateOrderRes struct {
+	Operation OrdersCreateOrderResOperation `json:"operation"`
+}
+
+// OrdersCreateOrderResOperation defines model for OrdersCreateOrderResOperation.
+type OrdersCreateOrderResOperation struct {
+	CreatedAt string  `json:"created_at"`
+	Id        string  `json:"id"`
+	OrderId   *string `json:"order_id,omitempty"`
+	Status    string  `json:"status"`
+	Type      string  `json:"type"`
+	UpdatedAt string  `json:"updated_at"`
+	UserId    string  `json:"user_id"`
+}
+
+// OrdersGetOperationRes defines model for OrdersGetOperationRes.
+type OrdersGetOperationRes struct {
+	CreatedAt string  `json:"created_at"`
+	Id        string  `json:"id"`
+	OrderId   *string `json:"order_id,omitempty"`
+	Status    string  `json:"status"`
+	Type      string  `json:"type"`
+	UpdatedAt string  `json:"updated_at"`
+}
+
+// OrdersGetOrderRes defines model for OrdersGetOrderRes.
+type OrdersGetOrderRes struct {
+	CreatedAt string                `json:"created_at"`
+	Id        string                `json:"id"`
+	Items     OrdersGetOrderResItem `json:"items"`
+	Status    string                `json:"status"`
+	UpdatedAt string                `json:"updated_at"`
+	UserId    string                `json:"user_id"`
+}
+
+// OrdersGetOrderResItem defines model for OrdersGetOrderResItem.
+type OrdersGetOrderResItem struct {
+	Count      int     `json:"count"`
+	Name       string  `json:"name"`
+	PictureUrl *string `json:"picture_url,omitempty"`
+	Price      float64 `json:"price"`
+	ProductId  string  `json:"product_id"`
+	SellerId   string  `json:"seller_id"`
+}
+
+// OrdersListOrdersRes defines model for OrdersListOrdersRes.
+type OrdersListOrdersRes struct {
+	NextPageToken *string                  `json:"next_page_token"`
+	Orders        OrdersListOrdersResOrder `json:"orders"`
+}
+
+// OrdersListOrdersResItem defines model for OrdersListOrdersResItem.
+type OrdersListOrdersResItem struct {
+	Count      int     `json:"count"`
+	Name       string  `json:"name"`
+	PictureUrl *string `json:"picture_url,omitempty"`
+	Price      float64 `json:"price"`
+	ProductId  string  `json:"product_id"`
+	SellerId   string  `json:"seller_id"`
+}
+
+// OrdersListOrdersResOrder defines model for OrdersListOrdersResOrder.
+type OrdersListOrdersResOrder struct {
+	CreatedAt *string                 `json:"created_at,omitempty"`
+	Id        string                  `json:"id"`
+	Items     OrdersListOrdersResItem `json:"items"`
+	Status    string                  `json:"status"`
+	UpdatedAt *string                 `json:"updated_at,omitempty"`
+	UserId    string                  `json:"user_id"`
+}
+
+// OrdersUpdateOrderReq defines model for OrdersUpdateOrderReq.
+type OrdersUpdateOrderReq struct {
+	Status string `json:"status"`
+}
+
+// OrdersUpdateOrderRes defines model for OrdersUpdateOrderRes.
+type OrdersUpdateOrderRes struct {
+	Status    string `json:"status"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 // PrivateClearCartPositionsReq defines model for PrivateClearCartPositionsReq.
@@ -304,7 +467,7 @@ type PrivateOrderProcessReservedProductsRes = map[string]interface{}
 
 // PrivatePublishCartPositionsReq defines model for PrivatePublishCartPositionsReq.
 type PrivatePublishCartPositionsReq struct {
-	Messages []PrivatePublishCartPositionsReqItem `json:"messages"`
+	Messages []PrivatePublishCartPositionsReqMessage `json:"messages"`
 }
 
 // PrivatePublishCartPositionsReqItem defines model for PrivatePublishCartPositionsReqItem.
@@ -316,7 +479,7 @@ type PrivatePublishCartPositionsReqItem struct {
 // PrivatePublishCartPositionsReqMessage defines model for PrivatePublishCartPositionsReqMessage.
 type PrivatePublishCartPositionsReqMessage struct {
 	CartPositions PrivatePublishCartPositionsReqItem `json:"cart_positions"`
-	OrderId       string                             `json:"order_id"`
+	OperationId   string                             `json:"operation_id"`
 }
 
 // PrivatePublishCartPositionsRes defines model for PrivatePublishCartPositionsRes.
@@ -329,8 +492,8 @@ type PrivateReserveProductsReq struct {
 
 // PrivateReserveProductsReqMessage defines model for PrivateReserveProductsReqMessage.
 type PrivateReserveProductsReqMessage struct {
-	OrderId  string                           `json:"order_id"`
-	Products PrivateReserveProductsReqProduct `json:"products"`
+	OperationId string                           `json:"operation_id"`
+	Products    PrivateReserveProductsReqProduct `json:"products"`
 }
 
 // PrivateReserveProductsReqProduct defines model for PrivateReserveProductsReqProduct.
@@ -773,49 +936,57 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"W/Fo837zvwAAAP//LBiX8+RqAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

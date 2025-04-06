@@ -15,6 +15,8 @@ CREATE TABLE `orders/orders` (
   -- For ease of designing and implementing business processes only online payments are allowed
   -- online_payment Bool NOT NULL DEFAULT false,
   status String NOT NULL,
+  created_at Datetime NOT NULL,
+  updated_at Datetime NOT NULL,
   PRIMARY KEY (order_id),
   INDEX idx_user_id GLOBAL ASYNC on (user_id)
 );
@@ -27,8 +29,8 @@ CREATE TABLE `orders/order_items` (
   name Utf8 NOT NULL,
   seller_id Utf8 NOT NULL,
   count Uint32 NOT NULL,
-  Price Double NOT NULL,
-  Picture Utf8,
+  price Double NOT NULL,
+  picture Utf8,
   PRIMARY KEY (order_id, product_id)
 )
 ```

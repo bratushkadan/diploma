@@ -8,12 +8,18 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"net/url"
 	"path"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gin-gonic/gin"
+	"github.com/oapi-codegen/runtime"
+)
+
+const (
+	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
 // AuthenticateReq defines model for AuthenticateReq.
@@ -167,6 +173,86 @@ type Err struct {
 	Message string `json:"message"`
 }
 
+// FeedbackCreateProductReviewReq defines model for FeedbackCreateProductReviewReq.
+type FeedbackCreateProductReviewReq struct {
+	Rating float64 `json:"rating"`
+	Review string  `json:"review"`
+}
+
+// FeedbackCreateProductReviewRes defines model for FeedbackCreateProductReviewRes.
+type FeedbackCreateProductReviewRes struct {
+	CreatedAt string  `json:"created_at"`
+	Id        string  `json:"id"`
+	ProductId string  `json:"product_id"`
+	Rating    float64 `json:"rating"`
+	Review    string  `json:"review"`
+	UpdatedAt string  `json:"updated_at"`
+	UserId    string  `json:"user_id"`
+}
+
+// FeedbackDeleteProductReviewRes defines model for FeedbackDeleteProductReviewRes.
+type FeedbackDeleteProductReviewRes struct {
+	Id string `json:"id"`
+}
+
+// FeedbackGetProductRatingRes defines model for FeedbackGetProductRatingRes.
+type FeedbackGetProductRatingRes struct {
+	ProductId string `json:"product_id"`
+	Rating    int    `json:"rating"`
+}
+
+// FeedbackGetProductReviewRes defines model for FeedbackGetProductReviewRes.
+type FeedbackGetProductReviewRes struct {
+	CreatedAt string  `json:"created_at"`
+	Id        string  `json:"id"`
+	ProductId string  `json:"product_id"`
+	Rating    float64 `json:"rating"`
+	Review    string  `json:"review"`
+	UpdatedAt string  `json:"updated_at"`
+	UserId    string  `json:"user_id"`
+}
+
+// FeedbackListProductRatingsRes defines model for FeedbackListProductRatingsRes.
+type FeedbackListProductRatingsRes struct {
+	Ratings []FeedbackListProductRatingsResRating `json:"ratings"`
+}
+
+// FeedbackListProductRatingsResRating defines model for FeedbackListProductRatingsResRating.
+type FeedbackListProductRatingsResRating struct {
+	ProductId *string `json:"product_id,omitempty"`
+	Rating    int     `json:"rating"`
+}
+
+// FeedbackListProductReviewsRes defines model for FeedbackListProductReviewsRes.
+type FeedbackListProductReviewsRes struct {
+	NextPageToken *string                               `json:"next_page_token"`
+	Reviews       []FeedbackListProductReviewsResReview `json:"reviews"`
+}
+
+// FeedbackListProductReviewsResReview defines model for FeedbackListProductReviewsResReview.
+type FeedbackListProductReviewsResReview struct {
+	CreatedAt string  `json:"created_at"`
+	Id        string  `json:"id"`
+	ProductId string  `json:"product_id"`
+	Rating    float64 `json:"rating"`
+	Review    string  `json:"review"`
+	UpdatedAt string  `json:"updated_at"`
+	UserId    string  `json:"user_id"`
+}
+
+// FeedbackUpdateProductReviewReq defines model for FeedbackUpdateProductReviewReq.
+type FeedbackUpdateProductReviewReq struct {
+	Rating *float64 `json:"rating,omitempty"`
+	Review *string  `json:"review,omitempty"`
+}
+
+// FeedbackUpdateProductReviewRes defines model for FeedbackUpdateProductReviewRes.
+type FeedbackUpdateProductReviewRes struct {
+	Id     string   `json:"id"`
+	Rating *float64 `json:"rating,omitempty"`
+	Review *string  `json:"review,omitempty"`
+}
+
 // GetProductRes defines model for GetProductRes.
 type GetProductRes struct {
 	CreatedAt   string                 `json:"created_at"`
@@ -203,6 +289,89 @@ type ListProductsResProduct struct {
 	PictureUrl string  `json:"picture_url"`
 	Price      float64 `json:"price"`
 	SellerId   string  `json:"seller_id"`
+}
+
+// OrdersCreateOrderRes defines model for OrdersCreateOrderRes.
+type OrdersCreateOrderRes struct {
+	Operation OrdersCreateOrderResOperation `json:"operation"`
+}
+
+// OrdersCreateOrderResOperation defines model for OrdersCreateOrderResOperation.
+type OrdersCreateOrderResOperation struct {
+	CreatedAt string  `json:"created_at"`
+	Id        string  `json:"id"`
+	OrderId   *string `json:"order_id,omitempty"`
+	Status    string  `json:"status"`
+	Type      string  `json:"type"`
+	UpdatedAt string  `json:"updated_at"`
+	UserId    string  `json:"user_id"`
+}
+
+// OrdersGetOperationRes defines model for OrdersGetOperationRes.
+type OrdersGetOperationRes struct {
+	CreatedAt string  `json:"created_at"`
+	Id        string  `json:"id"`
+	OrderId   *string `json:"order_id,omitempty"`
+	Status    string  `json:"status"`
+	Type      string  `json:"type"`
+	UpdatedAt string  `json:"updated_at"`
+}
+
+// OrdersGetOrderRes defines model for OrdersGetOrderRes.
+type OrdersGetOrderRes struct {
+	CreatedAt string                `json:"created_at"`
+	Id        string                `json:"id"`
+	Items     OrdersGetOrderResItem `json:"items"`
+	Status    string                `json:"status"`
+	UpdatedAt string                `json:"updated_at"`
+	UserId    string                `json:"user_id"`
+}
+
+// OrdersGetOrderResItem defines model for OrdersGetOrderResItem.
+type OrdersGetOrderResItem struct {
+	Count      int     `json:"count"`
+	Name       string  `json:"name"`
+	PictureUrl *string `json:"picture_url,omitempty"`
+	Price      float64 `json:"price"`
+	ProductId  string  `json:"product_id"`
+	SellerId   string  `json:"seller_id"`
+}
+
+// OrdersListOrdersRes defines model for OrdersListOrdersRes.
+type OrdersListOrdersRes struct {
+	NextPageToken *string                  `json:"next_page_token"`
+	Orders        OrdersListOrdersResOrder `json:"orders"`
+}
+
+// OrdersListOrdersResItem defines model for OrdersListOrdersResItem.
+type OrdersListOrdersResItem struct {
+	Count      int     `json:"count"`
+	Name       string  `json:"name"`
+	PictureUrl *string `json:"picture_url,omitempty"`
+	Price      float64 `json:"price"`
+	ProductId  string  `json:"product_id"`
+	SellerId   string  `json:"seller_id"`
+}
+
+// OrdersListOrdersResOrder defines model for OrdersListOrdersResOrder.
+type OrdersListOrdersResOrder struct {
+	CreatedAt *string                 `json:"created_at,omitempty"`
+	Id        string                  `json:"id"`
+	Items     OrdersListOrdersResItem `json:"items"`
+	Status    string                  `json:"status"`
+	UpdatedAt *string                 `json:"updated_at,omitempty"`
+	UserId    string                  `json:"user_id"`
+}
+
+// OrdersUpdateOrderReq defines model for OrdersUpdateOrderReq.
+type OrdersUpdateOrderReq struct {
+	Status string `json:"status"`
+}
+
+// OrdersUpdateOrderRes defines model for OrdersUpdateOrderRes.
+type OrdersUpdateOrderRes struct {
+	Status    string `json:"status"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 // PrivateClearCartPositionsReq defines model for PrivateClearCartPositionsReq.
@@ -297,7 +466,7 @@ type PrivateOrderProcessReservedProductsRes = map[string]interface{}
 
 // PrivatePublishCartPositionsReq defines model for PrivatePublishCartPositionsReq.
 type PrivatePublishCartPositionsReq struct {
-	Messages []PrivatePublishCartPositionsReqItem `json:"messages"`
+	Messages []PrivatePublishCartPositionsReqMessage `json:"messages"`
 }
 
 // PrivatePublishCartPositionsReqItem defines model for PrivatePublishCartPositionsReqItem.
@@ -309,7 +478,7 @@ type PrivatePublishCartPositionsReqItem struct {
 // PrivatePublishCartPositionsReqMessage defines model for PrivatePublishCartPositionsReqMessage.
 type PrivatePublishCartPositionsReqMessage struct {
 	CartPositions PrivatePublishCartPositionsReqItem `json:"cart_positions"`
-	OrderId       string                             `json:"order_id"`
+	OperationId   string                             `json:"operation_id"`
 }
 
 // PrivatePublishCartPositionsRes defines model for PrivatePublishCartPositionsRes.
@@ -322,8 +491,8 @@ type PrivateReserveProductsReq struct {
 
 // PrivateReserveProductsReqMessage defines model for PrivateReserveProductsReqMessage.
 type PrivateReserveProductsReqMessage struct {
-	OrderId  string                           `json:"order_id"`
-	Products PrivateReserveProductsReqProduct `json:"products"`
+	OperationId string                           `json:"operation_id"`
+	Products    PrivateReserveProductsReqProduct `json:"products"`
 }
 
 // PrivateReserveProductsReqProduct defines model for PrivateReserveProductsReqProduct.
@@ -399,6 +568,16 @@ type Error struct {
 	Errors []Err `json:"errors"`
 }
 
+// OrdersListOrdersParams defines parameters for OrdersListOrders.
+type OrdersListOrdersParams struct {
+	NextPageToken *string `form:"next_page_token,omitempty" json:"next_page_token,omitempty"`
+}
+
+// OrdersCreateOrderParams defines parameters for OrdersCreateOrder.
+type OrdersCreateOrderParams struct {
+	NextPageToken *string `form:"next_page_token,omitempty" json:"next_page_token,omitempty"`
+}
+
 // PrivateOrdersBatchCancelUnpaidOrdersJSONRequestBody defines body for PrivateOrdersBatchCancelUnpaidOrders for application/json ContentType.
 type PrivateOrdersBatchCancelUnpaidOrdersJSONRequestBody = PrivateOrderBatchCancelUnpaidOrdersReq
 
@@ -410,6 +589,9 @@ type PrivateOrdersPublishedCartPositionsJSONRequestBody = PrivateOrderProcessPub
 
 // PrivateOrdersProcessReservedProductsJSONRequestBody defines body for PrivateOrdersProcessReservedProducts for application/json ContentType.
 type PrivateOrdersProcessReservedProductsJSONRequestBody = PrivateOrderProcessReservedProductsReq
+
+// OrdersUpdateOrderJSONRequestBody defines body for OrdersUpdateOrder for application/json ContentType.
+type OrdersUpdateOrderJSONRequestBody = OrdersUpdateOrderReq
 
 // Method & Path constants for routes.
 // Batch cancel unpaid orders
@@ -428,6 +610,26 @@ const PrivateOrdersPublishedCartPositionsPath = "/api/private/v1/order:process-p
 const PrivateOrdersProcessReservedProductsMethod = "POST"
 const PrivateOrdersProcessReservedProductsPath = "/api/private/v1/order:process-reserved-products"
 
+// Get orders operation
+const OrdersGetOperationMethod = "GET"
+const OrdersGetOperationPath = "/api/v1/order/operations/:operation_id"
+
+// List orders
+const OrdersListOrdersMethod = "GET"
+const OrdersListOrdersPath = "/api/v1/order/orders"
+
+// Create order
+const OrdersCreateOrderMethod = "POST"
+const OrdersCreateOrderPath = "/api/v1/order/orders"
+
+// Get order
+const OrdersGetOrderMethod = "GET"
+const OrdersGetOrderPath = "/api/v1/order/orders/:order_id"
+
+// Update order
+const OrdersUpdateOrderMethod = "PATCH"
+const OrdersUpdateOrderPath = "/api/v1/order/orders/:order_id"
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Batch cancel unpaid orders
@@ -442,6 +644,21 @@ type ServerInterface interface {
 	// Process reserved products
 	// (POST /api/private/v1/order:process-reserved-products)
 	PrivateOrdersProcessReservedProducts(c *gin.Context)
+	// Get orders operation
+	// (GET /api/v1/order/operations/{operation_id})
+	OrdersGetOperation(c *gin.Context, operationId string)
+	// List orders
+	// (GET /api/v1/order/orders)
+	OrdersListOrders(c *gin.Context, params OrdersListOrdersParams)
+	// Create order
+	// (POST /api/v1/order/orders)
+	OrdersCreateOrder(c *gin.Context, params OrdersCreateOrderParams)
+	// Get order
+	// (GET /api/v1/order/orders/{order_id})
+	OrdersGetOrder(c *gin.Context, orderId string)
+	// Update order
+	// (PATCH /api/v1/order/orders/{order_id})
+	OrdersUpdateOrder(c *gin.Context, orderId string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -505,6 +722,140 @@ func (siw *ServerInterfaceWrapper) PrivateOrdersProcessReservedProducts(c *gin.C
 	siw.Handler.PrivateOrdersProcessReservedProducts(c)
 }
 
+// OrdersGetOperation operation middleware
+func (siw *ServerInterfaceWrapper) OrdersGetOperation(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "operation_id" -------------
+	var operationId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "operation_id", c.Param("operation_id"), &operationId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter operation_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.OrdersGetOperation(c, operationId)
+}
+
+// OrdersListOrders operation middleware
+func (siw *ServerInterfaceWrapper) OrdersListOrders(c *gin.Context) {
+
+	var err error
+
+	c.Set(BearerAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params OrdersListOrdersParams
+
+	// ------------- Optional query parameter "next_page_token" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "next_page_token", c.Request.URL.Query(), &params.NextPageToken)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter next_page_token: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.OrdersListOrders(c, params)
+}
+
+// OrdersCreateOrder operation middleware
+func (siw *ServerInterfaceWrapper) OrdersCreateOrder(c *gin.Context) {
+
+	var err error
+
+	c.Set(BearerAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params OrdersCreateOrderParams
+
+	// ------------- Optional query parameter "next_page_token" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "next_page_token", c.Request.URL.Query(), &params.NextPageToken)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter next_page_token: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.OrdersCreateOrder(c, params)
+}
+
+// OrdersGetOrder operation middleware
+func (siw *ServerInterfaceWrapper) OrdersGetOrder(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "order_id" -------------
+	var orderId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "order_id", c.Param("order_id"), &orderId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter order_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.OrdersGetOrder(c, orderId)
+}
+
+// OrdersUpdateOrder operation middleware
+func (siw *ServerInterfaceWrapper) OrdersUpdateOrder(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "order_id" -------------
+	var orderId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "order_id", c.Param("order_id"), &orderId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter order_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.OrdersUpdateOrder(c, orderId)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -536,46 +887,64 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/api/private/v1/order:cancel-orders", wrapper.PrivateOrdersCancelOrders)
 	router.POST(options.BaseURL+"/api/private/v1/order:process-published-cart-positions", wrapper.PrivateOrdersPublishedCartPositions)
 	router.POST(options.BaseURL+"/api/private/v1/order:process-reserved-products", wrapper.PrivateOrdersProcessReservedProducts)
+	router.GET(options.BaseURL+"/api/v1/order/operations/:operation_id", wrapper.OrdersGetOperation)
+	router.GET(options.BaseURL+"/api/v1/order/orders", wrapper.OrdersListOrders)
+	router.POST(options.BaseURL+"/api/v1/order/orders", wrapper.OrdersCreateOrder)
+	router.GET(options.BaseURL+"/api/v1/order/orders/:order_id", wrapper.OrdersGetOrder)
+	router.PATCH(options.BaseURL+"/api/v1/order/orders/:order_id", wrapper.OrdersUpdateOrder)
 }
 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"H4sIAAAAAAAC/+xd2Y/buBn/VwS2D11Ajie7aFP4LZumQdBdZDBJgAJJYHCkzzYTXSGpSaYD/+8FD0mU",
+	"RFmULMtOMG8amcd3/L6Lh+YBBWmcpQkknKHVA6LAsjRhIP94SWlKxUOQJhwSLh5xlkUkwJykyfIzSxPx",
+	"jgU7iLH8NQyJ+AlH1zTNgHIiRtrgiIGPMuPVAwIxuHwiHGL58FcKG7RCf1lWNC3V2Gz5klK09xG/zwCt",
+	"EKYU36P93kcUvuaEQohWH4ohP5XN0tvPEHC0Fw1DYAElmaAOrVRTOYCeQMz/POc7SLhgD27g61CGYkwi",
+	"8aAnZ5ySZCuIzjBj31IaWn5sciDHMHq0efEbZLKhZH7PCAW2xtxKK4UNBbZb8/QLJP0E15v75ug20l9g",
+	"yl9EgKl4GE57CBFwCNdZymQXd/g0J77WI/Riqj2lC1/l8MP4C9I8MdVCEg5bkMDPaBrmAV8TBxQZbX09",
+	"ZhfR/5LsiaeC5OO14qIL67yVUnqUMIydH0YZr4CbpLPhqhhnGJZ5ne2j3y4OjX7pGnlbp324QhjwQXbR",
+	"nrDTKGpDuzPwg8ie4yjdvoIRQSKB73yd4S1UMSzJowjfRoBWnObgWyK0ImuI2RgEXqve/bZSzOK3iOwV",
+	"QjHHMFlYVeKjBMdgz1RIwHMKyqub+VJORVriIEcSyN6blMYiw0BhmosOZdskj2+BtkQj8SDJKgaxSoQC",
+	"5vA8CICxd0Juw7O0o/IbR5qGIhbLzp0k+YdztgbFtcH6EzJJvQbXcGnWQGIhPAaOQ8yx8WM1dzcKnVHk",
+	"I8bT4IvNLzXEorFlEmyQV4zTD75SVEOVHMjuYVfe3SfJDkseKWBl5r1e7hXwit/rotNQDUEUAV13MNCp",
+	"Px/lWdgtMZv/qGby7fou+T6get/UVI2IblC8lRM/D2RAG25FvfavGJMJnmPJ2a1651pUS9ChJG0lJpJa",
+	"v86Xs/TYZHV3hxA6Q083ie/ZEeo9qZYK9RSx89DCgYWXyxK2Kt+0y9H+ZjiNLnkoCfsJmHXml5QOzshD",
+	"sDvOGBjDWwdtyCGq9ja6/g0Q3uLgSyP63RH4NiL5wlyQ4RY3qJzEIUVTg5YdBnMxcSTvCHQHqyR/ItH0",
+	"BE0f5awrFNsMtVatFV39lsSHhcxCFw1bG6eLIyyuoMNIciRfI1Zdxqs2xt9JnMdo9XcfxSRRz1d+XzZb",
+	"U4we35HHR9CfE/R/EFZH24hFPkWJ+1rFwbnVU+/SRTHnYN5uShVftEE52JDJnoQAm2dtSuHtOHWX9Kqn",
+	"fnXrOd0WqlxmfPQ2Z/A272WzS0nahpHJplnqPEnK2ZFR1JZLHpeHHpeHkE1C0+A6p5Ej26KlK23uUcbK",
+	"WSus+MiICexC93IaJJ5oN6djlln2c9Z2tExnqAd2c0yrK0zIJMsmqzc0BMpUsS6fhyNHPGOXXVfbXG/K",
+	"zk3OqmFd6X5jEnLyFCgVs3Y7U8xzZv1JvTh1siOblHSY+c4Qp6qk/Ap4Kdq5ytl5pesiwXFyG2dS42Tm",
+	"5IJbpL3mEPcIdVJkVkgsRasIP1LEko/JTlrM4ud7qqgBYaBW21iyL8XpoT1XJU8ROtXTPBmENHNHzNZo",
+	"kw/tmKGGc0sTLKM+YmhqDCk9XZj3a+v8Evxft0RV1a4d3dBFhU6+mnvJqp0jFWwqKoZF5iqfORwdrim5",
+	"wxzKg8LGkcih8tNbdu5FzqG5/9T7f30VTzlpizkffV9wvGXKYuVMa5wR9KmH6z+rncoBzDtDu2g4Fb2s",
+	"vY7iMFKxzHVN0wAYe5HGmTzOPNJ0xqq+j4xZUOBKxMBi71Bebq4HTCCmooY/tB5QedOSslMI69rgbIY9",
+	"0+MpHmc/svPvmAe7FzgJIHqfZJiERaj8eoIxj6BTDVcjbhog25LKscCyUHoEy1rZ1/ltRNgOwjOFNida",
+	"ZnFyTpSYf1/uWfypuB3n1wNMef2y11Q4qEn/8MpO88xUnSZ/AkvsIfZ407wBBvQOwmr9+RxGaaFidnM8",
+	"QMP5Uo4eAssNie6EYzIMHph+Mh91xKWUWTcwhq82HC3scaauHceZ4m7H7LOYdsfc066YnSGm9sh0hih6",
+	"SLIiXhZbL27JqtnabxI0nYDGmY82w/mDY3viWYyme9qRW6wThcE2XV2Rr4Gncp5ppDFPwLNFnPEOo8XF",
+	"OFN4n9BzGYNt6lnM4dDEJ8oJj3MSrgdUSnKOtBCbgH5EG7HwMdBKbiCLcAA36lLwpdxAtlL1Q30WpnEA",
+	"tF+iMUnMt08v9F7yOoRITVK/Tf9uBx6OBZC9dON9RCTxZPuPyNOW6kmYe8EOJ1vwPSB8B9RLN6uPycJT",
+	"qdMdrFSvYijCPJIEFDCD0Pubql48CpF4wbw4pVCMzn4RwySwxfZhQiiHEa7Ky3Ia7MTfvyDrSfo+hbKf",
+	"RaEdF80t/EcpDk9ykfH4o5+yFA5ySvj9WxFr1GS3gCnQ5znfyakFTHeAQ3mRVwkQ/Xchfk4p+R/WJ2aL",
+	"+JOR/8C9+s4WSTapJI/wSPz2Mkhj7/n1a+SjO6BMGcDVk6dPrnQdkQjvukK/Pbl6ciVvsPKdJGiJM7LU",
+	"Hnh593QpqoZVEAGmC/09Mtns+0K3WchxOM1h79s7Z6poGNF9o/c1luosxypTBfw6KDY41mlxpMBtQNl8",
+	"dYt5sFsEciF+kcstiEV1+CRLGW/7Drlp4ak+nurjlSdMysT4dYhWtSUH1rHZgRRsgPHf0/B+0MfeXFe2",
+	"Dmzd7PcKt8ZH5369upqXCmb7Ply3lL1Sxh7jmHKvoF4d09/gPOJddJWMLl9W35/L4xjT+z7NFimJfiGy",
+	"kSFI0xjrA5eSjxOezO2jGUDU3FebETnNjTILXEy5TQeIpjaOxIB2Wous2GdYCK+4qK0M2WGh1yu9sqcn",
+	"enq1XZBupNj3NWbATO/G5Iwg6t3jsaDqukPcntYkSbbTgc1BxxPhT1dh4cIsiQ8Dr+jimXseBxBnX1+f",
+	"D3K2Dbf5wWbbX7DA7KYp3JPiy6bK0cAqxljpUd0TsLJnnrj11Unk8kEf7tkvTcfp0Gr5UG0O7Jtd5Jfe",
+	"6i/LnLMgtTbAsrzYOKBLeZPY1kf/au2yfFAPbdKlypalLbLlg7k4KxqjLfDacrG01/YlDpn7UxwDlynK",
+	"h6YvENnQxuM7qDIw5KtCRdQMVZnSWB2uqiJ13Lsyp2YF9emE5mm/tGKxxjfNLDPD96KYHGuAutKTAjVr",
+	"vA+fBL+Vfb4C3spwLaYpLPM+EOaxxRy+4fuFLISrK05CWpgkeiEUyX1UekcCWGP10SH1Hn+GZ0CeZV/+",
+	"EWW/Xm2+/vPZb5uqoJQGSSNVYunx5M3S5uR3OCIh5uoz1foPuDGdvLThfRuxZSas4VnXwh+E8a40uHlc",
+	"uw1cCcqvOdD7CpXNw//nBWL9SkUXDOfCXl3aPwnk/K4aS14kUOx2YMu4QfgjgqtxcfPc6GoI/Of2aMuH",
+	"YtvHJfbaEVbXlSpqZSi1Bdtqk+nSAu2l4K+MrD+Vb8M82LWdm1r41wshC71/4TGOOXT4OuMCz7mQOH1J",
+	"aL0hdeIC0Hof6tzYN/HwU/peYw3D8vZAzWcv0YxPrzi3XT60BhfVJ1uusPGfQqwNgjTZEBqvy896NiUS",
+	"6P/REgPfpSETdfybt+/kiVOyFUZY+IPmwM2vYtunL1rpcwFdLWpfiLW2o+09cNFuX0Ku6UuMf6Iil/IV",
+	"qipvIkSH9r5lQUotkbQ6lEBod9Ifcm/3Kep+WxfKbe0ptzTWJWOrubayTi48Xd23exaLAmj/af//AAAA",
+	"//+Icxx0I2gAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
