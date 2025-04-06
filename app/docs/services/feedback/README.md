@@ -15,8 +15,7 @@ CREATE TABLE `feedback/reviews` (
     review Utf8 NOT NULL,
     created_at Datetime NOT NULL,
     updated_at Datetime NOT NULL,
-    INDEX idx_product_id GLOBAL ASYNC ON (product_id)
-    INDEX idx_created_at GLOBAL ASYNC ON (created_at)
+    INDEX idx_product_created_at GLOBAL ASYNC ON (product_id, created_at)
 );
 ```
 
