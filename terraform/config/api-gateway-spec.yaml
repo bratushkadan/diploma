@@ -1886,57 +1886,173 @@ components:
     FeedbackListProductRatingsRes:
       type: object
       required:
-        -
+        - ratings
       additionalProperties: false
       properties:
+        ratings:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeedbackListProductRatingsResRating'
+    FeedbackListProductRatingsResRating:
+      type: object
+      required:
+        - rating
+      additionalProperties: false
+      properties:
+        product_id:
+          type: string
+        rating:
+          type: integer
+          format: double
+          minimum: 0
+          maximum: 5.0
     FeedbackGetProductRatingRes:
       type: object
       required:
-        -
+        - product_id
+        - rating
       additionalProperties: false
       properties:
+        product_id:
+          type: string
+        rating:
+          type: integer
+          format: double
+          minimum: 0
+          maximum: 5.0
     FeedbackListProductReviewsRes:
       type: object
       required:
-        -
+        - reviews
       additionalProperties: false
       properties:
+        reviews:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeedbackListProductReviewsResReview'
+    FeedbackListProductReviewsResReview:
+      type: object
+      required:
+        - id
+        - product_id
+        - user_id
+        - rating
+        - review
+        - created_at
+        - updated_at
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        product_id:
+          type: string
+        user_id:
+          type: string
+        rating:
+          type: number
+          format: double
+        review:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
     FeedbackCreateProductReviewReq:
       type: object
       required:
-        -
+        - rating
+        - review
       additionalProperties: false
       properties:
+        rating:
+          type: number
+          format: double
+        review:
+          type: string
     FeedbackCreateProductReviewRes:
       type: object
       required:
-        -
+        - id
+        - product_id
+        - user_id
+        - rating
+        - review
+        - created_at
+        - updated_at
       additionalProperties: false
       properties:
+        id:
+          type: string
+        product_id:
+          type: string
+        user_id:
+          type: string
+        rating:
+          type: number
+          format: double
+        review:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
     FeedbackGetProductReviewRes:
       type: object
       required:
-        -
+        - id
+        - product_id
+        - user_id
+        - rating
+        - review
+        - created_at
+        - updated_at
       additionalProperties: false
       properties:
+        id:
+          type: string
+        product_id:
+          type: string
+        user_id:
+          type: string
+        rating:
+          type: number
+          format: double
+        review:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
     FeedbackUpdateProductReviewReq:
       type: object
-      required:
-        -
       additionalProperties: false
       properties:
+        rating:
+          type: number
+          format: double
+        review:
+          type: string
     FeedbackUpdateProductReviewRes:
       type: object
       required:
-        -
+        - id
       additionalProperties: false
       properties:
+        id:
+          type: string
+        rating:
+          type: number
+          format: double
+        review:
+          type: string
     FeedbackDeleteProductReviewRes:
       type: object
       required:
-        -
+        - id
       additionalProperties: false
       properties:
+        id:
+          type: string
 
     ### Errors
     Err:
