@@ -15,10 +15,10 @@ locals {
       account            = "0.0.7"
       email_confirmation = "0.0.7"
     }
-    products = "0.0.1-rc"
+    products = "0.0.1-fake"
     catalog  = "0.0.3"
-    cart     = ""
-    orders   = ""
+    cart     = "0.0.1-fake"
+    orders   = "0.0.1-fake"
     feedback = ""
   }
 
@@ -154,6 +154,9 @@ locals {
     }
     products = []
     catalog  = []
+    cart     = []
+    orders   = []
+    feedback = []
   }
 }
 
@@ -383,5 +386,265 @@ resource "yandex_function_trigger" "catalog" {
     service_account_id = yandex_iam_service_account.app.id
     batch_cutoff       = "1"
     batch_size         = 50
+  }
+}
+
+resource "yandex_serverless_container" "cart" {
+  count = local.containers.cart.count
+
+  name        = "cart"
+  description = "cart container"
+
+  cores              = 1
+  core_fraction      = 50
+  memory             = 128
+  execution_timeout  = "10s"
+  service_account_id = yandex_iam_service_account.app.id
+  runtime {
+    type = "http"
+  }
+
+  image {
+    url = "cr.yandex/${yandex_container_repository.cart_repository.name}:${local.versions.cart}"
+    environment = {
+    }
+  }
+
+  dynamic "secrets" {
+    for_each = toset(local.lockbox.cart)
+    content {
+      id                   = secrets.value.id
+      version_id           = secrets.value.version_id
+      key                  = secrets.value.key
+      environment_variable = secrets.value.environment_variable
+    }
+  }
+
+  depends_on = [
+    yandex_resourcemanager_folder_iam_member.app_lockbox_payload_viewer,
+    yandex_resourcemanager_folder_iam_member.app_images_puller,
+  ]
+}
+
+resource "yandex_serverless_container_iam_binding" "cart_sls_container_invoker" {
+  count        = local.containers.cart.count
+  container_id = yandex_serverless_container.cart[0].id
+  role         = "serverless.containers.invoker"
+
+  members = [
+    "serviceAccount:${yandex_iam_service_account.auth_caller.id}",
+  ]
+}
+
+resource "yandex_function_trigger" "cart_contents_publish_requests" {
+  count       = local.containers.cart.count
+  name        = "cart-contents-publish-requests"
+  description = "trigger for directing cart contents publish requests to cart service"
+
+  container {
+    id                 = yandex_serverless_container.cart[0].id
+    service_account_id = yandex_iam_service_account.auth_caller.id
+    path               = "/api/internal/v1/cart:publish-contents"
+  }
+
+  data_streams {
+    database           = yandex_ydb_database_serverless.this.database_path
+    stream_name        = yandex_ydb_topic.cart_contents_publish_requests.name
+    service_account_id = yandex_iam_service_account.app.id
+    batch_cutoff       = "1"
+    batch_size         = 1
+  }
+}
+resource "yandex_function_trigger" "cart_clear_requests" {
+  count       = local.containers.cart.count
+  name        = "cart-clear-requests"
+  description = "trigger for directing cart cart clear requests to cart service"
+
+  container {
+    id                 = yandex_serverless_container.cart[0].id
+    service_account_id = yandex_iam_service_account.auth_caller.id
+    path               = "/api/internal/v1/cart:clear-contents"
+  }
+
+  data_streams {
+    database           = yandex_ydb_database_serverless.this.database_path
+    stream_name        = yandex_ydb_topic.cart_clear_requests.name
+    service_account_id = yandex_iam_service_account.app.id
+    batch_cutoff       = "1"
+    batch_size         = 1
+  }
+}
+resource "yandex_function_trigger" "cart_contents" {
+  count       = local.containers.orders.count
+  name        = "cart-contents"
+  description = "trigger for directing cart contents to orders service"
+
+  container {
+    id                 = yandex_serverless_container.orders[0].id
+    service_account_id = yandex_iam_service_account.auth_caller.id
+    path               = "/api/internal/v1/order:process-published-cart-positions"
+  }
+
+  data_streams {
+    database           = yandex_ydb_database_serverless.this.database_path
+    stream_name        = yandex_ydb_topic.cart_contents.name
+    service_account_id = yandex_iam_service_account.app.id
+    batch_cutoff       = "1"
+    batch_size         = 1
+  }
+}
+
+
+resource "yandex_serverless_container" "orders" {
+  count = local.containers.orders.count
+
+  name        = "orders"
+  description = "orders container"
+
+  cores              = 1
+  core_fraction      = 50
+  memory             = 128
+  execution_timeout  = "10s"
+  service_account_id = yandex_iam_service_account.app.id
+  runtime {
+    type = "http"
+  }
+
+  image {
+    url = "cr.yandex/${yandex_container_repository.orders_repository.name}:${local.versions.orders}"
+    environment = {
+    }
+  }
+
+  dynamic "secrets" {
+    for_each = toset(local.lockbox.orders)
+    content {
+      id                   = secrets.value.id
+      version_id           = secrets.value.version_id
+      key                  = secrets.value.key
+      environment_variable = secrets.value.environment_variable
+    }
+  }
+
+  depends_on = [
+    yandex_resourcemanager_folder_iam_member.app_lockbox_payload_viewer,
+    yandex_resourcemanager_folder_iam_member.app_images_puller,
+  ]
+}
+
+resource "yandex_serverless_container_iam_binding" "orders_sls_container_invoker" {
+  count        = local.containers.orders.count
+  container_id = yandex_serverless_container.orders[0].id
+  role         = "serverless.containers.invoker"
+
+  members = [
+    "serviceAccount:${yandex_iam_service_account.auth_caller.id}",
+  ]
+}
+
+resource "yandex_function_trigger" "products_reserved_to_orders" {
+  count       = local.containers.orders.count
+  name        = "products-reserved-to-orders"
+  description = "trigger for directing products reserved payload to orders service"
+
+  container {
+    id                 = yandex_serverless_container.orders[0].id
+    service_account_id = yandex_iam_service_account.auth_caller.id
+    path               = "/api/internal/v1/order:process-reserved-products"
+  }
+
+  data_streams {
+    database           = yandex_ydb_database_serverless.this.database_path
+    stream_name        = yandex_ydb_topic.products_reserved.name
+    service_account_id = yandex_iam_service_account.app.id
+    batch_cutoff       = "1"
+    batch_size         = 1
+  }
+}
+
+resource "yandex_serverless_container" "products" {
+  count = local.containers.products.count
+
+  name        = "products"
+  description = "products container"
+
+  cores              = 1
+  core_fraction      = 50
+  memory             = 128
+  execution_timeout  = "10s"
+  service_account_id = yandex_iam_service_account.app.id
+  runtime {
+    type = "http"
+  }
+
+  image {
+    url = "cr.yandex/${yandex_container_repository.products_repository.name}:${local.versions.products}"
+    environment = {
+    }
+  }
+
+  dynamic "secrets" {
+    for_each = toset(local.lockbox.products)
+    content {
+      id                   = secrets.value.id
+      version_id           = secrets.value.version_id
+      key                  = secrets.value.key
+      environment_variable = secrets.value.environment_variable
+    }
+  }
+
+  depends_on = [
+    yandex_resourcemanager_folder_iam_member.app_lockbox_payload_viewer,
+    yandex_resourcemanager_folder_iam_member.app_images_puller,
+  ]
+}
+
+resource "yandex_serverless_container_iam_binding" "products_sls_container_invoker" {
+  count        = local.containers.products.count
+  container_id = yandex_serverless_container.orders[0].id
+  role         = "serverless.containers.invoker"
+
+  members = [
+    "serviceAccount:${yandex_iam_service_account.auth_caller.id}",
+  ]
+}
+
+resource "yandex_function_trigger" "process_products_reservations" {
+  count       = local.containers.products.count
+  name        = "process-products-reservations"
+  description = "trigger for directing products reservations messages to products service"
+
+  container {
+    id                 = yandex_serverless_container.products[0].id
+    service_account_id = yandex_iam_service_account.auth_caller.id
+    path               = "/api/internal/v1/products:reserve"
+  }
+
+  data_streams {
+    database           = yandex_ydb_database_serverless.this.database_path
+    stream_name        = yandex_ydb_topic.products_reservations.name
+    service_account_id = yandex_iam_service_account.app.id
+    batch_cutoff       = "1"
+    batch_size         = 1
+  }
+}
+
+resource "yandex_function_trigger" "process_products_unreservations" {
+  count       = local.containers.products.count
+  name        = "process-products-unreservations"
+  description = "trigger for directing products unreservations messages to products service"
+
+  container {
+    id                 = yandex_serverless_container.products[0].id
+    service_account_id = yandex_iam_service_account.auth_caller.id
+    path               = "/api/internal/v1/products:unreserve"
+  }
+
+  data_streams {
+    database           = yandex_ydb_database_serverless.this.database_path
+    stream_name        = yandex_ydb_topic.products_unreservations.name
+    service_account_id = yandex_iam_service_account.app.id
+    batch_cutoff       = "1"
+    batch_size         = 1
   }
 }
