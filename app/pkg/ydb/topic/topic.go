@@ -101,7 +101,7 @@ func Produce(ctx context.Context, w *topicwriter.Writer, msgs ...[]byte) error {
 		})
 	}
 	if err := w.Write(ctx); err != nil {
-		return fmt.Errorf("failed to procude messagesto topic: %w", err)
+		return fmt.Errorf("failed to procude messages to topic: %w", err)
 	}
 	return nil
 }

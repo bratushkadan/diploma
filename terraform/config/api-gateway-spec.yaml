@@ -621,7 +621,7 @@ paths:
       description: Clear carts contents
       tags:
         - cart
-      operationId: carts_clear_contents
+      operationId: private_carts_clear_contents
       requestBody:
         content:
           application/json:
@@ -1824,26 +1824,13 @@ components:
       type: object
       required:
         - operation_id
-        - cart_positions
+        - user_id
       additionalProperties: false
       properties:
         operation_id:
           type: string
-        cart_positions:
-          $ref: '#/components/schemas/PrivatePublishCartPositionsReqItem'
-    PrivatePublishCartPositionsReqItem:
-      x-tags:
-        - private_api
-      type: object
-      required:
-        - product_id
-        - count
-      additionalProperties: false
-      properties:
-        product_id:
+        user_id:
           type: string
-        count:
-          type: integer
     PrivatePublishCartPositionsRes:
       x-tags:
         - private_api
@@ -1894,12 +1881,12 @@ components:
       type: object
       required:
         - cart_positions
-        - order_id
+        - operation_id
       additionalProperties: false
       properties:
         cart_positions:
           $ref: '#/components/schemas/PrivateOrderProcessPublishedCartPositionsReqCartPosition'
-        order_id:
+        operation_id:
           type: string
     PrivateOrderProcessPublishedCartPositionsReqCartPosition:
       x-tags:

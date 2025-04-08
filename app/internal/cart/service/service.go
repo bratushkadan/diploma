@@ -1,8 +1,10 @@
 package service
 
 import (
+	"context"
 	"errors"
 
+	oapi_codegen "github.com/bratushkadan/floral/internal/cart/presentation/generated"
 	"github.com/bratushkadan/floral/internal/cart/store"
 	"go.uber.org/zap"
 )
@@ -39,4 +41,27 @@ func (b *CartBuilder) Build() (*Cart, error) {
 	}
 
 	return &b.svc, nil
+}
+
+func (c *Cart) GetCartPositions(ctx context.Context, userId string) (oapi_codegen.CartGetCartPositionsRes, error) {
+	positions, err := c.store.GetCartPositions(ctx, userId)
+	if err != nil {
+		return oapi_codegen.CartGetCartPositionsRes{}, err
+	}
+	return oapi_codegen.CartGetCartPositionsRes{Positions: positions}, nil
+}
+
+func (c *Cart) SetCartPosition(ctx context.Context, userId, productId string, count int) {
+	return c.store.SetCartPosition(ctx, userId, productId, count)
+}
+func (c *Cart) DeleteCartPosition(ctx context.Context) {}
+
+func (c *Cart) ClearCart(ctx context.Context)  {}
+func (c *Cart) ClearCarts(ctx context.Context) {}
+
+func (c *Cart) CartsPublishPositions(ctx context.Context, req oapi_codegen.PrivateCartPublishContentsJSONRequestBody) error {
+	// positions, err := c.store.GetCartPositionsMany(ctx)
+
+	// ydbtopic.Produce(ctx context.Context, w *topicwriter.Writer, msgs ...[]byte)
+	return nil
 }

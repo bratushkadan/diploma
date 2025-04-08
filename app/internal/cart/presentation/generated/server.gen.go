@@ -434,7 +434,7 @@ type PrivateOrderProcessPublishedCartPositionsReqCartPosition struct {
 // PrivateOrderProcessPublishedCartPositionsReqMessage defines model for PrivateOrderProcessPublishedCartPositionsReqMessage.
 type PrivateOrderProcessPublishedCartPositionsReqMessage struct {
 	CartPositions PrivateOrderProcessPublishedCartPositionsReqCartPosition `json:"cart_positions"`
-	OrderId       string                                                   `json:"order_id"`
+	OperationId   string                                                   `json:"operation_id"`
 }
 
 // PrivateOrderProcessPublishedCartPositionsRes defines model for PrivateOrderProcessPublishedCartPositionsRes.
@@ -469,16 +469,10 @@ type PrivatePublishCartPositionsReq struct {
 	Messages []PrivatePublishCartPositionsReqMessage `json:"messages"`
 }
 
-// PrivatePublishCartPositionsReqItem defines model for PrivatePublishCartPositionsReqItem.
-type PrivatePublishCartPositionsReqItem struct {
-	Count     int    `json:"count"`
-	ProductId string `json:"product_id"`
-}
-
 // PrivatePublishCartPositionsReqMessage defines model for PrivatePublishCartPositionsReqMessage.
 type PrivatePublishCartPositionsReqMessage struct {
-	CartPositions PrivatePublishCartPositionsReqItem `json:"cart_positions"`
-	OperationId   string                             `json:"operation_id"`
+	OperationId string `json:"operation_id"`
+	UserId      string `json:"user_id"`
 }
 
 // PrivatePublishCartPositionsRes defines model for PrivatePublishCartPositionsRes.
@@ -574,16 +568,16 @@ type CartSetCartPositionParams struct {
 	Count int `form:"count" json:"count"`
 }
 
-// CartsClearContentsJSONRequestBody defines body for CartsClearContents for application/json ContentType.
-type CartsClearContentsJSONRequestBody = PrivateClearCartPositionsReq
+// PrivateCartsClearContentsJSONRequestBody defines body for PrivateCartsClearContents for application/json ContentType.
+type PrivateCartsClearContentsJSONRequestBody = PrivateClearCartPositionsReq
 
 // PrivateCartPublishContentsJSONRequestBody defines body for PrivateCartPublishContents for application/json ContentType.
 type PrivateCartPublishContentsJSONRequestBody = PrivatePublishCartPositionsReq
 
 // Method & Path constants for routes.
 // Clear carts contents
-const CartsClearContentsMethod = "POST"
-const CartsClearContentsPath = "/api/private/v1/cart:clear-contents"
+const PrivateCartsClearContentsMethod = "POST"
+const PrivateCartsClearContentsPath = "/api/private/v1/cart:clear-contents"
 
 // Publish carts contents
 const PrivateCartPublishContentsMethod = "POST"
@@ -609,7 +603,7 @@ const CartSetCartPositionPath = "/api/v1/cart/:user_id/positions/:product_id"
 type ServerInterface interface {
 	// Clear carts contents
 	// (POST /api/private/v1/cart:clear-contents)
-	CartsClearContents(c *gin.Context)
+	PrivateCartsClearContents(c *gin.Context)
 	// Publish carts contents
 	// (POST /api/private/v1/cart:publish-contents)
 	PrivateCartPublishContents(c *gin.Context)
@@ -636,8 +630,8 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(c *gin.Context)
 
-// CartsClearContents operation middleware
-func (siw *ServerInterfaceWrapper) CartsClearContents(c *gin.Context) {
+// PrivateCartsClearContents operation middleware
+func (siw *ServerInterfaceWrapper) PrivateCartsClearContents(c *gin.Context) {
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
@@ -646,7 +640,7 @@ func (siw *ServerInterfaceWrapper) CartsClearContents(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.CartsClearContents(c)
+	siw.Handler.PrivateCartsClearContents(c)
 }
 
 // PrivateCartPublishContents operation middleware
@@ -829,7 +823,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
-	router.POST(options.BaseURL+"/api/private/v1/cart:clear-contents", wrapper.CartsClearContents)
+	router.POST(options.BaseURL+"/api/private/v1/cart:clear-contents", wrapper.PrivateCartsClearContents)
 	router.POST(options.BaseURL+"/api/private/v1/cart:publish-contents", wrapper.PrivateCartPublishContents)
 	router.DELETE(options.BaseURL+"/api/v1/cart/:user_id/positions", wrapper.CartClearCart)
 	router.GET(options.BaseURL+"/api/v1/cart/:user_id/positions", wrapper.CartGetCartPositions)
@@ -840,52 +834,51 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"BgAA///9+B/zH2IAAA==",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

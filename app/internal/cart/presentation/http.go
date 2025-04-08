@@ -18,7 +18,6 @@ type ApiImpl struct {
 }
 
 func (api *ApiImpl) CartGetCartPositions(c *gin.Context, userId string) {
-
 }
 func (api *ApiImpl) CartClearCart(c *gin.Context, userId string) {
 
@@ -30,8 +29,12 @@ func (api *ApiImpl) CartSetCartPosition(c *gin.Context, userId string, productId
 
 }
 
-func (api *ApiImpl) CartsClearContents(c *gin.Context)   {}
-func (api *ApiImpl) CartsPublishContents(c *gin.Context) {}
+func (api *ApiImpl) PrivateCartPublishContents(c *gin.Context) {
+	// oapi_codegen.PrivatePublishCartPositionsRes
+	oapi_codegen.PrivatePublishCartPositionsReq
+	oapi_codegen.PrivatePublishCartPositionsReqMessage
+}
+func (api *ApiImpl) PrivateCartsClearContents(c *gin.Context) {}
 
 func (*ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {
 	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: message}))
