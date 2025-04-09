@@ -2,7 +2,9 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 
 	oapi_codegen "github.com/bratushkadan/floral/internal/cart/presentation/generated"
 	"github.com/bratushkadan/floral/pkg/template"
@@ -135,4 +137,17 @@ RETURNING product_id, count;
 `, "{{table.cart}}", tableCart)
 
 func (c *Cart) SetCartPosition(ctx context.Context, userId, productId string, count int) (oapi_codegen.CartSetCartPositionResPosition, error) {
+}
+
+func (c *Cart) PublishCartContents(ctx context.Context, messages []oapi_codegen.PrivateOrderProcessPublishedCartPositionsReqMessage) error {
+	marshaledMessages := make([][]byte, 0, len(messages))
+	for _, message := range messages {
+		marshaledPosition, err := json.Marshal(&message)
+		if err != nil {
+			return fmt.Errorf("marshal cart contents message: %w", err)
+		}
+		marshaledMessages = append(marshaledMessages, marshaledPosition)
+	}
+
+	return ydbtopic.Produce(ctx, c.topicCartContents, marshaledMessages...)
 }

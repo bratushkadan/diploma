@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	oapi_codegen "github.com/bratushkadan/floral/internal/cart/presentation/generated"
 	"github.com/bratushkadan/floral/internal/cart/store"
@@ -43,25 +44,38 @@ func (b *CartBuilder) Build() (*Cart, error) {
 	return &b.svc, nil
 }
 
-func (c *Cart) GetCartPositions(ctx context.Context, userId string) (oapi_codegen.CartGetCartPositionsRes, error) {
+func (c *Cart) GetCartPositions(ctx context.Context, userId string) ([]oapi_codegen.CartGetCartPositionsResPosition, error) {
 	positions, err := c.store.GetCartPositions(ctx, userId)
 	if err != nil {
-		return oapi_codegen.CartGetCartPositionsRes{}, err
+		return nil, err
 	}
-	return oapi_codegen.CartGetCartPositionsRes{Positions: positions}, nil
+	return positions, nil
 }
 
-func (c *Cart) SetCartPosition(ctx context.Context, userId, productId string, count int) {
+func (c *Cart) SetCartPosition(ctx context.Context, userId, productId string, count int) (oapi_codegen.CartSetCartPositionResPosition, error) {
 	return c.store.SetCartPosition(ctx, userId, productId, count)
 }
-func (c *Cart) DeleteCartPosition(ctx context.Context) {}
+func (c *Cart) DeleteCartPosition(ctx context.Context, userId, productId string) (oapi_codegen.CartDeleteCartPositionResPosition, error) {
+	return c.store.DeleteCartPosition(ctx, userId, productId)
+}
 
-func (c *Cart) ClearCart(ctx context.Context)  {}
-func (c *Cart) ClearCarts(ctx context.Context) {}
+func (c *Cart) ClearCart(ctx context.Context, userId string) error {
+	_, err := c.store.Clear(ctx, userId)
+	return err
+}
+func (c *Cart) ClearCarts(ctx context.Context, messages []oapi_codegen.PrivateClearCartPositionsReqMessage) error {
+	return c.store.ClearMany(ctx, messages)
+}
 
-func (c *Cart) CartsPublishPositions(ctx context.Context, req oapi_codegen.PrivateCartPublishContentsJSONRequestBody) error {
-	// positions, err := c.store.GetCartPositionsMany(ctx)
+func (c *Cart) CartsPublishPositions(ctx context.Context, req oapi_codegen.PrivatePublishCartPositionsReq) error {
+	positions, err := c.store.GetCartPositionsMany(ctx, req.Messages)
+	if err != nil {
+		return fmt.Errorf("get cart positions many: %w", err)
+	}
 
-	// ydbtopic.Produce(ctx context.Context, w *topicwriter.Writer, msgs ...[]byte)
+	if err := c.store.PublishCartContents(ctx, positions); err != nil {
+		return fmt.Errorf("publish cart contents: %w", err)
+	}
+
 	return nil
 }

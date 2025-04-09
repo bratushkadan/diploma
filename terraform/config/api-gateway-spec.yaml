@@ -1749,14 +1749,7 @@ components:
           type: integer
     CartClearCartRes:
       type: object
-      required:
-        - deleted_positions
       additionalProperties: false
-      properties:
-        deleted_positions:
-          type: array
-          items:
-            $ref: '#/components/schemas/CartClearCartResPosition'
     CartClearCartResPosition:
       type: object
       required:
