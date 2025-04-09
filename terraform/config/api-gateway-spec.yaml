@@ -267,7 +267,7 @@ paths:
         container_id: '${containers.auth.email_confirmation.id}'
         service_account_id: '${containers.auth.email_confirmation.sa_id}'
   ### Products
-  /api/private/v1/products:reserve:
+  /api/private/v1/products/reserve:
     x-private-api: true
     post:
       summary: Reserve products
@@ -289,7 +289,7 @@ paths:
                 $ref: '#/components/schemas/PrivateReserveProductsRes'
         default:
           $ref: '#/components/responses/Error'
-  /api/private/v1/products:unreserve:
+  /api/private/v1/products/unreserve:
     x-private-api: true
     post:
       summary: List products
@@ -592,7 +592,7 @@ paths:
         service_account_id: '${containers.catalog.sa_id}'
 
   ### Cart
-  /api/private/v1/cart:publish-contents:
+  /api/private/v1/cart/publish-contents:
     x-private-api: true
     post:
       summary: Publish carts contents
@@ -614,7 +614,7 @@ paths:
                 $ref: '#/components/schemas/PrivatePublishCartPositionsRes'
         default:
           $ref: '#/components/responses/Error'
-  /api/private/v1/cart:clear-contents:
+  /api/private/v1/cart/clear-contents:
     x-private-api: true
     post:
       summary: Clear carts contents
@@ -775,7 +775,7 @@ paths:
         service_account_id: '${containers.cart.sa_id}'
 
   ### Order
-  /api/private/v1/order:process-published-cart-positions:
+  /api/private/v1/order/process-published-cart-positions:
     x-private-api: true
     post:
       summary: Process published cart positions
@@ -797,7 +797,7 @@ paths:
                 $ref: '#/components/schemas/PrivateOrderProcessPublishedCartPositionsRes'
         default:
           $ref: '#/components/responses/Error'
-  /api/private/v1/order:process-reserved-products:
+  /api/private/v1/order/process-reserved-products:
     x-private-api: true
     post:
       summary: Process reserved products
@@ -819,7 +819,7 @@ paths:
                 $ref: '#/components/schemas/PrivateOrderProcessReservedProductsRes'
         default:
           $ref: '#/components/responses/Error'
-  /api/private/v1/order:cancel-orders:
+  /api/private/v1/order/cancel-orders:
     x-private-api: true
     post:
       summary: Cancel orders
@@ -841,7 +841,7 @@ paths:
                 $ref: '#/components/schemas/PrivateOrderCancelOrdersRes'
         default:
           $ref: '#/components/responses/Error'
-  /api/private/v1/order:batch-cancel-unpaid-orders:
+  /api/private/v1/order/batch-cancel-unpaid-orders:
     x-private-api: true
     post:
       summary: Batch cancel unpaid orders
@@ -1023,7 +1023,7 @@ paths:
   # /api/v1/order/processPayment/{provider} (e.g. yoomoney)
 
   ### Feedback
-  /api/private/v1/feedback/orders:process_completed_order:
+  /api/private/v1/feedback/orders/process_completed_order:
     x-private-api: true
     post:
       summary: Process completed order contents

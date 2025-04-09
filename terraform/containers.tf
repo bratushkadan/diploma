@@ -444,7 +444,7 @@ resource "yandex_function_trigger" "cart_contents_publish_requests" {
   container {
     id                 = yandex_serverless_container.cart[0].id
     service_account_id = yandex_iam_service_account.auth_caller.id
-    path               = "/api/internal/v1/cart:publish-contents"
+    path               = "/api/internal/v1/cart/publish-contents"
   }
 
   data_streams {
@@ -463,7 +463,7 @@ resource "yandex_function_trigger" "cart_clear_requests" {
   container {
     id                 = yandex_serverless_container.cart[0].id
     service_account_id = yandex_iam_service_account.auth_caller.id
-    path               = "/api/internal/v1/cart:clear-contents"
+    path               = "/api/internal/v1/cart/clear-contents"
   }
 
   data_streams {
@@ -482,7 +482,7 @@ resource "yandex_function_trigger" "cart_contents" {
   container {
     id                 = yandex_serverless_container.orders[0].id
     service_account_id = yandex_iam_service_account.auth_caller.id
-    path               = "/api/internal/v1/order:process-published-cart-positions"
+    path               = "/api/internal/v1/order/process-published-cart-positions"
   }
 
   data_streams {
@@ -550,7 +550,7 @@ resource "yandex_function_trigger" "products_reserved_to_orders" {
   container {
     id                 = yandex_serverless_container.orders[0].id
     service_account_id = yandex_iam_service_account.auth_caller.id
-    path               = "/api/internal/v1/order:process-reserved-products"
+    path               = "/api/internal/v1/order/process-reserved-products"
   }
 
   data_streams {
@@ -617,7 +617,7 @@ resource "yandex_function_trigger" "process_products_reservations" {
   container {
     id                 = yandex_serverless_container.products[0].id
     service_account_id = yandex_iam_service_account.auth_caller.id
-    path               = "/api/internal/v1/products:reserve"
+    path               = "/api/internal/v1/products/reserve"
   }
 
   data_streams {
@@ -637,7 +637,7 @@ resource "yandex_function_trigger" "process_products_unreservations" {
   container {
     id                 = yandex_serverless_container.products[0].id
     service_account_id = yandex_iam_service_account.auth_caller.id
-    path               = "/api/internal/v1/products:unreserve"
+    path               = "/api/internal/v1/products/unreserve"
   }
 
   data_streams {
