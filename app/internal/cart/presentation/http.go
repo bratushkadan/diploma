@@ -2,6 +2,7 @@ package presentation
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	oapi_codegen "github.com/bratushkadan/floral/internal/cart/presentation/generated"
@@ -47,7 +48,12 @@ func (api *ApiImpl) CartDeleteCartPosition(c *gin.Context, userId string, produc
 		return
 	}
 
-	c.JSON(http.StatusOK, oapi_codegen.CartDeleteCartPositionRes{DeletedPosition: position})
+	if position == nil {
+		c.AbortWithStatusJSON(http.StatusNotFound, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: 1, Message: fmt.Sprintf("position productId=%s not found", productId)}))
+		return
+	}
+
+	c.JSON(http.StatusOK, oapi_codegen.CartDeleteCartPositionRes{DeletedPosition: *position})
 }
 func (api *ApiImpl) CartSetCartPosition(c *gin.Context, userId string, productId string, params oapi_codegen.CartSetCartPositionParams) {
 	position, err := api.CartService.SetCartPosition(c.Request.Context(), userId, productId, params.Count)

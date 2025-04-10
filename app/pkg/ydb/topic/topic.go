@@ -100,7 +100,7 @@ func Produce(ctx context.Context, w *topicwriter.Writer, msgs ...[]byte) error {
 			Data: bytes.NewReader(v),
 		})
 	}
-	if err := w.Write(ctx); err != nil {
+	if err := w.Write(ctx, wmsgs...); err != nil {
 		return fmt.Errorf("failed to procude messages to topic: %w", err)
 	}
 	return nil

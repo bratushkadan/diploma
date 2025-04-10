@@ -55,7 +55,7 @@ func (c *Cart) GetCartPositions(ctx context.Context, userId string) ([]oapi_code
 func (c *Cart) SetCartPosition(ctx context.Context, userId, productId string, count int) (oapi_codegen.CartSetCartPositionResPosition, error) {
 	return c.store.SetCartPosition(ctx, userId, productId, count)
 }
-func (c *Cart) DeleteCartPosition(ctx context.Context, userId, productId string) (oapi_codegen.CartDeleteCartPositionResPosition, error) {
+func (c *Cart) DeleteCartPosition(ctx context.Context, userId, productId string) (*oapi_codegen.CartDeleteCartPositionResPosition, error) {
 	return c.store.DeleteCartPosition(ctx, userId, productId)
 }
 

@@ -1878,7 +1878,9 @@ components:
       additionalProperties: false
       properties:
         cart_positions:
-          $ref: '#/components/schemas/PrivateOrderProcessPublishedCartPositionsReqCartPosition'
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateOrderProcessPublishedCartPositionsReqCartPosition'
         operation_id:
           type: string
     PrivateOrderProcessPublishedCartPositionsReqCartPosition:
