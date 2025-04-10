@@ -19,6 +19,9 @@ import (
 const (
 	tableProducts = "`products/products`"
 
+	topicProductsReservedProductsTopic = "products/reserved_products_topic"
+	topicOrdersCancelOperations        = "orders/cancel_operations_topic"
+
 	tableProductsIndexSellerId    = "idx_seller_id"
 	tableProductsIndexCreatedAtId = "idx_created_at_id"
 )

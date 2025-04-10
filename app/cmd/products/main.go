@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"bb.yandexcloud.net/cloud/ydb-go"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/gin-gonic/gin"
 	"github.com/ydb-platform/ydb-go-sdk/v3"

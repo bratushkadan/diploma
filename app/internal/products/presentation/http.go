@@ -607,6 +607,9 @@ func (a *ApiImpl) ProductsDeletePicture(c *gin.Context, productId string, id str
 	c.JSON(http.StatusOK, oapi_codegen.DeleteProductPictureRes{Id: id})
 }
 
+func (*ApiImpl) ProductsReserve(c *gin.Context)   {}
+func (*ApiImpl) ProductsUnreserve(c *gin.Context) {}
+
 func (*ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {
 	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: message}))
 }

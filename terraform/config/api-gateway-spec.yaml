@@ -863,6 +863,28 @@ paths:
                 $ref: '#/components/schemas/PrivateOrderBatchCancelUnpaidOrdersRes'
         default:
           $ref: '#/components/responses/Error'
+  /api/private/v1/order/operations/cancel:
+    x-private-api: true
+    post:
+      summary: Cancel order operations
+      description: Cancel order operations
+      tags:
+        - orders
+      operationId: private_orders_cancel_operations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivateOrderCancelOperationsReq'
+      responses:
+        200:
+          description: Cancel order operations res
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivateOrderCancelOperationsRes'
+        default:
+          $ref: '#/components/responses/Error'
   /api/v1/order/operations/{operation_id}:
     get:
       summary: Get orders operation
@@ -1977,8 +1999,35 @@ components:
       x-tags:
         - private_api
       type: object
-    # TODO:
-    # PrivateOrderProcessProductsReservationFailureReq:
+    PrivateOrderCancelOperationsReq:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - messages
+      additionalProperties: false
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateOrderCancelOperationsReqMessage'
+    PrivateOrderCancelOperationsReqMessage:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - operation_id
+        - details
+      additionalProperties: false
+      properties:
+        operation_id:
+          type: string
+        details:
+          type: string
+    PrivateOrderCancelOperationsRes:
+      x-tags:
+        - private_api
+      type: object
     OrdersGetOperationRes:
       type: object
       required:

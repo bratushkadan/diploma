@@ -542,6 +542,26 @@ resource "yandex_serverless_container_iam_binding" "orders_sls_container_invoker
   ]
 }
 
+resource "yandex_function_trigger" "process_orders_cancel_operations" {
+  count       = local.containers.orders.count
+  name        = "process-orders-cancel-operations"
+  description = "trigger for directing orders cancel operations messages to orders service"
+
+  container {
+    id                 = yandex_serverless_container.orders[0].id
+    service_account_id = yandex_iam_service_account.auth_caller.id
+    path               = "/api/internal/v1/order/operations/cancel"
+  }
+
+  data_streams {
+    database           = yandex_ydb_database_serverless.this.database_path
+    stream_name        = yandex_ydb_topic.orders_cancel_operations.name
+    service_account_id = yandex_iam_service_account.app.id
+    batch_cutoff       = "1"
+    batch_size         = 1
+  }
+}
+
 resource "yandex_function_trigger" "products_reserved_to_orders" {
   count       = local.containers.orders.count
   name        = "products-reserved-to-orders"
