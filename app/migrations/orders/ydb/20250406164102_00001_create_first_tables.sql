@@ -1,19 +1,19 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE `orders/orders` (
-  id String NOT NULL,
-  user_id String NOT NULL,
+  id Utf8 NOT NULL,
+  user_id Utf8 NOT NULL,
   -- For ease of designing and implementing business processes only online payments are allowed
   -- online_payment Bool NOT NULL DEFAULT false,
-  status String NOT NULL,
+  status Utf8 NOT NULL,
   created_at Datetime NOT NULL,
   updated_at Datetime NOT NULL,
   PRIMARY KEY (id),
   INDEX idx_user_id GLOBAL ASYNC on (user_id)
 );
 CREATE TABLE `orders/order_items` (
-  order_id String NOT NULL,
-  product_id String NOT NULL,
+  order_id Utf8 NOT NULL,
+  product_id Utf8 NOT NULL,
   name Utf8 NOT NULL,
   seller_id Utf8 NOT NULL,
   count Uint32 NOT NULL,
@@ -22,8 +22,8 @@ CREATE TABLE `orders/order_items` (
   PRIMARY KEY (order_id, product_id)
 );
 CREATE TABLE `orders/payments` (
-  id String NOT NULL,
-  order_id String NOT NULL,
+  id Utf8 NOT NULL,
+  order_id Utf8 NOT NULL,
   provider Json NOT NULL,
   created_at Timestamp NOT NULL,
   updated_at Timestamp NOT NULL,
@@ -32,11 +32,12 @@ CREATE TABLE `orders/payments` (
   INDEX idx_order_id GLOBAL ASYNC on (order_id)
 );
 CREATE TABLE `orders/operations` (
-  id String NOT NULL,
-  type String NOT NULL,
-  status String NOT NULL,
-  user_id String NOT NULL,
-  order_id String,
+  id Utf8 NOT NULL,
+  type Utf8 NOT NULL,
+  status Utf8 NOT NULL,
+  details Utf8,
+  user_id Utf8 NOT NULL,
+  order_id Utf8,
   created_at Timestamp NOT NULL,
   updated_at Timestamp NOT NULL,
   PRIMARY KEY (id),
