@@ -139,7 +139,7 @@ export APP_PASSWORD_HASH_SALT="$(echo $INFRA_TOKENS_SECRET | yq -M '.entries.[] 
 ### Run email-confirmation service locally
 
 ```sh
-export EMAIL_CONFIRMATION_API_ENDPOINT=/api/v1/auth/confirm-email
+export EMAIL_CONFIRMATION_API_ENDPOINT=/api/v1/auth/confirmEmail
 go run cmd/auth/email-confirmation/main.go
 ```
 
@@ -162,7 +162,7 @@ TARGET_EMAIL= go run cmd/auth/account-creation-producer/main.go
 
 4\. Run email confirmation service in window 3:
 ```sh
-export EMAIL_CONFIRMATION_API_ENDPOINT=/api/v1/auth/confirm-email
+export EMAIL_CONFIRMATION_API_ENDPOINT=/api/v1/auth/confirmEmail
 go run cmd/auth/email-confirmation/main.go
 ```
 
@@ -205,7 +205,7 @@ go run cmd/auth/email-confirmation-consumer/main.go
 #### Run confirm email function
 
 ```sh
-CONFIRMATION_TOKEN= go run cmd/auth/confirm-email/main.go
+CONFIRMATION_TOKEN= go run cmd/auth/confirmEmail/main.go
 ```
 
 ## Build docker image locally
@@ -333,7 +333,7 @@ Sample:
 
 #### Endpoints
 
-##### `POST /api/v1/users/register`
+##### `POST /api/v1/users/createAccount`
 
 Request sample:
 ```json
@@ -352,7 +352,7 @@ Response sample:
 }
 ```
 
-##### `POST /api/v1/users/registerSeller`
+##### `POST /api/v1/users/createSellerAccount`
 
 **admin only**
 
@@ -376,7 +376,7 @@ Response sample:
 }
 ```
 
-##### `POST /api/v1/users/registerAdmin`
+##### `POST /api/v1/users/createAdminAccount`
 
 **admin only** - expose this endpoint with **extreme caution**
 

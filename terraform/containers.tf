@@ -12,12 +12,12 @@ data "yandex_lockbox_secret" "token_infra" {
 locals {
   versions = {
     auth = {
-      account            = "0.0.8"
-      email_confirmation = "0.0.8"
+      account            = "0.0.9"
+      email_confirmation = "0.0.9"
     }
     products = "0.0.2"
     catalog  = "0.0.3"
-    cart     = "0.0.1-fake"
+    cart     = "0.0.3"
     orders   = "0.0.1-fake"
     feedback = ""
   }
@@ -439,6 +439,7 @@ resource "yandex_serverless_container" "cart" {
   image {
     url = "cr.yandex/${yandex_container_repository.cart_repository.name}:${local.versions.cart}"
     environment = {
+      (local.env.YDB_ENDPOINT) = yandex_ydb_database_serverless.this.ydb_full_endpoint
     }
   }
 

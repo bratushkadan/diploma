@@ -171,7 +171,7 @@ paths:
         type: serverless_containers
         container_id: '${containers.auth.account.id}'
         service_account_id: '${containers.auth.account.sa_id}'
-  /api/v1/users/confirm_email:
+  /api/v1/auth/confirmEmail:
     x-yc-apigateway-cors:
       origin: true
       methods: POST
@@ -991,6 +991,11 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
         - name: next_page_token
           in: query
           required: false
@@ -1019,12 +1024,6 @@ paths:
         - orders
       security:
         - bearerAuth: []
-      parameters:
-        - name: next_page_token
-          in: query
-          required: false
-          schema:
-            type: string
       responses:
         200:
           description: Order payload

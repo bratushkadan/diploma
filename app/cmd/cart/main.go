@@ -24,6 +24,7 @@ import (
 	"github.com/bratushkadan/floral/pkg/cfg"
 	"github.com/bratushkadan/floral/pkg/logging"
 	xgin "github.com/bratushkadan/floral/pkg/xhttp/gin"
+	"github.com/bratushkadan/floral/pkg/xhttp/gin/middleware/auth"
 	ydbpkg "github.com/bratushkadan/floral/pkg/ydb"
 	ginzap "github.com/gin-contrib/zap"
 	middleware "github.com/oapi-codegen/gin-middleware"
@@ -95,10 +96,10 @@ func main() {
 
 	apiImpl := &presentation.ApiImpl{Logger: logger, CartService: svc}
 
-	// bearerAuthenticator, err := auth.NewJwtBearerAuthenticator(env[setup.EnvKeyAuthTokenPublicKey])
-	// if err != nil {
-	// 	logger.Fatal("failed to setup jwt bearer authenticator", zap.Error(err))
-	// }
+	bearerAuthenticator, err := auth.NewJwtBearerAuthenticator(env[setup.EnvKeyAuthTokenPublicKey])
+	if err != nil {
+		logger.Fatal("failed to setup jwt bearer authenticator", zap.Error(err))
+	}
 
 	swagger, err := oapi_codegen.GetSwagger()
 	if err != nil {
@@ -114,34 +115,36 @@ func main() {
 		},
 	}))
 
-	// authMiddleware, err := auth.NewBuilder().
-	// 	Authenticator(bearerAuthenticator).
-	// 	Routes(
-	// 		auth.NewRequiredRoute(
-	// 			oapi_codegen.CartGetCartPositionsMethod,
-	// 			oapi_codegen.CartGetCartPositionsPath,
-	// 		),
-	// 		auth.NewRequiredRoute(
-	// 			oapi_codegen.CartClearCartMethod,
-	// 			oapi_codegen.CartClearCartPath,
-	// 		),
-	// 		auth.NewRequiredRoute(
-	// 			oapi_codegen.CartSetCartPositionMethod,
-	// 			oapi_codegen.CartSetCartPositionPath,
-	// 		),
-	// 		auth.NewRequiredRoute(
-	// 			oapi_codegen.CartDeleteCartPositionMethod,
-	// 			oapi_codegen.CartDeleteCartPositionPath,
-	// 		),
-	// 	).
-	// 	Build()
-	// if err != nil {
-	// 	logger.Fatal("build auth middleware", zap.Error(err))
-	// }
+	authMiddleware, err := auth.NewBuilder().
+		Authenticator(bearerAuthenticator).
+		Routes(
+			auth.NewRequiredRoute(
+				oapi_codegen.CartGetCartPositionsMethod,
+				oapi_codegen.CartGetCartPositionsPath,
+			),
+			auth.NewRequiredRoute(
+				oapi_codegen.CartClearCartMethod,
+				oapi_codegen.CartClearCartPath,
+			),
+			auth.NewRequiredRoute(
+				oapi_codegen.CartSetCartPositionMethod,
+				oapi_codegen.CartSetCartPositionPath,
+			),
+			auth.NewRequiredRoute(
+				oapi_codegen.CartDeleteCartPositionMethod,
+				oapi_codegen.CartDeleteCartPositionPath,
+			),
+		).
+		Build()
+	if err != nil {
+		logger.Fatal("build auth middleware", zap.Error(err))
+	}
 
 	oapi_codegen.RegisterHandlersWithOptions(r, apiImpl, oapi_codegen.GinServerOptions{
 		ErrorHandler: apiImpl.ErrorHandler,
-		// Middlewares:  []oapi_codegen.MiddlewareFunc{authMiddleware},
+		Middlewares: []oapi_codegen.MiddlewareFunc{
+			authMiddleware,
+		},
 	})
 
 	r.NoRoute(xgin.HandleNotFound())

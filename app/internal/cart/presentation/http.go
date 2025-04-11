@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 
 	oapi_codegen "github.com/bratushkadan/floral/internal/cart/presentation/generated"
 	"github.com/bratushkadan/floral/internal/cart/service"
+	shared_api "github.com/bratushkadan/floral/pkg/shared/api"
 	"github.com/bratushkadan/floral/pkg/xhttp"
+	"github.com/bratushkadan/floral/pkg/xhttp/gin/middleware/auth"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -22,6 +25,27 @@ type ApiImpl struct {
 }
 
 func (api *ApiImpl) CartGetCartPositions(c *gin.Context, userId string) {
+	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "authentication problems"}},
+		})
+		return
+	}
+
+	if !slices.Contains([]string{shared_api.SubjectTypeUser, shared_api.SubjectTypeAdmin}, accessToken.SubjectType) {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
+	}
+	if accessToken.SubjectType == shared_api.SubjectTypeUser && userId != accessToken.SubjectId {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
+	}
+
 	positions, err := api.CartService.GetCartPositions(c.Request.Context(), userId)
 	if err != nil {
 		api.Logger.Error("get cart positions", zap.Error(err))
@@ -32,6 +56,27 @@ func (api *ApiImpl) CartGetCartPositions(c *gin.Context, userId string) {
 	c.JSON(http.StatusOK, oapi_codegen.CartGetCartPositionsRes{Positions: positions})
 }
 func (api *ApiImpl) CartClearCart(c *gin.Context, userId string) {
+	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "authentication problems"}},
+		})
+		return
+	}
+
+	if !slices.Contains([]string{shared_api.SubjectTypeUser, shared_api.SubjectTypeAdmin}, accessToken.SubjectType) {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
+	}
+	if accessToken.SubjectType == shared_api.SubjectTypeUser && userId != accessToken.SubjectId {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
+	}
+
 	if err := api.CartService.ClearCart(c.Request.Context(), userId); err != nil {
 		api.Logger.Error("clear cart", zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: 1, Message: err.Error()}))
@@ -41,6 +86,27 @@ func (api *ApiImpl) CartClearCart(c *gin.Context, userId string) {
 	c.JSON(http.StatusOK, oapi_codegen.CartClearCartRes{"message": "ok"})
 }
 func (api *ApiImpl) CartDeleteCartPosition(c *gin.Context, userId string, productId string) {
+	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "authentication problems"}},
+		})
+		return
+	}
+
+	if !slices.Contains([]string{shared_api.SubjectTypeUser, shared_api.SubjectTypeAdmin}, accessToken.SubjectType) {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
+	}
+	if accessToken.SubjectType == shared_api.SubjectTypeUser && userId != accessToken.SubjectId {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
+	}
+
 	position, err := api.CartService.DeleteCartPosition(c.Request.Context(), userId, productId)
 	if err != nil {
 		api.Logger.Error("delete cart position", zap.Error(err))
@@ -56,6 +122,27 @@ func (api *ApiImpl) CartDeleteCartPosition(c *gin.Context, userId string, produc
 	c.JSON(http.StatusOK, oapi_codegen.CartDeleteCartPositionRes{DeletedPosition: *position})
 }
 func (api *ApiImpl) CartSetCartPosition(c *gin.Context, userId string, productId string, params oapi_codegen.CartSetCartPositionParams) {
+	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "authentication problems"}},
+		})
+		return
+	}
+
+	if !slices.Contains([]string{shared_api.SubjectTypeUser, shared_api.SubjectTypeAdmin}, accessToken.SubjectType) {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
+	}
+	if accessToken.SubjectType == shared_api.SubjectTypeUser && userId != accessToken.SubjectId {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
+	}
+
 	position, err := api.CartService.SetCartPosition(c.Request.Context(), userId, productId, params.Count)
 	if err != nil {
 		api.Logger.Error("publish carts positions", zap.Error(err))

@@ -128,10 +128,10 @@ func main() {
 	r.Mount("/api", apiRouter)
 
 	// FIXME: delete after tests
-	v1ApiRouter.Get("/auth/confirm-email", func(w http.ResponseWriter, _ *http.Request) {
+	v1ApiRouter.Get("/auth/confirmEmail", func(w http.ResponseWriter, _ *http.Request) {
 		w.Write(confirmEmailGetHtmlPage)
 	})
-	v1ApiRouter.Post("/auth/confirm-email", httpAdapter.HandleConfirmEmail)
+	v1ApiRouter.Post("/auth/confirmEmail", httpAdapter.HandleConfirmEmail)
 	v1ApiRouter.Post("/auth/send-confirmation-email", httpAdapter.HandleSendConfirmation)
 
 	if ymqTriggerEndpointsEnabled {
