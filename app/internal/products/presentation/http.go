@@ -635,7 +635,7 @@ func (api *ApiImpl) ProductsUnreserve(c *gin.Context) {
 		return
 	}
 
-	if err := api.ProductsService.ReserveProducts(c.Request.Context(), requestBody.Messages); err != nil {
+	if err := api.ProductsService.UnreserveProducts(c.Request.Context(), requestBody.Messages); err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 0, Message: fmt.Sprintf(`failed to process unreserve products messages: %s`, err.Error())}},
 		})

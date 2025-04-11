@@ -1994,6 +1994,18 @@ components:
         - private_api
       type: object
       required:
+        - messages
+      additionalProperties: false
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateOrderProcessUnreservedProductsReqMessage'
+    PrivateOrderProcessUnreservedProductsReqMessage:
+      x-tags:
+        - private_api
+      type: object
+      required:
         - order_id
       additionalProperties: false
       properties:

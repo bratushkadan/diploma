@@ -37,6 +37,7 @@ type Products struct {
 	l  *zap.Logger
 
 	topicProductsReservedProductsTopic *topicwriter.Writer
+	topicProductsUnreservedProducts    *topicwriter.Writer
 	topicOrdersCancelOperations        *topicwriter.Writer
 }
 
@@ -73,6 +74,12 @@ func (b *ProductsBuilder) Build() (*Products, error) {
 		return nil, errors.New("setup ProductsReservedProductsTopic topic: %w")
 	}
 	b.p.topicProductsReservedProductsTopic = topicProductsReservedProductsTopic
+
+	topicProductsUnreserved, err := ydbtopic.NewProducer(b.p.db, topicProductsUnreservedTopic)
+	if err != nil {
+		return nil, errors.New("setup ProductsUnreservedTopic topic: %w")
+	}
+	b.p.topicProductsUnreservedProducts = topicProductsUnreserved
 
 	topicOrdersCancelOperations, err := ydbtopic.NewProducer(b.p.db, topicOrdersCancelOperations)
 	if err != nil {
@@ -773,7 +780,7 @@ SELECT * FROM
 (
     SELECT
         p.id AS id,
-        u.stock AS stock,
+        (p.stock + u.stock) AS stock,
         CurrentUtcDatetime() AS updated_at,
     FROM {{table.table_products}} p
     JOIN AS_TABLE($updates) u ON p.id = u.id
@@ -784,5 +791,82 @@ RETURNING id, stock, updated_at;
 )
 
 func (p *Products) UnreserveProducts(ctx context.Context, messages []oapi_codegen.PrivateUnreserveProductsReqMessage) error {
+	unreserveProductsMessages := make([]oapi_codegen.PrivateOrderProcessUnreservedProductsReqMessage, 0, len(messages))
+
+	if err := p.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		// 1. Compute
+		toUnreserve := make(map[string]uint32)
+		for _, msg := range messages {
+			unreserveProductsMessages = append(unreserveProductsMessages, oapi_codegen.PrivateOrderProcessUnreservedProductsReqMessage{
+				OrderId: msg.OrderId,
+			})
+
+			for _, product := range msg.Products {
+				count, _ := toUnreserve[product.Id]
+				toUnreserve[product.Id] = count + uint32(product.Count)
+			}
+		}
+
+		// 2. Write
+		updates := make([]types.Value, 0, len(toUnreserve))
+		for productId, count := range toUnreserve {
+			updates = append(updates, types.StructValue(
+				types.StructFieldValue("id", types.StringValueFromString(productId)),
+				types.StructFieldValue("stock", types.Uint32Value(count)),
+			))
+		}
+
+		res, err := tx.Execute(ctx, queryUnreserveProducts, table.NewQueryParameters(
+			table.ValueParam("$updates", types.ListValue(updates...)),
+		))
+
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		results := make([]any, 0)
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var row struct {
+					Id        string    `json:"id"`
+					Stock     uint32    `json:"stock"`
+					UpdatedAt time.Time `json:"updated_at"`
+				}
+				if err := res.ScanNamed(
+					named.Required("id", &row.Id),
+					named.Required("stock", &row.Stock),
+					named.Required("updated_at", &row.UpdatedAt),
+				); err != nil {
+					return err
+				}
+				results = append(results, row)
+			}
+		}
+
+		if err := res.Err(); err != nil {
+			return err
+		}
+
+		p.l.Info("unreserved", zap.Any("products", results))
+
+		// Publish
+		unreserveProductsByteMessages := make([][]byte, 0, len(messages))
+		for _, msg := range unreserveProductsMessages {
+			data, err := json.Marshal(&msg)
+			if err != nil {
+				return fmt.Errorf("serialize unreserved product message: %v", err)
+			}
+			unreserveProductsByteMessages = append(unreserveProductsByteMessages, data)
+		}
+		if err := ydbtopic.Produce(ctx, p.topicProductsUnreservedProducts, unreserveProductsByteMessages...); err != nil {
+			return fmt.Errorf("publish unreserved products messages: %v", err)
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
 	return nil
 }
