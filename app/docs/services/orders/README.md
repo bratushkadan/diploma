@@ -92,3 +92,24 @@ Orders that are older than one hour and are not paid online (if not paid by cash
 ### Setup env and run
 
 ## CURLs for testing
+
+## Build docker image locally
+
+1\. `cd app`
+2\. `go mod tidy`
+3\. `CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o bin cmd/orders/main.go`
+
+### Build for Yandex Cloud Container Registry
+
+Email confirmation:
+
+```sh
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/orders/main.go
+TAG=0.0.1
+docker build -f build/orders/Dockerfile -t "orders:${TAG}" .
+rm bin
+yc iam create-token | docker login cr.yandex -u iam --password-stdin
+TARGET="cr.yandex/$(../terraform/tf output -json -no-color | jq -cMr .container_registry.value.repository.orders.name):${TAG}"
+docker tag "orders:${TAG}" "${TARGET}"
+docker push "${TARGET}"
+```

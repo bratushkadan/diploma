@@ -24,7 +24,7 @@ paths:
   #  get: # List
   # /api/v1/users/{user_id}:
   #  get: # Get
-  /api/v1/users/:createAccount:
+  /api/v1/users/createAccount:
     post:
       summary: Create user account
       description: Create user account
@@ -54,7 +54,7 @@ paths:
         type: serverless_containers
         container_id: '${containers.auth.account.id}'
         service_account_id: '${containers.auth.account.sa_id}'
-  /api/v1/users/:createSellerAccount:
+  /api/v1/users/createSellerAccount:
     post:
       summary: Create seller account
       description: Create seller account
@@ -84,7 +84,7 @@ paths:
         type: serverless_containers
         container_id: '${containers.auth.account.id}'
         service_account_id: '${containers.auth.account.sa_id}'
-  /api/v1/users/:authenticate:
+  /api/v1/users/authenticate:
     post:
       summary: Get refresh token
       description: Authenticate
@@ -114,7 +114,7 @@ paths:
         type: serverless_containers
         container_id: '${containers.auth.account.id}'
         service_account_id: '${containers.auth.account.sa_id}'
-  /api/v1/users/:replaceRefreshToken:
+  /api/v1/users/replaceRefreshToken:
     post:
       summary: Replace refresh token
       description: Authenticate - replace old refresh token with the new one.
@@ -144,7 +144,7 @@ paths:
         type: serverless_containers
         container_id: '${containers.auth.account.id}'
         service_account_id: '${containers.auth.account.sa_id}'
-  /api/v1/users/:createAccessToken:
+  /api/v1/users/createAccessToken:
     post:
       summary: Get access token
       description: Get access token
@@ -171,7 +171,7 @@ paths:
         type: serverless_containers
         container_id: '${containers.auth.account.id}'
         service_account_id: '${containers.auth.account.sa_id}'
-  /api/v1/users/:confirm_email:
+  /api/v1/users/confirm_email:
     x-yc-apigateway-cors:
       origin: true
       methods: POST

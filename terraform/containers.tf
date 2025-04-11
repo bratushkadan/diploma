@@ -12,10 +12,10 @@ data "yandex_lockbox_secret" "token_infra" {
 locals {
   versions = {
     auth = {
-      account            = "0.0.7"
-      email_confirmation = "0.0.7"
+      account            = "0.0.8"
+      email_confirmation = "0.0.8"
     }
-    products = "0.0.1-fake"
+    products = "0.0.2"
     catalog  = "0.0.3"
     cart     = "0.0.1-fake"
     orders   = "0.0.1-fake"
@@ -57,6 +57,7 @@ locals {
     "YDB_DOC_API_ENDPOINT",
     "AWS_ACCESS_KEY_ID",
     "AWS_SECRET_ACCESS_KEY",
+    "PICTURES_BUCKET",
     "SQS_QUEUE_URL_EMAIL_CONFIRMATIONS",
     "SQS_QUEUE_URL_ACCOUNT_CREATIONS",
     "SENDER_EMAIL",
@@ -152,10 +153,41 @@ locals {
         },
       ]
     }
-    products = []
-    catalog  = []
-    cart     = []
-    orders   = []
+    products = [
+      {
+        id                   = data.yandex_lockbox_secret.app_sa_static_key.id
+        version_id           = data.yandex_lockbox_secret.app_sa_static_key.current_version[0].id
+        key                  = "access_key_id"
+        environment_variable = local.env.AWS_ACCESS_KEY_ID
+      },
+      {
+        id                   = data.yandex_lockbox_secret.app_sa_static_key.id
+        version_id           = data.yandex_lockbox_secret.app_sa_static_key.current_version[0].id
+        key                  = "secret_access_key"
+        environment_variable = local.env.AWS_SECRET_ACCESS_KEY
+      },
+      {
+        id                   = data.yandex_lockbox_secret.token_infra.id
+        version_id           = data.yandex_lockbox_secret.token_infra.current_version[0].id
+        key                  = "auth_token_public.key"
+        environment_variable = local.env.APP_AUTH_TOKEN_PUBLIC_KEY
+      },
+    ]
+    catalog = []
+    cart = [{
+      id                   = data.yandex_lockbox_secret.token_infra.id
+      version_id           = data.yandex_lockbox_secret.token_infra.current_version[0].id
+      key                  = "auth_token_public.key"
+      environment_variable = local.env.APP_AUTH_TOKEN_PUBLIC_KEY
+      },
+    ]
+    orders = [{
+      id                   = data.yandex_lockbox_secret.token_infra.id
+      version_id           = data.yandex_lockbox_secret.token_infra.current_version[0].id
+      key                  = "auth_token_public.key"
+      environment_variable = local.env.APP_AUTH_TOKEN_PUBLIC_KEY
+      },
+    ]
     feedback = []
   }
 }
@@ -303,7 +335,7 @@ resource "yandex_function_trigger" "auth_account_activation" {
   container {
     id                 = yandex_serverless_container.auth_account[0].id
     service_account_id = yandex_iam_service_account.auth_caller.id
-    path               = "/api/v1/users/:activateAccounts"
+    path               = "/api/v1/users/activateAccounts"
   }
 
   message_queue {
@@ -600,6 +632,8 @@ resource "yandex_serverless_container" "products" {
   image {
     url = "cr.yandex/${yandex_container_repository.products_repository.name}:${local.versions.products}"
     environment = {
+      (local.env.YDB_ENDPOINT)    = yandex_ydb_database_serverless.this.ydb_full_endpoint
+      (local.env.PICTURES_BUCKET) = yandex_storage_bucket.ecom.id
     }
   }
 

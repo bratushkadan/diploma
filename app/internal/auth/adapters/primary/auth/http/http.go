@@ -426,7 +426,10 @@ func (f *Http) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidCredentials) {
 			w.WriteHeader(http.StatusBadRequest)
-			if err := json.NewEncoder(w).Encode(NewHttpErrors(ErrHttpBadRequestBody)); err != nil {
+			if err := json.NewEncoder(w).Encode(NewHttpErrors(HttpError{
+				Code:    55,
+				Message: "invalid credentials",
+			})); err != nil {
 				f.l.Error("failed to encode error response", zap.Error(err))
 			}
 			return

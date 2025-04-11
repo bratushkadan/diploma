@@ -34,7 +34,7 @@ func main() {
 	senderEmail := cfg.MustEnv(setup.EnvKeySenderEmail)
 	senderPassword := cfg.MustEnv(setup.EnvKeySenderPassword)
 
-	emailConfirmationApiEndpoint := cfg.EnvDefault(setup.EnvKeyEmailConfirmationApiEndpoint, "/api/v1/auth:confirm-email")
+	emailConfirmationApiEndpoint := cfg.EnvDefault(setup.EnvKeyEmailConfirmationApiEndpoint, "/api/v1/auth/confirm-email")
 
 	logger, err := logging.NewZapConf("dev").Build()
 	if err != nil {

@@ -139,7 +139,7 @@ export APP_PASSWORD_HASH_SALT="$(echo $INFRA_TOKENS_SECRET | yq -M '.entries.[] 
 ### Run email-confirmation service locally
 
 ```sh
-export EMAIL_CONFIRMATION_API_ENDPOINT=/api/v1/auth:confirm-email
+export EMAIL_CONFIRMATION_API_ENDPOINT=/api/v1/auth/confirm-email
 go run cmd/auth/email-confirmation/main.go
 ```
 
@@ -162,7 +162,7 @@ TARGET_EMAIL= go run cmd/auth/account-creation-producer/main.go
 
 4\. Run email confirmation service in window 3:
 ```sh
-export EMAIL_CONFIRMATION_API_ENDPOINT=/api/v1/auth:confirm-email
+export EMAIL_CONFIRMATION_API_ENDPOINT=/api/v1/auth/confirm-email
 go run cmd/auth/email-confirmation/main.go
 ```
 
@@ -220,7 +220,7 @@ Account:
 
 ```sh
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/auth/account/main.go
-TAG=0.0.6
+TAG=0.0.8
 docker build -f build/auth/account.Dockerfile -t "account:${TAG}" .
 rm bin
 ```
@@ -229,7 +229,7 @@ Email confirmation:
 
 ```sh
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/auth/email-confirmation/main.go
-TAG=0.0.6
+TAG=0.0.8
 docker build -f build/auth/email_confirmation.Dockerfile -t "email-confirmation:${TAG}" .
 rm bin
 ```
@@ -257,7 +257,6 @@ TARGET="cr.yandex/$(../terraform/tf output -json -no-color | jq -cMr .container_
 docker tag "email-confirmation:${TAG}" "${TARGET}"
 docker push "${TARGET}"
 ```
-
 
 List of Auth service repositories
 
@@ -334,7 +333,7 @@ Sample:
 
 #### Endpoints
 
-##### `POST /api/v1/users/:register`
+##### `POST /api/v1/users/register`
 
 Request sample:
 ```json
@@ -353,7 +352,7 @@ Response sample:
 }
 ```
 
-##### `POST /api/v1/users/:registerSeller`
+##### `POST /api/v1/users/registerSeller`
 
 **admin only**
 
@@ -377,7 +376,7 @@ Response sample:
 }
 ```
 
-##### `POST /api/v1/users/:registerAdmin`
+##### `POST /api/v1/users/registerAdmin`
 
 **admin only** - expose this endpoint with **extreme caution**
 
@@ -401,7 +400,7 @@ Response sample:
 }
 ```
 
-##### `POST /api/v1/users/:authenticate`
+##### `POST /api/v1/users/authenticate`
 
 Request sample:
 ```json
@@ -418,7 +417,7 @@ Response sample:
 }
 ```
 
-##### `POST /api/v1/users/:renewRefreshToken`
+##### `POST /api/v1/users/renewRefreshToken`
 
 Request sample:
 ```json
@@ -434,7 +433,7 @@ Response sample:
 }
 ```
 
-##### `POST /api/v1/users/:createAccessToken`
+##### `POST /api/v1/users/createAccessToken`
 
 Request sample:
 ```json

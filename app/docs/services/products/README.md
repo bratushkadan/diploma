@@ -65,14 +65,14 @@ go run cmd/products/main.go
 curl -X POST \
   -H "Content-Type: application/json" \
   -d '{"email": "<Email>", "password": "<Password>"}' \
-  https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net/api/v1/users/:authenticate \
+  https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net/api/v1/users/authenticate \
 ```
 
 ```sh
 curl -s -X POST \
   -H "Content-Type: application/json" \
   -d '{"refresh_token": ""}' \
-  https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net/api/v1/users/:createAccessToken \
+  https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net/api/v1/users/createAccessToken \
   | jq -cMr .access_token
 ```
 
@@ -82,7 +82,7 @@ Or export it:
 ACCESS_TOKEN="$(curl -s -X POST \
   -H "Content-Type: application/json" \
   -d '{"refresh_token": ""}' \
-  https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net/api/v1/users/:createAccessToken \
+  https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net/api/v1/users/createAccessToken \
   | jq -cMr .access_token)"
 ```
 
@@ -270,4 +270,25 @@ Sample response:
 
 ```json
 {"id":"2c345e94-6409-462c-a412-bf96ae7d9f89"}
+```
+
+## Build docker image locally
+
+1\. `cd app`
+2\. `go mod tidy`
+3\. `CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o bin cmd/products/main.go`
+
+### Build for Yandex Cloud Container Registry
+
+Email confirmation:
+
+```sh
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/products/main.go
+TAG=0.0.2
+docker build -f build/products/Dockerfile -t "products:${TAG}" .
+rm bin
+yc iam create-token | docker login cr.yandex -u iam --password-stdin
+TARGET="cr.yandex/$(../terraform/tf output -json -no-color | jq -cMr .container_registry.value.repository.products.name):${TAG}"
+docker tag "products:${TAG}" "${TARGET}"
+docker push "${TARGET}"
 ```

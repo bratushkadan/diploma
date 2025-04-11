@@ -145,15 +145,15 @@ func main() {
 		})
 	})
 
-	rUsers.Post("/:createAccount", http.HandlerFunc(httpAdapter.RegisterUserHandler))
-	rUsers.Post("/:createSellerAccount", http.HandlerFunc(httpAdapter.RegisterSellerHandler))
+	rUsers.Post("/createAccount", http.HandlerFunc(httpAdapter.RegisterUserHandler))
+	rUsers.Post("/createSellerAccount", http.HandlerFunc(httpAdapter.RegisterSellerHandler))
 	// Expose this endpoint ONLY internally
-	rUsers.Post("/:createAdminAccount", http.HandlerFunc(httpAdapter.RegisterAdminHandler))
+	rUsers.Post("/createAdminAccount", http.HandlerFunc(httpAdapter.RegisterAdminHandler))
 	// Expose this endpoint ONLY internally
-	rUsers.Post("/:activateAccounts", http.HandlerFunc(httpAdapter.ActivateAccountsHandler))
-	rUsers.Post("/:authenticate", http.HandlerFunc(httpAdapter.AuthenticateHandler))
-	rUsers.Post("/:replaceRefreshToken", http.HandlerFunc(httpAdapter.ReplaceRefreshTokenHandler))
-	rUsers.Post("/:createAccessToken", http.HandlerFunc(httpAdapter.CreateAccessToken))
+	rUsers.Post("/activateAccounts", http.HandlerFunc(httpAdapter.ActivateAccountsHandler))
+	rUsers.Post("/authenticate", http.HandlerFunc(httpAdapter.AuthenticateHandler))
+	rUsers.Post("/replaceRefreshToken", http.HandlerFunc(httpAdapter.ReplaceRefreshTokenHandler))
+	rUsers.Post("/createAccessToken", http.HandlerFunc(httpAdapter.CreateAccessToken))
 
 	// Get
 	// rUsers.Get("/{id}")

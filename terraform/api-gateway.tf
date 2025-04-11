@@ -1,5 +1,5 @@
 locals {
-  auth_email_confirmation_api_endpoint = "/api/v1/auth:confirm-email"
+  auth_email_confirmation_api_endpoint = "/api/v1/auth/confirm-email"
 
   api_gateway = {
     spec_options = {
@@ -15,8 +15,7 @@ locals {
           }
         }
         products = {
-          id = ""
-          # id    = local.containers.products.count > 0 ? yandex_serverless_container.products[0].id : ""
+          id    = local.containers.products.count > 0 ? yandex_serverless_container.products[0].id : ""
           sa_id = yandex_iam_service_account.auth_caller.id
         }
         catalog = {

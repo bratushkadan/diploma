@@ -35,4 +35,36 @@ If a user has products from one seller in their cart and a product from another 
 
 ### Setup env and run
 
+```sh
+TF_OUTPUT=$(../terraform/tf output -json -no-color)
+export YDB_ENDPOINT="$(echo "${TF_OUTPUT}" | jq -cMr .ydb.value.full_endpoint)"
+export YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS="$(scripts/ydb_access_token.sh)"
+export YDB_AUTH_METHOD=environ
+INFRA_TOKENS_SECRET_ID="$(echo $TF_OUTPUT | jq -cMr .infra_tokens_lockbox_secret_id.value)"
+INFRA_TOKENS_SECRET="$(yc lockbox payload get "${INFRA_TOKENS_SECRET_ID}")"
+export APP_AUTH_TOKEN_PUBLIC_KEY="$(echo $INFRA_TOKENS_SECRET | yq -M '.entries.[] | select(.key == "auth_token_public.key").text_value')"
+go run cmd/cart/main.go
+```
+
 ## CURLs for testing
+
+## Build docker image locally
+
+1\. `cd app`
+2\. `go mod tidy`
+3\. `CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o bin cmd/cart/main.go`
+
+### Build for Yandex Cloud Container Registry
+
+Email confirmation:
+
+```sh
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/cart/main.go
+TAG=0.0.1
+docker build -f build/cart/Dockerfile -t "cart:${TAG}" .
+rm bin
+yc iam create-token | docker login cr.yandex -u iam --password-stdin
+TARGET="cr.yandex/$(../terraform/tf output -json -no-color | jq -cMr .container_registry.value.repository.cart.name):${TAG}"
+docker tag "cart:${TAG}" "${TARGET}"
+docker push "${TARGET}"
+```
