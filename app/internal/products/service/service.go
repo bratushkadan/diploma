@@ -312,6 +312,14 @@ func (s *Products) DeleteProduct(ctx context.Context, id uuid.UUID) (oapi_codege
 	return oapi_codegen.DeleteProductRes{Id: out.Id.String()}, nil
 }
 
+func (s *Products) ReserveProducts(ctx context.Context, messages []oapi_codegen.PrivateReserveProductsReqMessage) error {
+	return s.productsStore.ReserveProducts(ctx, messages)
+}
+
+func (s *Products) UnreserveProducts(ctx context.Context, messages []oapi_codegen.PrivateUnreserveProductsReqMessage) error {
+	return s.productsStore.UnreserveProducts(ctx, messages)
+}
+
 func ptr[T any](v T) *T {
 	return &v
 }

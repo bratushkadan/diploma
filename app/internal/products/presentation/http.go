@@ -1,6 +1,7 @@
 package presentation
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -607,8 +608,42 @@ func (a *ApiImpl) ProductsDeletePicture(c *gin.Context, productId string, id str
 	c.JSON(http.StatusOK, oapi_codegen.DeleteProductPictureRes{Id: id})
 }
 
-func (*ApiImpl) ProductsReserve(c *gin.Context)   {}
-func (*ApiImpl) ProductsUnreserve(c *gin.Context) {}
+func (api *ApiImpl) ProductsReserve(c *gin.Context) {
+	var requestBody oapi_codegen.PrivateReserveProductsReq
+	if err := json.NewDecoder(c.Request.Body).Decode(&requestBody); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 0, Message: fmt.Sprintf(`bad request: %s`, err.Error())}},
+		})
+		return
+	}
+
+	if err := api.ProductsService.ReserveProducts(c.Request.Context(), requestBody.Messages); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 0, Message: fmt.Sprintf(`failed to process reserve products messages: %s`, err.Error())}},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "processed reserve products requests"})
+}
+func (api *ApiImpl) ProductsUnreserve(c *gin.Context) {
+	var requestBody oapi_codegen.PrivateUnreserveProductsReq
+	if err := json.NewDecoder(c.Request.Body).Decode(&requestBody); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 0, Message: fmt.Sprintf(`bad request: %s`, err.Error())}},
+		})
+		return
+	}
+
+	if err := api.ProductsService.ReserveProducts(c.Request.Context(), requestBody.Messages); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 0, Message: fmt.Sprintf(`failed to process unreserve products messages: %s`, err.Error())}},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "processed unreserve products requests"})
+}
 
 func (*ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {
 	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: message}))

@@ -819,26 +819,26 @@ paths:
                 $ref: '#/components/schemas/PrivateOrderProcessReservedProductsRes'
         default:
           $ref: '#/components/responses/Error'
-  /api/private/v1/order/cancel-orders:
+  /api/private/v1/order/process-unreserved-products:
     x-private-api: true
     post:
-      summary: Cancel orders
-      description: Cancel orders
+      summary: Process unreserved products
+      description: Process unreserved products - cancels order
       tags:
         - orders
-      operationId: private_orders_cancel_orders
+      operationId: private_orders_process_unreserved_products
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PrivateOrderCancelOrdersReq'
+              $ref: '#/components/schemas/PrivateOrderProcessUnreservedProductsReq'
       responses:
         200:
-          description: Cancel order response
+          description: Process unreserved products response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PrivateOrderCancelOrdersRes'
+                $ref: '#/components/schemas/PrivateOrderProcessUnreservedProductsRes'
         default:
           $ref: '#/components/responses/Error'
   /api/private/v1/order/batch-cancel-unpaid-orders:
@@ -1615,7 +1615,9 @@ components:
         operation_id:
           type: string
         products:
-          $ref: '#/components/schemas/PrivateReserveProductsReqProduct'
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateReserveProductsReqProduct'
     PrivateReserveProductsReqProduct:
       x-tags:
         - private_api
@@ -1940,12 +1942,14 @@ components:
       type: object
       required:
         - products
-        - order_id
+        - operation_id
       additionalProperties: false
       properties:
         products:
-          $ref: '#/components/schemas/PrivateOrderProcessReservedProductsReqProduct'
-        order_id:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateOrderProcessReservedProductsReqProduct'
+        operation_id:
           type: string
     PrivateOrderProcessReservedProductsReqProduct:
       x-tags:
@@ -1985,7 +1989,7 @@ components:
       x-tags:
         - private_api
       type: object
-    PrivateOrderCancelOrdersReq:
+    PrivateOrderProcessUnreservedProductsReq:
       x-tags:
         - private_api
       type: object
@@ -1995,7 +1999,7 @@ components:
       properties:
         order_id:
           type: string
-    PrivateOrderCancelOrdersRes:
+    PrivateOrderProcessUnreservedProductsRes:
       x-tags:
         - private_api
       type: object

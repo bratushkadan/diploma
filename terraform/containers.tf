@@ -649,9 +649,9 @@ resource "yandex_function_trigger" "process_products_reservations" {
   }
 }
 
-resource "yandex_function_trigger" "process_products_unreservations" {
+resource "yandex_function_trigger" "process_products_unreserved" {
   count       = local.containers.products.count
-  name        = "process-products-unreservations"
+  name        = "process-products-unreserved"
   description = "trigger for directing products unreservations messages to products service"
 
   container {
@@ -663,6 +663,26 @@ resource "yandex_function_trigger" "process_products_unreservations" {
   data_streams {
     database           = yandex_ydb_database_serverless.this.database_path
     stream_name        = yandex_ydb_topic.products_unreservations.name
+    service_account_id = yandex_iam_service_account.app.id
+    batch_cutoff       = "1"
+    batch_size         = 1
+  }
+}
+
+resource "yandex_function_trigger" "process_orders_with_unreserved_products" {
+  count       = local.containers.products.count
+  name        = "process-products-unreservations"
+  description = "trigger for directing unreserved products messages to orders service"
+
+  container {
+    id                 = yandex_serverless_container.products[0].id
+    service_account_id = yandex_iam_service_account.auth_caller.id
+    path               = "/api/internal/v1/products/unreserve"
+  }
+
+  data_streams {
+    database           = yandex_ydb_database_serverless.this.database_path
+    stream_name        = yandex_ydb_topic.products_unreserved.name
     service_account_id = yandex_iam_service_account.app.id
     batch_cutoff       = "1"
     batch_size         = 1

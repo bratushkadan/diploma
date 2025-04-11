@@ -4,14 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
+	oapi_codegen "github.com/bratushkadan/floral/internal/products/presentation/generated"
 	"github.com/bratushkadan/floral/pkg/template"
+	ydbtopic "github.com/bratushkadan/floral/pkg/ydb/topic"
 	"github.com/google/uuid"
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/result/named"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
+	"github.com/ydb-platform/ydb-go-sdk/v3/topic/topicwriter"
 	"go.uber.org/zap"
 )
 
@@ -21,6 +26,7 @@ const (
 
 	topicProductsReservedProductsTopic = "products/reserved_products_topic"
 	topicOrdersCancelOperations        = "orders/cancel_operations_topic"
+	topicProductsUnreservedTopic       = "products/unreserved_products_topic"
 
 	tableProductsIndexSellerId    = "idx_seller_id"
 	tableProductsIndexCreatedAtId = "idx_created_at_id"
@@ -29,6 +35,9 @@ const (
 type Products struct {
 	db *ydb.Driver
 	l  *zap.Logger
+
+	topicProductsReservedProductsTopic *topicwriter.Writer
+	topicOrdersCancelOperations        *topicwriter.Writer
 }
 
 type ProductsBuilder struct {
@@ -58,6 +67,18 @@ func (b *ProductsBuilder) Build() (*Products, error) {
 	if b.p.db == nil {
 		return nil, errors.New("YDBDriver must be set")
 	}
+
+	topicProductsReservedProductsTopic, err := ydbtopic.NewProducer(b.p.db, topicProductsReservedProductsTopic)
+	if err != nil {
+		return nil, errors.New("setup ProductsReservedProductsTopic topic: %w")
+	}
+	b.p.topicProductsReservedProductsTopic = topicProductsReservedProductsTopic
+
+	topicOrdersCancelOperations, err := ydbtopic.NewProducer(b.p.db, topicOrdersCancelOperations)
+	if err != nil {
+		return nil, errors.New("setup OrdersCancelOperations topic: %w")
+	}
+	b.p.topicOrdersCancelOperations = topicOrdersCancelOperations
 
 	return &b.p, nil
 }
@@ -541,4 +562,227 @@ func (p *Products) List(ctx context.Context, nextPage ListProductsNextPage) ([]L
 	}
 
 	return outProducts, nil
+}
+
+var queryListProductsForReservation = template.ReplaceAllPairs(`
+DECLARE $product_ids AS List<String>;
+
+SELECT 
+  id,
+  seller_id,
+  name,
+  stock,
+  price,
+  pictures
+FROM {{table.table_products}}
+WHERE 
+    id IN $product_ids
+        AND
+    deleted_at IS NULL;
+`,
+	"{{table.table_products}}", tableProducts,
+)
+var queryReserveProducts = template.ReplaceAllPairs(`
+DECLARE $updates AS List<Struct<
+    id:String, 
+    stock:Uint32
+>>;
+
+UPDATE {{table.table_products}} ON
+SELECT
+  update.id AS id,
+  update.stock AS stock
+FROM
+  AS_TABLE($updates) AS update;
+`,
+	"{{table.table_products}}", tableProducts,
+)
+
+// TODO: process messages correctly - try to reserve products for several orders and if none products are left decline other requests
+func (p *Products) ReserveProducts(ctx context.Context, messages []oapi_codegen.PrivateReserveProductsReqMessage) error {
+	reserved := make([]oapi_codegen.PrivateOrderProcessReservedProductsReqMessage, 0)
+	failedToReserve := make([]oapi_codegen.PrivateOrderCancelOperationsReqMessage, 0)
+
+	productsToQuery := make(map[string]struct{}, 0)
+	for _, m := range messages {
+		for _, p := range m.Products {
+			productsToQuery[p.Id] = struct{}{}
+		}
+	}
+
+	if err := p.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		// 1. Read
+		var productIdsList []types.Value
+		for id := range productsToQuery {
+			productIdsList = append(productIdsList, types.StringValueFromString(id))
+		}
+		res, err := tx.Execute(ctx, queryListProductsForReservation, table.NewQueryParameters(
+			table.ValueParam("$product_ids", types.ListValue(productIdsList...)),
+		))
+
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		// count is "stock" here
+		products := make(map[string]oapi_codegen.PrivateOrderProcessReservedProductsReqProduct)
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var product oapi_codegen.PrivateOrderProcessReservedProductsReqProduct
+				var stock uint32
+				var picturesJson []byte
+				if err := res.ScanNamed(
+					named.Required("id", &product.Id),
+					named.Required("seller_id", &product.SellerId),
+					named.Required("name", &product.Name),
+					named.Required("stock", &stock),
+					named.Required("price", &product.Price),
+					named.Required("pictures", &picturesJson),
+				); err != nil {
+					return err
+				}
+
+				var pictures []string
+				if err := json.Unmarshal(picturesJson, &pictures); err != nil {
+					return errors.New("failed to unmarshal product pictures json field")
+				}
+
+				if len(pictures) > 0 {
+					picture := pictures[0]
+					product.Picture = &picture
+				}
+
+				product.Count = int(stock)
+				products[product.Id] = product
+			}
+		}
+
+		if err := res.Err(); err != nil {
+			return err
+		}
+
+		// 2. Compute
+		for _, msg := range messages {
+			ok := true
+			reservedPositions := make(map[string]int)
+			var detailsMessages []string
+			for _, p := range msg.Products {
+				product, exists := products[p.Id]
+				if !exists {
+					detailsMessages = append(detailsMessages, fmt.Sprintf(`product id="%s" does not exist`, p.Id))
+					ok = false
+					continue
+				}
+				if product.Count < p.Count {
+					detailsMessages = append(detailsMessages, fmt.Sprintf(`product id="%s" stock (%d) is less than requested (%d)`, p.Id, product.Count, p.Count))
+					ok = false
+				} else if ok {
+					reservedPositions[p.Id] = p.Count
+				}
+			}
+			if !ok {
+				failedToReserve = append(failedToReserve, oapi_codegen.PrivateOrderCancelOperationsReqMessage{
+					OperationId: msg.OperationId,
+					Details:     strings.Join(detailsMessages, ", "),
+				})
+				continue
+			}
+
+			reservedPositionsRes := make([]oapi_codegen.PrivateOrderProcessReservedProductsReqProduct, 0, len(reservedPositions))
+			for productId, count := range reservedPositions {
+				product := products[productId]
+				product.Count -= count
+				products[productId] = product
+
+				reservedPosition := products[productId]
+				reservedPosition.Count = count
+				reservedPositionsRes = append(reservedPositionsRes, reservedPosition)
+			}
+
+			reserved = append(reserved, oapi_codegen.PrivateOrderProcessReservedProductsReqMessage{
+				OperationId: msg.OperationId,
+				Products:    reservedPositionsRes,
+			})
+		}
+
+		p.l.Info("to reserve", zap.Any("products", reserved))
+		p.l.Info("to report reservation failure", zap.Any("products", failedToReserve))
+
+		// 3. Write
+		var updates []types.Value
+		for _, p := range products {
+			updates = append(updates, types.StructValue(
+				types.StructFieldValue("id", types.StringValueFromString(p.Id)),
+				types.StructFieldValue("stock", types.Uint32Value(uint32(p.Count))),
+			))
+		}
+
+		res, err = tx.Execute(ctx, queryReserveProducts, table.NewQueryParameters(
+			table.ValueParam("$updates", types.ListValue(updates...)),
+		))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		// 4. Publish reserved
+		productsReservedData := make([][]byte, 0, len(reserved))
+		for _, r := range reserved {
+			data, err := json.Marshal(&r)
+			if err != nil {
+				return fmt.Errorf("marshal reserved products: %v", err)
+			}
+			productsReservedData = append(productsReservedData, data)
+		}
+
+		if err := ydbtopic.Produce(ctx, p.topicProductsReservedProductsTopic, productsReservedData...); err != nil {
+			return fmt.Errorf("produce products reserved messages: %v", err)
+		}
+
+		// 5. Publish reserve failures
+		orderCancelOperationsData := make([][]byte, 0, len(failedToReserve))
+		for _, r := range failedToReserve {
+			data, err := json.Marshal(&r)
+			if err != nil {
+				return fmt.Errorf("marshal order cancel operations: %v", err)
+			}
+			orderCancelOperationsData = append(orderCancelOperationsData, data)
+		}
+		if err := ydbtopic.Produce(ctx, p.topicOrdersCancelOperations, orderCancelOperationsData...); err != nil {
+			return fmt.Errorf("produce orders cancel operations messages: %v", err)
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var queryUnreserveProducts = template.ReplaceAllPairs(`
+DECLARE $updates AS List<Struct<
+    id:String,
+    stock:Uint32,
+>>;
+
+UPDATE {{table.table_products}} ON
+SELECT * FROM 
+(
+    SELECT
+        p.id AS id,
+        u.stock AS stock,
+        CurrentUtcDatetime() AS updated_at,
+    FROM {{table.table_products}} p
+    JOIN AS_TABLE($updates) u ON p.id = u.id
+)
+RETURNING id, stock, updated_at;
+`,
+	"{{table.table_products}}", tableProducts,
+)
+
+func (p *Products) UnreserveProducts(ctx context.Context, messages []oapi_codegen.PrivateUnreserveProductsReqMessage) error {
+	return nil
 }

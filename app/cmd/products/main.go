@@ -26,6 +26,7 @@ import (
 	"github.com/bratushkadan/floral/pkg/s3aws"
 	xgin "github.com/bratushkadan/floral/pkg/xhttp/gin"
 	"github.com/bratushkadan/floral/pkg/xhttp/gin/middleware/auth"
+	ydbpkg "github.com/bratushkadan/floral/pkg/ydb"
 	ginzap "github.com/gin-contrib/zap"
 	middleware "github.com/oapi-codegen/gin-middleware"
 )
@@ -51,19 +52,18 @@ func main() {
 		setup.EnvKeyStorePicturesBucket,
 	)
 
-	var db *ydb.Driver
-	// authMethod := cfg.EnvDefault(setup.EnvKeyYdbAuthMethod, ydbpkg.YdbAuthMethodMetadata)
-	// db, err := ydb.Open(ctx, env[setup.EnvKeyYdbEndpoint], ydbpkg.GetYdbAuthOpts(authMethod)...)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer func() {
-	// 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	// 	defer cancel()
-	// 	if err := db.Close(ctx); err != nil {
-	// 		logger.Error("failed to close ydb", zap.Error(err))
-	// 	}
-	// }()
+	authMethod := cfg.EnvDefault(setup.EnvKeyYdbAuthMethod, ydbpkg.YdbAuthMethodMetadata)
+	db, err := ydb.Open(ctx, env[setup.EnvKeyYdbEndpoint], ydbpkg.GetYdbAuthOpts(authMethod)...)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		if err := db.Close(ctx); err != nil {
+			logger.Error("failed to close ydb", zap.Error(err))
+		}
+	}()
 
 	productsStore, err := store.NewProductsBuilder().
 		Logger(logger).

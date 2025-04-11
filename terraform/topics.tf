@@ -81,6 +81,17 @@ resource "yandex_ydb_topic" "products_unreservations" {
 
   partition_write_speed_kbps = 128
 }
+resource "yandex_ydb_topic" "products_unreserved" {
+  database_endpoint = yandex_ydb_database_serverless.this.ydb_full_endpoint
+  name              = "products/unreserved_products_topic"
+  description       = "topic for unreserved products messages"
+
+  supported_codecs       = []
+  partitions_count       = 1
+  retention_period_hours = 1
+
+  partition_write_speed_kbps = 128
+}
 
 resource "yandex_ydb_topic" "orders_cancel_operations" {
   database_endpoint = yandex_ydb_database_serverless.this.ydb_full_endpoint
