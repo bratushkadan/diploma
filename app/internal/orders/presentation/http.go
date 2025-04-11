@@ -130,23 +130,142 @@ func PrivateOrdersProcessUnreservedProducts(c *gin.Context) {
 
 }
 func OrdersGetOperation(c *gin.Context, operationId string) {
+	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "authentication problems"}},
+		})
+		return
+	}
+
+	if !slices.Contains([]string{shared_api.SubjectTypeUser, shared_api.SubjectTypeAdmin}, accessToken.SubjectType) {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
+	}
+
 	// oapi_codegen.OrdersGetOperationRes
+
+	var res oapi_codegen.OrdersGetOperationRes
+
+	if accessToken.SubjectType == shared_api.SubjectTypeUser && res.UserId != accessToken.SubjectId {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
 }
 func OrdersListOrders(c *gin.Context, params oapi_codegen.OrdersListOrdersParams) {
-	// oapi_codegen.OrdersListOrdersRes{}
+	if params.UserId == nil && params.NextPageToken == nil || params.UserId != nil && params.NextPageToken != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 12, Message: `either "user_id" or "next_page_token" query paramater must be provided`}},
+		})
+		return
+	}
 
+	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "authentication problems"}},
+		})
+		return
+	}
+
+	if params.UserId != nil && accessToken.SubjectType == shared_api.SubjectTypeUser && *params.UserId != accessToken.SubjectId {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
+	}
+
+	var res oapi_codegen.OrdersListOrdersRes
+
+	c.JSON(http.StatusOK, res)
 }
 func OrdersCreateOrder(c *gin.Context) {
-	// no request body
-	// oapi_codegen.OrdersCreateOrderRes{}
+	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "authentication problems"}},
+		})
+		return
+	}
 
+	if !slices.Contains([]string{shared_api.SubjectTypeUser}, accessToken.SubjectType) {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
+	}
+
+	var res oapi_codegen.OrdersCreateOrderRes
+
+	c.JSON(http.StatusOK, res)
 }
 func OrdersGetOrder(c *gin.Context, orderId string) {
-	// oapi_codegen.OrdersGetOrderRes
+	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "authentication problems"}},
+		})
+		return
+	}
 
+	var res *oapi_codegen.OrdersGetOrderRes
+
+	if res == nil {
+		c.AbortWithStatusJSON(http.StatusNotFound, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 125, Message: "order not found"}},
+		})
+		return
+	}
+	if accessToken.SubjectType == shared_api.SubjectTypeUser && res.UserId != accessToken.SubjectId {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
 }
 func OrdersUpdateOrder(c *gin.Context, orderId string) {
-	// oapi_codegen.OrdersUpdateOrderRes
+	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "authentication problems"}},
+		})
+		return
+	}
+
+	if accessToken.SubjectType == shared_api.SubjectTypeUser {
+		// TODO:
+		// res, err := store.GetOrder(orderId)
+		var res struct {
+			OrderId string
+			UserId  string
+		}
+		// TODO: check "if subjecType = user", query order from database,
+		// acquire its user_id, if it doesn't match with accessToken, reject the request
+		if res.UserId != accessToken.SubjectId {
+			c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+				Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+			})
+			return
+		}
+	}
+
+	var res *oapi_codegen.OrdersUpdateOrderRes
+	if res == nil {
+		c.AbortWithStatusJSON(http.StatusNotFound, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 125, Message: "order not found"}},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
 }
 
 func (*ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {

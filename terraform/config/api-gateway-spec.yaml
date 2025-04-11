@@ -993,7 +993,7 @@ paths:
       parameters:
         - name: user_id
           in: query
-          required: true
+          required: false
           schema:
             type: string
         - name: next_page_token
@@ -2049,6 +2049,7 @@ components:
         - id
         - type
         - status
+        - user_id
         - created_at
         - updated_at
       additionalProperties: false
@@ -2058,6 +2059,8 @@ components:
         type:
           type: string
         status:
+          type: string
+        user_id:
           type: string
         created_at:
           type: string
