@@ -1,41 +1,52 @@
 package store
 
 import (
-	"context"
+	"errors"
 
-	oapi_codegen "github.com/bratushkadan/floral/internal/products/presentation/generated"
-	"github.com/bratushkadan/floral/pkg/template"
 	ydbtopic "github.com/bratushkadan/floral/pkg/ydb/topic"
+	"github.com/ydb-platform/ydb-go-sdk/v3"
+	"github.com/ydb-platform/ydb-go-sdk/v3/topic/topicwriter"
+	"go.uber.org/zap"
 )
 
 type OrdersBuilder struct {
+	store Orders
+}
+
+func NewBuilder() *OrdersBuilder {
+	return &OrdersBuilder{}
+}
+
+func (b *OrdersBuilder) Ydb(db *ydb.Driver) *OrdersBuilder {
+	b.store.db = db
+	return b
+}
+func (b *OrdersBuilder) Logger(l *zap.Logger) *OrdersBuilder {
+	b.store.logger = l
+	return b
+}
+
+func (b *OrdersBuilder) Build() (*Orders, error) {
+	if b.store.db == nil {
+		return nil, errors.New("ydb driver is nil")
+	}
+
+	topicCartContents, err := ydbtopic.NewProducer(b.store.db, topicA)
+	if err != nil {
+		return nil, errors.New("setup <> topic: %w")
+	}
+	b.store.topicA = topicCartContents
+
+	if b.store.logger == nil {
+		b.store.logger = zap.NewNop()
+	}
+
+	return &b.store, nil
 }
 
 type Orders struct {
-}
+	db     *ydb.Driver
+	logger *zap.Logger
 
-var queryUnreserveProducts = template.ReplaceAllPairs(`
-DECLARE $updates AS List<Struct<
-    id:String,
-    stock:Uint32,
->>;
-
-UPDATE {{table.table_products}} ON
-SELECT * FROM 
-(
-    SELECT
-        p.id AS id,
-        u.stock AS stock,
-        CurrentUtcDatetime() AS updated_at,
-    FROM {{table.table_products}} p
-    JOIN AS_TABLE($updates) u ON p.id = u.id
-)
-RETURNING id, stock, updated_at;
-`,
-	"{{table.table_products}}", tableProducts,
-)
-
-func (s *Orders) UnreserveProducts(ctx context.Context, messages []oapi_codegen.PrivateUnreserveProductsReqMessage) error {
-	ydbtopic.Produce(ctx, nil)
-	return nil
+	topicA *topicwriter.Writer
 }

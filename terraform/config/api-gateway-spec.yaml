@@ -782,7 +782,7 @@ paths:
       description: Process published cart positions
       tags:
         - orders
-      operationId: private_orders_published_cart_positions
+      operationId: private_orders_process_published_cart_positions
       requestBody:
         content:
           application/json:
@@ -2138,7 +2138,9 @@ components:
       additionalProperties: false
       properties:
         orders:
-          $ref: '#/components/schemas/OrdersListOrdersResOrder'
+          type: array
+          items:
+            $ref: '#/components/schemas/OrdersListOrdersResOrder'
         next_page_token:
           type: string
           nullable: true

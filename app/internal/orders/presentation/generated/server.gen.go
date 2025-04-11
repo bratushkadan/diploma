@@ -337,8 +337,8 @@ type OrdersGetOrderResItem struct {
 
 // OrdersListOrdersRes defines model for OrdersListOrdersRes.
 type OrdersListOrdersRes struct {
-	NextPageToken *string                  `json:"next_page_token"`
-	Orders        OrdersListOrdersResOrder `json:"orders"`
+	NextPageToken *string                    `json:"next_page_token"`
+	Orders        []OrdersListOrdersResOrder `json:"orders"`
 }
 
 // OrdersListOrdersResItem defines model for OrdersListOrdersResItem.
@@ -581,11 +581,7 @@ type Error struct {
 
 // OrdersListOrdersParams defines parameters for OrdersListOrders.
 type OrdersListOrdersParams struct {
-	NextPageToken *string `form:"next_page_token,omitempty" json:"next_page_token,omitempty"`
-}
-
-// OrdersCreateOrderParams defines parameters for OrdersCreateOrder.
-type OrdersCreateOrderParams struct {
+	UserId        string  `form:"user_id" json:"user_id"`
 	NextPageToken *string `form:"next_page_token,omitempty" json:"next_page_token,omitempty"`
 }
 
@@ -595,8 +591,8 @@ type PrivateOrdersBatchCancelUnpaidOrdersJSONRequestBody = PrivateOrderBatchCanc
 // PrivateOrdersCancelOperationsJSONRequestBody defines body for PrivateOrdersCancelOperations for application/json ContentType.
 type PrivateOrdersCancelOperationsJSONRequestBody = PrivateOrderCancelOperationsReq
 
-// PrivateOrdersPublishedCartPositionsJSONRequestBody defines body for PrivateOrdersPublishedCartPositions for application/json ContentType.
-type PrivateOrdersPublishedCartPositionsJSONRequestBody = PrivateOrderProcessPublishedCartPositionsReq
+// PrivateOrdersProcessPublishedCartPositionsJSONRequestBody defines body for PrivateOrdersProcessPublishedCartPositions for application/json ContentType.
+type PrivateOrdersProcessPublishedCartPositionsJSONRequestBody = PrivateOrderProcessPublishedCartPositionsReq
 
 // PrivateOrdersProcessReservedProductsJSONRequestBody defines body for PrivateOrdersProcessReservedProducts for application/json ContentType.
 type PrivateOrdersProcessReservedProductsJSONRequestBody = PrivateOrderProcessReservedProductsReq
@@ -617,8 +613,8 @@ const PrivateOrdersCancelOperationsMethod = "POST"
 const PrivateOrdersCancelOperationsPath = "/api/private/v1/order/operations/cancel"
 
 // Process published cart positions
-const PrivateOrdersPublishedCartPositionsMethod = "POST"
-const PrivateOrdersPublishedCartPositionsPath = "/api/private/v1/order/process-published-cart-positions"
+const PrivateOrdersProcessPublishedCartPositionsMethod = "POST"
+const PrivateOrdersProcessPublishedCartPositionsPath = "/api/private/v1/order/process-published-cart-positions"
 
 // Process reserved products
 const PrivateOrdersProcessReservedProductsMethod = "POST"
@@ -658,7 +654,7 @@ type ServerInterface interface {
 	PrivateOrdersCancelOperations(c *gin.Context)
 	// Process published cart positions
 	// (POST /api/private/v1/order/process-published-cart-positions)
-	PrivateOrdersPublishedCartPositions(c *gin.Context)
+	PrivateOrdersProcessPublishedCartPositions(c *gin.Context)
 	// Process reserved products
 	// (POST /api/private/v1/order/process-reserved-products)
 	PrivateOrdersProcessReservedProducts(c *gin.Context)
@@ -673,7 +669,7 @@ type ServerInterface interface {
 	OrdersListOrders(c *gin.Context, params OrdersListOrdersParams)
 	// Create order
 	// (POST /api/v1/order/orders)
-	OrdersCreateOrder(c *gin.Context, params OrdersCreateOrderParams)
+	OrdersCreateOrder(c *gin.Context)
 	// Get order
 	// (GET /api/v1/order/orders/{order_id})
 	OrdersGetOrder(c *gin.Context, orderId string)
@@ -717,8 +713,8 @@ func (siw *ServerInterfaceWrapper) PrivateOrdersCancelOperations(c *gin.Context)
 	siw.Handler.PrivateOrdersCancelOperations(c)
 }
 
-// PrivateOrdersPublishedCartPositions operation middleware
-func (siw *ServerInterfaceWrapper) PrivateOrdersPublishedCartPositions(c *gin.Context) {
+// PrivateOrdersProcessPublishedCartPositions operation middleware
+func (siw *ServerInterfaceWrapper) PrivateOrdersProcessPublishedCartPositions(c *gin.Context) {
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
@@ -727,7 +723,7 @@ func (siw *ServerInterfaceWrapper) PrivateOrdersPublishedCartPositions(c *gin.Co
 		}
 	}
 
-	siw.Handler.PrivateOrdersPublishedCartPositions(c)
+	siw.Handler.PrivateOrdersProcessPublishedCartPositions(c)
 }
 
 // PrivateOrdersProcessReservedProducts operation middleware
@@ -792,6 +788,21 @@ func (siw *ServerInterfaceWrapper) OrdersListOrders(c *gin.Context) {
 	// Parameter object where we will unmarshal all parameters from the context
 	var params OrdersListOrdersParams
 
+	// ------------- Required query parameter "user_id" -------------
+
+	if paramValue := c.Query("user_id"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Query argument user_id is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "user_id", c.Request.URL.Query(), &params.UserId)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter user_id: %w", err), http.StatusBadRequest)
+		return
+	}
+
 	// ------------- Optional query parameter "next_page_token" -------------
 
 	err = runtime.BindQueryParameter("form", true, false, "next_page_token", c.Request.URL.Query(), &params.NextPageToken)
@@ -813,20 +824,7 @@ func (siw *ServerInterfaceWrapper) OrdersListOrders(c *gin.Context) {
 // OrdersCreateOrder operation middleware
 func (siw *ServerInterfaceWrapper) OrdersCreateOrder(c *gin.Context) {
 
-	var err error
-
 	c.Set(BearerAuthScopes, []string{})
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params OrdersCreateOrderParams
-
-	// ------------- Optional query parameter "next_page_token" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "next_page_token", c.Request.URL.Query(), &params.NextPageToken)
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter next_page_token: %w", err), http.StatusBadRequest)
-		return
-	}
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
@@ -835,7 +833,7 @@ func (siw *ServerInterfaceWrapper) OrdersCreateOrder(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.OrdersCreateOrder(c, params)
+	siw.Handler.OrdersCreateOrder(c)
 }
 
 // OrdersGetOrder operation middleware
@@ -919,7 +917,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 
 	router.POST(options.BaseURL+"/api/private/v1/order/batch-cancel-unpaid-orders", wrapper.PrivateOrdersBatchCancelUnpaidOrders)
 	router.POST(options.BaseURL+"/api/private/v1/order/operations/cancel", wrapper.PrivateOrdersCancelOperations)
-	router.POST(options.BaseURL+"/api/private/v1/order/process-published-cart-positions", wrapper.PrivateOrdersPublishedCartPositions)
+	router.POST(options.BaseURL+"/api/private/v1/order/process-published-cart-positions", wrapper.PrivateOrdersProcessPublishedCartPositions)
 	router.POST(options.BaseURL+"/api/private/v1/order/process-reserved-products", wrapper.PrivateOrdersProcessReservedProducts)
 	router.POST(options.BaseURL+"/api/private/v1/order/process-unreserved-products", wrapper.PrivateOrdersProcessUnreservedProducts)
 	router.GET(options.BaseURL+"/api/v1/order/operations/:operation_id", wrapper.OrdersGetOperation)
@@ -932,55 +930,55 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"7Zl5UQAdPx3/HwAA//+UwSwkymwAAA==",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
