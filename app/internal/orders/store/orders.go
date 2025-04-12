@@ -68,7 +68,50 @@ func (s *Orders) GetOrder() (*oapi_codegen.OrdersGetOrderRes, error) {
 	return nil, nil
 }
 
+// TODO: STALE READONLY TRANSACTION (JUST LIKE IN PRODCUTS)
 var queryListOrders = template.ReplaceAllPairs(`
+DECLARE $user_id AS Utf8;
+DECLARE $last_paginated_order_id AS Optional<Utf8>;
+DECLARE $last_paginated_created_at As Optional<Datetime>;
+DECLARE $page_size AS Optional<Uint32>;
+
+-- $user_id = UNWRAP(CAST("acd559b2-def1-4b01-b501-c642e22dd7da" AS Utf8));
+-- $last_paginated_order_id = UNWRAP(CAST("foo-bar-baz-qux3" AS Utf8));
+-- $last_paginated_created_at = UNWRAP(CAST("2025-04-12T18:03:40Z" AS Datetime));
+
+SELECT
+    o.id AS id,
+    o.user_id AS user_id,
+    o.status AS status,
+    o.created_at AS created_at,
+    o.updated_at AS updated_at,
+    i.product_id AS product_id,
+    i.name AS product_name,
+    i.seller_id AS product_seller_id,
+    i.count AS produt_count,
+    i.price AS product_price,
+    i.picture AS product_picture
+FROM {{table.orders}}
+VIEW idx_list_orders o
+JOIN {{table.order_items}} i ON i.order_id = o.id
+WHERE
+    o.user_id = $user_id
+        AND
+    (
+        (
+            $last_paginated_order_id IS NULL
+                OR 
+            $last_paginated_order_id = o.id
+        )
+            OR
+        (
+            $last_paginated_created_at IS NULL
+                OR
+            $last_paginated_created_at > o.created_at
+        )
+    )
+ORDER BY created_at DESC
+LIMIT COALESCE($page_size + 1, 3u);
 `,
 	"{{table.orders}}",
 	tableOrders,
