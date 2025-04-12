@@ -9,7 +9,9 @@ import (
 )
 
 const (
-	topicA = "orders/topicA"
+	tableOperations = `orders/operations`
+
+	topicCancelOperations = "orders/cancel_operations_topic"
 )
 
 var queryUnreserveProducts = template.ReplaceAllPairs(`
@@ -38,3 +40,21 @@ func (s *Orders) UnreserveProducts(ctx context.Context, messages []oapi_codegen.
 	_ = queryUnreserveProducts
 	return nil
 }
+
+var queryGetOperation = template.ReplaceAllPairs(`
+`,
+	"{{table.operations}}",
+	tableOperations,
+)
+
+var queryCreateOperation = template.ReplaceAllPairs(`
+`,
+	"{{table.operations}}",
+	tableOperations,
+)
+
+var queryUpdateOperation = template.ReplaceAllPairs(`
+`,
+	"{{table.operations}}",
+	tableOperations,
+)

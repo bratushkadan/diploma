@@ -75,7 +75,7 @@ func (api *ApiImpl) PrivateCartsClearContents(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "clear carts applied"})
 }
 
-func PrivateOrdersBatchCancelUnpaidOrders(c *gin.Context) {
+func (api *ApiImpl) PrivateOrdersBatchCancelUnpaidOrders(c *gin.Context) {
 	var reqBody oapi_codegen.PrivateOrdersBatchCancelUnpaidOrdersJSONRequestBody
 	if err := json.NewDecoder(c.Request.Body).Decode(&reqBody); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
@@ -86,7 +86,7 @@ func PrivateOrdersBatchCancelUnpaidOrders(c *gin.Context) {
 	}
 
 }
-func PrivateOrdersCancelOperations(c *gin.Context) {
+func (api *ApiImpl) PrivateOrdersCancelOperations(c *gin.Context) {
 	var reqBody oapi_codegen.PrivateOrdersCancelOperationsJSONRequestBody
 	if err := json.NewDecoder(c.Request.Body).Decode(&reqBody); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
@@ -97,7 +97,7 @@ func PrivateOrdersCancelOperations(c *gin.Context) {
 	}
 
 }
-func PrivateOrdersProcessPublishedCartPositions(c *gin.Context) {
+func (api *ApiImpl) PrivateOrdersProcessPublishedCartPositions(c *gin.Context) {
 	var reqBody oapi_codegen.PrivateOrdersProcessPublishedCartPositionsJSONRequestBody
 	if err := json.NewDecoder(c.Request.Body).Decode(&reqBody); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
@@ -107,7 +107,7 @@ func PrivateOrdersProcessPublishedCartPositions(c *gin.Context) {
 		return
 	}
 }
-func PrivateOrdersProcessReservedProducts(c *gin.Context) {
+func (api *ApiImpl) PrivateOrdersProcessReservedProducts(c *gin.Context) {
 	var reqBody oapi_codegen.PrivateOrdersProcessReservedProductsJSONRequestBody
 	if err := json.NewDecoder(c.Request.Body).Decode(&reqBody); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
@@ -118,7 +118,7 @@ func PrivateOrdersProcessReservedProducts(c *gin.Context) {
 	}
 
 }
-func PrivateOrdersProcessUnreservedProducts(c *gin.Context) {
+func (api *ApiImpl) PrivateOrdersProcessUnreservedProducts(c *gin.Context) {
 	var reqBody oapi_codegen.PrivateOrdersProcessUnreservedProductsJSONRequestBody
 	if err := json.NewDecoder(c.Request.Body).Decode(&reqBody); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
@@ -129,7 +129,7 @@ func PrivateOrdersProcessUnreservedProducts(c *gin.Context) {
 	}
 
 }
-func OrdersGetOperation(c *gin.Context, operationId string) {
+func (api *ApiImpl) OrdersGetOperation(c *gin.Context, operationId string) {
 	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
 	if !ok {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
@@ -158,7 +158,7 @@ func OrdersGetOperation(c *gin.Context, operationId string) {
 
 	c.JSON(http.StatusOK, res)
 }
-func OrdersListOrders(c *gin.Context, params oapi_codegen.OrdersListOrdersParams) {
+func (api *ApiImpl) OrdersListOrders(c *gin.Context, params oapi_codegen.OrdersListOrdersParams) {
 	if params.UserId == nil && params.NextPageToken == nil || params.UserId != nil && params.NextPageToken != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 12, Message: `either "user_id" or "next_page_token" query paramater must be provided`}},
@@ -185,7 +185,7 @@ func OrdersListOrders(c *gin.Context, params oapi_codegen.OrdersListOrdersParams
 
 	c.JSON(http.StatusOK, res)
 }
-func OrdersCreateOrder(c *gin.Context) {
+func (api *ApiImpl) OrdersCreateOrder(c *gin.Context) {
 	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
 	if !ok {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
@@ -205,7 +205,7 @@ func OrdersCreateOrder(c *gin.Context) {
 
 	c.JSON(http.StatusOK, res)
 }
-func OrdersGetOrder(c *gin.Context, orderId string) {
+func (api *ApiImpl) OrdersGetOrder(c *gin.Context, orderId string) {
 	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
 	if !ok {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
@@ -231,7 +231,7 @@ func OrdersGetOrder(c *gin.Context, orderId string) {
 
 	c.JSON(http.StatusOK, res)
 }
-func OrdersUpdateOrder(c *gin.Context, orderId string) {
+func (api *ApiImpl) OrdersUpdateOrder(c *gin.Context, orderId string) {
 	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
 	if !ok {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
@@ -240,21 +240,11 @@ func OrdersUpdateOrder(c *gin.Context, orderId string) {
 		return
 	}
 
-	if accessToken.SubjectType == shared_api.SubjectTypeUser {
-		// TODO:
-		// res, err := store.GetOrder(orderId)
-		var res struct {
-			OrderId string
-			UserId  string
-		}
-		// TODO: check "if subjecType = user", query order from database,
-		// acquire its user_id, if it doesn't match with accessToken, reject the request
-		if res.UserId != accessToken.SubjectId {
-			c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
-				Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
-			})
-			return
-		}
+	if !slices.Contains([]string{shared_api.SubjectTypeSeller, shared_api.SubjectTypeAdmin}, accessToken.SubjectType) {
+		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+		})
+		return
 	}
 
 	var res *oapi_codegen.OrdersUpdateOrderRes
