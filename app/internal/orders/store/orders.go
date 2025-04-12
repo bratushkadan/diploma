@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	tableProducts   = "products/products"
-	tableOrders     = "orders/orders"
-	tableOrderItems = "orders/order_items"
+	tableProducts   = "`products/products`"
+	tableOrders     = "`orders/orders`"
+	tableOrderItems = "`orders/order_items`"
 
 	topicProductsReservations   = "products/products_reservartions_topic"
 	topicProductsUnreservations = "products/products_unreservartions_topic"
@@ -40,6 +40,23 @@ RETURNING id, stock, updated_at;
 )
 
 var queryGetOrder = template.ReplaceAllPairs(`
+DECLARE $id AS Utf8;
+
+SELECT
+    o.id AS id,
+    o.user_id AS user_id,
+    o.status AS status,
+    o.created_at AS created_at,
+    o.updated_at AS updated_at,
+    i.product_id AS product_id,
+    i.name AS product_name,
+    i.seller_id AS product_seller_id,
+    i.count AS produt_count,
+    i.price AS product_price,
+    i.picture AS product_picture
+FROM {{table.orders}} o
+JOIN {{table.order_items}} i ON i.order_id = o.id
+WHERE o.id = $id;
 `,
 	"{{table.orders}}",
 	tableOrders,
@@ -60,6 +77,37 @@ var queryListOrders = template.ReplaceAllPairs(`
 )
 
 var queryCreateOrder = template.ReplaceAllPairs(`
+DECLARE $id AS Utf8;
+DECLARE $user_id AS Utf8;
+DECLARE $status AS Utf8;
+DECLARE $created_at AS Datetime;
+DECLARE $updated_at AS Datetime;
+
+DECLARE $order_items AS List<Struct<
+  product_id:Utf8,
+  seller_id:Utf8,
+  name:Utf8,
+  count:Uint32,
+  price:Double,
+  picture:Optional<Utf8>,
+>>;
+
+INSERT INTO {{table.orders}} (id, user_id, status, created_at, updated_at)
+VALUES ($id, $user_id, $status, $created_at, $updated_at);
+
+INSERT INTO {{table.order_items}} (
+    order_id, product_id, seller_id, name, count, price, picture
+)
+SELECT
+    $id AS order_id,
+    product_id,
+    seller_id,
+    name,
+    count,
+    price,
+    picture
+FROM
+    AS_TABLE($order_items);
 `,
 	"{{table.orders}}",
 	tableOrders,
@@ -68,9 +116,28 @@ var queryCreateOrder = template.ReplaceAllPairs(`
 )
 
 var queryUpdateOrder = template.ReplaceAllPairs(`
+DECLARE $id AS Utf8;
+DECLARE $status AS Utf8;
+DECLARE $updated_at AS Datetime;
+
+$to_update = (
+    SELECT
+        id,
+        $status AS status,
+        $updated_at AS updated_at
+    FROM
+        {{table.orders}}
+    WHERE id = $id
+);
+
+UPDATE {{table.orders}}
+ON SELECT * FROM $to_update
+RETURNING id, status, updated_at;
 `,
 	"{{table.orders}}",
 	tableOrders,
-	"{{table.order_items}}",
-	tableOrderItems,
 )
+
+func a() {
+	// oapi_codegen.OrdersUpdateOrderRes
+}

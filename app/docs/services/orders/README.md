@@ -16,7 +16,7 @@ CREATE TABLE `orders/orders` (
   created_at Datetime NOT NULL,
   updated_at Datetime NOT NULL,
   PRIMARY KEY (id),
-  INDEX idx_user_id GLOBAL ASYNC on (user_id)
+  INDEX idx_list_orders GLOBAL ASYNC on (user_id, created_at)
 );
 ```
 

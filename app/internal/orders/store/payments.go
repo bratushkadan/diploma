@@ -3,7 +3,7 @@ package store
 import "github.com/bratushkadan/floral/pkg/template"
 
 const (
-	tablePayments = `orders/payments`
+	tablePayments = "`orders/payments`"
 )
 
 var queryCreatePayment = template.ReplaceAllPairs(`

@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	tableOperations = `orders/operations`
+	tableOperations = "`orders/operations`"
 
 	topicCancelOperations = "orders/cancel_operations_topic"
 )
@@ -41,19 +41,64 @@ func (s *Orders) UnreserveProducts(ctx context.Context, messages []oapi_codegen.
 	return nil
 }
 
+// Careful with "store"s, here Service's own DTOs are required I think
+
 var queryGetOperation = template.ReplaceAllPairs(`
+DECLARE $id AS Utf8;
+
+SELECT
+	id, type, status, details, user_id, order_id, created_at, updated_at
+FROM
+	{{table.operations}}
+WHERE id = $id;
 `,
 	"{{table.operations}}",
 	tableOperations,
 )
 
 var queryCreateOperation = template.ReplaceAllPairs(`
+DECLARE $id AS Utf8;
+DECLARE $type AS Utf8;
+DECLARE $status AS Utf8;
+DECLARE $details AS Optional<Utf8>;
+DECLARE $user_id AS Utf8;
+DECLARE $order_id AS Utf8;
+DECLARE $created_at AS Timestamp;
+DECLARE $updated_at AS Timestamp;
+
+INSERT INTO {{table.operations}} (id, type, status, details, user_id, order_id, created_at, updated_at)
+VALUES
+($id, $type, $status, $details, $user_id, $order_id, $created_at, $updated_at)
+RETURNING *;
 `,
 	"{{table.operations}}",
 	tableOperations,
 )
 
 var queryUpdateOperation = template.ReplaceAllPairs(`
+DECLARE $id AS Utf8;
+DECLARE $status AS Utf8;
+DECLARE $details AS Optional<Utf8>;
+DECLARE $updated_at AS Timestamp;
+
+-- $id = "foo";
+-- $status = Unwrap(CAST("cancelled" AS Utf8));
+-- $details = CAST("not enought positions" AS Utf8);
+-- $updated_at = CurrentUtcTimestamp();
+
+$to_update = (
+    SELECT
+        id,
+        $status AS status,
+        COALESCE($details, details) AS details,
+        $updated_at AS updated_at,
+    FROM {{table.operations}}
+    WHERE id = $id
+);
+
+UPDATE {{table.operations}} ON
+SELECT * FROM $to_update
+RETURNING *;
 `,
 	"{{table.operations}}",
 	tableOperations,
