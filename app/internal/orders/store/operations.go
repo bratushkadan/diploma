@@ -2,10 +2,16 @@ package store
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"time"
 
-	oapi_codegen "github.com/bratushkadan/floral/internal/products/presentation/generated"
+	oapi_codegen "github.com/bratushkadan/floral/internal/orders/presentation/generated"
 	"github.com/bratushkadan/floral/pkg/template"
 	ydbtopic "github.com/bratushkadan/floral/pkg/ydb/topic"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/result/named"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
 
 const (
@@ -14,34 +20,12 @@ const (
 	topicCancelOperations = "orders/cancel_operations_topic"
 )
 
-var queryUnreserveProducts = template.ReplaceAllPairs(`
-DECLARE $updates AS List<Struct<
-    id:String,
-    stock:Uint32,
->>;
-
-UPDATE {{table.table_products}} ON
-SELECT * FROM 
-(
-    SELECT
-        p.id AS id,
-        u.stock AS stock,
-        CurrentUtcDatetime() AS updated_at,
-    FROM {{table.table_products}} p
-    JOIN AS_TABLE($updates) u ON p.id = u.id
-)
-RETURNING id, stock, updated_at;
-`,
-	"{{table.table_products}}", tableProducts,
-)
-
-func (s *Orders) UnreserveProducts(ctx context.Context, messages []oapi_codegen.PrivateUnreserveProductsReqMessage) error {
-	ydbtopic.Produce(ctx, nil)
-	_ = queryUnreserveProducts
-	return nil
-}
+// ydbtopic.Produce(ctx, nil)
 
 // Careful with "store"s, here Service's own DTOs are required I think
+func (s *Orders) GetOperation(ctx context.Context, messages []oapi_codegen.PrivateUnreserveProductsReqMessage) error {
+	return nil
+}
 
 var queryGetOperation = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;
@@ -62,18 +46,84 @@ DECLARE $type AS Utf8;
 DECLARE $status AS Utf8;
 DECLARE $details AS Optional<Utf8>;
 DECLARE $user_id AS Utf8;
-DECLARE $order_id AS Utf8;
+DECLARE $order_id AS Optional<Utf8>;
 DECLARE $created_at AS Timestamp;
 DECLARE $updated_at AS Timestamp;
 
 INSERT INTO {{table.operations}} (id, type, status, details, user_id, order_id, created_at, updated_at)
 VALUES
 ($id, $type, $status, $details, $user_id, $order_id, $created_at, $updated_at)
-RETURNING *;
+RETURNING id, type, status, user_id, order_id, created_at, updated_at;
 `,
 	"{{table.operations}}",
 	tableOperations,
 )
+
+type CreateOperationDTOInput struct {
+	Id        string
+	Type      string
+	Status    string
+	Details   *string
+	UserId    string
+	OrderId   *string
+	CreatedAt time.Time
+}
+
+func (s *Orders) CreateOperation(ctx context.Context, in CreateOperationDTOInput) (oapi_codegen.OrdersCreateOrderResOperation, error) {
+	var out oapi_codegen.OrdersCreateOrderResOperation
+
+	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		res, err := tx.Execute(ctx, queryCreateOperation, table.NewQueryParameters(
+			table.ValueParam("$id", types.UTF8Value(in.Id)),
+			table.ValueParam("$type", types.UTF8Value(in.Type)),
+			table.ValueParam("$status", types.UTF8Value(in.Status)),
+			table.ValueParam("$details", types.NullableUTF8Value(in.Details)),
+			table.ValueParam("$user_id", types.UTF8Value(in.UserId)),
+			table.ValueParam("$order_id", types.NullableUTF8Value(in.OrderId)),
+			table.ValueParam("$created_at", types.DatetimeValueFromTime(in.CreatedAt)),
+			table.ValueParam("$updated_at", types.DatetimeValueFromTime(in.CreatedAt)),
+		))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				if err := res.ScanNamed(
+					named.Required("$id", &out.Id),
+					named.Required("$type", &out.Type),
+					named.Required("$status", &out.Status),
+					named.Required("$user_id", &out.UserId),
+					named.Optional("$order_id", &out.OrderId),
+					named.Required("$created_at", &out.CreatedAt),
+					named.Required("$updated_at", &out.UpdatedAt),
+				); err != nil {
+					return err
+				}
+			}
+		}
+
+		return res.Err()
+	}); err != nil {
+		return oapi_codegen.OrdersCreateOrderResOperation{}, nil
+	}
+
+	return out, nil
+}
+
+func (s *Orders) PublishGetCartContentsRequest(ctx context.Context, operationId, userId string) error {
+	msgBytes, err := json.Marshal(&oapi_codegen.PrivatePublishCartPositionsReqMessage{
+		OperationId: operationId,
+		UserId:      userId,
+	})
+	if err != nil {
+		return fmt.Errorf("serialize publish carts contents message: %v", err)
+	}
+	if err := ydbtopic.Produce(ctx, s.topicCartPublishRequests, msgBytes); err != nil {
+		return fmt.Errorf("publish message request publish cart contents: %v", err)
+	}
+}
 
 var queryUpdateOperation = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;

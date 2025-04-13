@@ -201,9 +201,17 @@ func (api *ApiImpl) OrdersCreateOrder(c *gin.Context) {
 		return
 	}
 
-	var res oapi_codegen.OrdersCreateOrderRes
+	userId := accessToken.SubjectId
 
-	c.JSON(http.StatusOK, res)
+	createOrderRes, err := api.Service.CreateOrder(c.Request.Context(), userId)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "failed to create order operation and place order"}},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, createOrderRes)
 }
 func (api *ApiImpl) OrdersGetOrder(c *gin.Context, orderId string) {
 	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())

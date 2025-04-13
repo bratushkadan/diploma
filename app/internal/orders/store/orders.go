@@ -1,8 +1,14 @@
 package store
 
 import (
-	oapi_codegen "github.com/bratushkadan/floral/internal/cart/presentation/generated"
+	"context"
+	"time"
+
+	oapi_codegen "github.com/bratushkadan/floral/internal/orders/presentation/generated"
 	"github.com/bratushkadan/floral/pkg/template"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/result/named"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
 
 const (
@@ -16,6 +22,10 @@ const (
 	topicCartContents        = "cart/cart_contents_topic"
 	topicCartPublishRequests = "cart/cart_publish_requests_topic"
 	topicCartClearRequests   = "cart/cart_clear_requests_topic"
+)
+
+const (
+	OrdersPageSize = 10
 )
 
 var queryUnreserveProducts2 = template.ReplaceAllPairs(`
@@ -64,7 +74,7 @@ WHERE o.id = $id;
 	tableOrderItems,
 )
 
-func (s *Orders) GetOrder() (*oapi_codegen.OrdersGetOrderRes, error) {
+func (s *Orders) GetOrder(ctx context.Context, orderId string) (*oapi_codegen.OrdersGetOrderRes, error) {
 	return nil, nil
 }
 
@@ -119,6 +129,10 @@ LIMIT COALESCE($page_size + 1, 3u);
 	tableOrderItems,
 )
 
+func (s *Orders) ListOrders(ctx context.Context, userId string, nextPageToken *string) (*oapi_codegen.OrdersListOrdersRes, error) {
+	return nil, nil
+}
+
 var queryCreateOrder = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;
 DECLARE $user_id AS Utf8;
@@ -158,6 +172,55 @@ FROM
 	tableOrderItems,
 )
 
+type CreateOrderDTOInput struct {
+	OrderId   string
+	UserId    string
+	Status    string
+	CreatedAt time.Time
+}
+
+func (s *Orders) CreateOrder(ctx context.Context, in CreateOrderDTOInput) (oapi_codegen.OrdersCreateOrderResOperation, error) {
+	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		updates := make([]types.Value, 0, len(toUnreserve))
+		for productId, count := range toUnreserve {
+			updates = append(updates, types.StructValue(
+				types.StructFieldValue("id", types.StringValueFromString(productId)),
+				types.StructFieldValue("stock", types.Uint32Value(count)),
+			))
+		}
+		res, err := tx.Execute(ctx, queryCreateOrder, table.NewQueryParameters(
+			table.ValueParam("$id", types.UTF8Value(in.OrderId)),
+			table.ValueParam("$user_id", types.UTF8Value(in.UserId)),
+			table.ValueParam("$status", types.UTF8Value(in.Status)),
+			table.ValueParam("$created_at", types.DatetimeValueFromTime(in.CreatedAt)),
+			table.ValueParam("$updated_at", types.DatetimeValueFromTime(in.CreatedAt)),
+		))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var pos oapi_codegen.CartDeleteCartPositionResPosition
+				var count uint32
+				if err := res.ScanNamed(
+					named.Required("product_id", &pos.ProductId),
+					named.Required("count", &count),
+				); err != nil {
+					return err
+				}
+				pos.Count = int(count)
+				out = &pos
+			}
+		}
+
+		return res.Err()
+	}); err != nil {
+		return oapi_codegen.OrdersCreateOrderResOperation{}, nil
+	}
+}
+
 var queryUpdateOrder = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;
 DECLARE $status AS Utf8;
@@ -180,6 +243,10 @@ RETURNING id, status, updated_at;
 	"{{table.orders}}",
 	tableOrders,
 )
+
+func (s *Orders) UpdateOrder(ctx context.Context, req oapi_codegen.OrdersUpdateOrderReq) (*oapi_codegen.OrdersUpdateOrderRes, error) {
+
+}
 
 func a() {
 	// oapi_codegen.OrdersUpdateOrderRes

@@ -31,11 +31,41 @@ func (b *OrdersBuilder) Build() (*Orders, error) {
 		return nil, errors.New("ydb driver is nil")
 	}
 
-	topicCartContents, err := ydbtopic.NewProducer(b.store.db, topicA)
+	topicCartContents, err := ydbtopic.NewProducer(b.store.db, topicCartContents)
 	if err != nil {
-		return nil, errors.New("setup <> topic: %w")
+		return nil, errors.New("setup CartContents topic: %w")
 	}
-	b.store.topicA = topicCartContents
+	b.store.topicCartContents = topicCartContents
+
+	topicCartPublishRequests, err := ydbtopic.NewProducer(b.store.db, topicCartPublishRequests)
+	if err != nil {
+		return nil, errors.New("setup CartPublishRequsts topic: %w")
+	}
+	b.store.topicCartPublishRequests = topicCartPublishRequests
+
+	topicCartClearRequests, err := ydbtopic.NewProducer(b.store.db, topicCartClearRequests)
+	if err != nil {
+		return nil, errors.New("setup CartClearRequests topic: %w")
+	}
+	b.store.topicCartClearRequests = topicCartClearRequests
+
+	topicProductsReservations, err := ydbtopic.NewProducer(b.store.db, topicProductsReservations)
+	if err != nil {
+		return nil, errors.New("setup ProductsReservations topic: %w")
+	}
+	b.store.topicProductsReservations = topicProductsReservations
+
+	topicProductsUnreservations, err := ydbtopic.NewProducer(b.store.db, topicProductsUnreservations)
+	if err != nil {
+		return nil, errors.New("setup ProductsUnreservations topic: %w")
+	}
+	b.store.topicProductsUnreservations = topicProductsUnreservations
+
+	topicCancelOperations, err := ydbtopic.NewProducer(b.store.db, topicCancelOperations)
+	if err != nil {
+		return nil, errors.New("setup ProductsUnreservations topic: %w")
+	}
+	b.store.topicCancelOperations = topicCancelOperations
 
 	if b.store.logger == nil {
 		b.store.logger = zap.NewNop()
@@ -48,5 +78,12 @@ type Orders struct {
 	db     *ydb.Driver
 	logger *zap.Logger
 
-	topicA *topicwriter.Writer
+	topicCartContents        *topicwriter.Writer
+	topicCartPublishRequests *topicwriter.Writer
+	topicCartClearRequests   *topicwriter.Writer
+
+	topicProductsReservations   *topicwriter.Writer
+	topicProductsUnreservations *topicwriter.Writer
+
+	topicCancelOperations *topicwriter.Writer
 }
