@@ -2060,6 +2060,8 @@ components:
           type: string
         status:
           type: string
+        details:
+          type: string
         user_id:
           type: string
         created_at:

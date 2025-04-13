@@ -20,13 +20,6 @@ const (
 	topicCancelOperations = "orders/cancel_operations_topic"
 )
 
-// ydbtopic.Produce(ctx, nil)
-
-// Careful with "store"s, here Service's own DTOs are required I think
-func (s *Orders) GetOperation(ctx context.Context, messages []oapi_codegen.PrivateUnreserveProductsReqMessage) error {
-	return nil
-}
-
 var queryGetOperation = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;
 
@@ -39,6 +32,47 @@ WHERE id = $id;
 	"{{table.operations}}",
 	tableOperations,
 )
+
+func (s *Orders) GetOperation(ctx context.Context, operationId string) (*oapi_codegen.OrdersGetOperationRes, error) {
+	var out *oapi_codegen.OrdersGetOperationRes
+
+	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		res, err := tx.Execute(ctx, queryGetOperation, table.NewQueryParameters(
+			table.ValueParam("$id", types.UTF8Value(operationId)),
+		))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				out = &oapi_codegen.OrdersGetOperationRes{}
+				var createdAt, updatedAt time.Time
+				if err := res.ScanNamed(
+					named.Required("id", &out.Id),
+					named.Required("type", &out.Type),
+					named.Required("status", &out.Status),
+					named.Optional("details", &out.Details),
+					named.Required("user_id", &out.UserId),
+					named.Optional("order_id", &out.OrderId),
+					named.Required("created_at", &createdAt),
+					named.Required("updated_at", &updatedAt),
+				); err != nil {
+					return err
+				}
+				out.CreatedAt = createdAt.Format(time.RFC3339)
+				out.UpdatedAt = updatedAt.Format(time.RFC3339)
+			}
+		}
+
+		return res.Err()
+	}); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
 
 var queryCreateOperation = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;
@@ -80,8 +114,8 @@ func (s *Orders) CreateOperation(ctx context.Context, in CreateOperationDTOInput
 			table.ValueParam("$details", types.NullableUTF8Value(in.Details)),
 			table.ValueParam("$user_id", types.UTF8Value(in.UserId)),
 			table.ValueParam("$order_id", types.NullableUTF8Value(in.OrderId)),
-			table.ValueParam("$created_at", types.DatetimeValueFromTime(in.CreatedAt)),
-			table.ValueParam("$updated_at", types.DatetimeValueFromTime(in.CreatedAt)),
+			table.ValueParam("$created_at", types.TimestampValueFromTime(in.CreatedAt)),
+			table.ValueParam("$updated_at", types.TimestampValueFromTime(in.CreatedAt)),
 		))
 		if err != nil {
 			return err
@@ -90,23 +124,26 @@ func (s *Orders) CreateOperation(ctx context.Context, in CreateOperationDTOInput
 
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
+				var createdAt, updatedAt time.Time
 				if err := res.ScanNamed(
-					named.Required("$id", &out.Id),
-					named.Required("$type", &out.Type),
-					named.Required("$status", &out.Status),
-					named.Required("$user_id", &out.UserId),
-					named.Optional("$order_id", &out.OrderId),
-					named.Required("$created_at", &out.CreatedAt),
-					named.Required("$updated_at", &out.UpdatedAt),
+					named.Required("id", &out.Id),
+					named.Required("type", &out.Type),
+					named.Required("status", &out.Status),
+					named.Required("user_id", &out.UserId),
+					named.Optional("order_id", &out.OrderId),
+					named.Required("created_at", &createdAt),
+					named.Required("updated_at", &updatedAt),
 				); err != nil {
 					return err
 				}
+				out.CreatedAt = createdAt.Format(time.RFC3339)
+				out.UpdatedAt = updatedAt.Format(time.RFC3339)
 			}
 		}
 
 		return res.Err()
 	}); err != nil {
-		return oapi_codegen.OrdersCreateOrderResOperation{}, nil
+		return oapi_codegen.OrdersCreateOrderResOperation{}, err
 	}
 
 	return out, nil
@@ -123,6 +160,8 @@ func (s *Orders) PublishGetCartContentsRequest(ctx context.Context, operationId,
 	if err := ydbtopic.Produce(ctx, s.topicCartPublishRequests, msgBytes); err != nil {
 		return fmt.Errorf("publish message request publish cart contents: %v", err)
 	}
+
+	return nil
 }
 
 var queryUpdateOperation = template.ReplaceAllPairs(`

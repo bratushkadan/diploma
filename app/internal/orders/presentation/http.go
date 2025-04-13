@@ -24,57 +24,6 @@ type ApiImpl struct {
 
 //go:generate go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen --config=oapi/config.yaml oapi/api.yaml
 
-func (api *ApiImpl) CartGetCartPositions(c *gin.Context, userId string) {
-	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
-	if !ok {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
-			Errors: []oapi_codegen.Err{{Code: 124, Message: "authentication problems"}},
-		})
-		return
-	}
-
-	if !slices.Contains([]string{shared_api.SubjectTypeUser, shared_api.SubjectTypeAdmin}, accessToken.SubjectType) {
-		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
-			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
-		})
-		return
-	}
-	if accessToken.SubjectType == shared_api.SubjectTypeUser && userId != accessToken.SubjectId {
-		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
-			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
-		})
-		return
-	}
-
-	positions, err := api.Service.GetCartPositions(c.Request.Context(), userId)
-	if err != nil {
-		api.Logger.Error("get cart positions", zap.Error(err))
-		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: 1, Message: err.Error()}))
-		return
-	}
-
-	c.JSON(http.StatusOK, oapi_codegen.CartGetCartPositionsRes{Positions: positions})
-}
-
-func (api *ApiImpl) PrivateCartsClearContents(c *gin.Context) {
-	var reqBody oapi_codegen.PrivateOrdersCancelOperationsJSONRequestBody
-	if err := json.NewDecoder(c.Request.Body).Decode(&reqBody); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
-			Code:    1,
-			Message: fmt.Sprintf("invalid request body: %v", err),
-		}))
-		return
-	}
-
-	if err := api.Service.ClearCarts(c.Request.Context(), reqBody.Messages); err != nil {
-		api.Logger.Error("clear cart", zap.Error(err))
-		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: 1, Message: err.Error()}))
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "clear carts applied"})
-}
-
 func (api *ApiImpl) PrivateOrdersBatchCancelUnpaidOrders(c *gin.Context) {
 	var reqBody oapi_codegen.PrivateOrdersBatchCancelUnpaidOrdersJSONRequestBody
 	if err := json.NewDecoder(c.Request.Body).Decode(&reqBody); err != nil {
@@ -145,18 +94,29 @@ func (api *ApiImpl) OrdersGetOperation(c *gin.Context, operationId string) {
 		return
 	}
 
-	// oapi_codegen.OrdersGetOperationRes
+	op, err := api.Service.GetOperation(c.Request.Context(), operationId)
+	if err != nil {
+		api.Logger.Info("retrieve operation", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "failed to retrieve operation"}},
+		})
+		return
+	}
+	if op == nil {
+		c.AbortWithStatusJSON(http.StatusNotFound, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "operation not found"}},
+		})
+		return
+	}
 
-	var res oapi_codegen.OrdersGetOperationRes
-
-	if accessToken.SubjectType == shared_api.SubjectTypeUser && res.UserId != accessToken.SubjectId {
+	if accessToken.SubjectType == shared_api.SubjectTypeUser && op.UserId != accessToken.SubjectId {
 		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, res)
+	c.JSON(http.StatusOK, op)
 }
 func (api *ApiImpl) OrdersListOrders(c *gin.Context, params oapi_codegen.OrdersListOrdersParams) {
 	if params.UserId == nil && params.NextPageToken == nil || params.UserId != nil && params.NextPageToken != nil {
@@ -205,6 +165,7 @@ func (api *ApiImpl) OrdersCreateOrder(c *gin.Context) {
 
 	createOrderRes, err := api.Service.CreateOrder(c.Request.Context(), userId)
 	if err != nil {
+		api.Logger.Error("create order operation and publish request cart contents", zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 124, Message: "failed to create order operation and place order"}},
 		})

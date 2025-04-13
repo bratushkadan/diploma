@@ -20,7 +20,7 @@ const (
 	topicProductsUnreservations = "products/products_unreservartions_topic"
 
 	topicCartContents        = "cart/cart_contents_topic"
-	topicCartPublishRequests = "cart/cart_publish_requests_topic"
+	topicCartPublishRequests = "cart/cart_contents_publish_requests_topic"
 	topicCartClearRequests   = "cart/cart_clear_requests_topic"
 )
 
@@ -181,13 +181,13 @@ type CreateOrderDTOInput struct {
 
 func (s *Orders) CreateOrder(ctx context.Context, in CreateOrderDTOInput) (oapi_codegen.OrdersCreateOrderResOperation, error) {
 	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
-		updates := make([]types.Value, 0, len(toUnreserve))
-		for productId, count := range toUnreserve {
-			updates = append(updates, types.StructValue(
-				types.StructFieldValue("id", types.StringValueFromString(productId)),
-				types.StructFieldValue("stock", types.Uint32Value(count)),
-			))
-		}
+		// updates := make([]types.Value, 0, len(toUnreserve))
+		// for productId, count := range toUnreserve {
+		// 	updates = append(updates, types.StructValue(
+		// 		types.StructFieldValue("id", types.StringValueFromString(productId)),
+		// 		types.StructFieldValue("stock", types.Uint32Value(count)),
+		// 	))
+		// }
 		res, err := tx.Execute(ctx, queryCreateOrder, table.NewQueryParameters(
 			table.ValueParam("$id", types.UTF8Value(in.OrderId)),
 			table.ValueParam("$user_id", types.UTF8Value(in.UserId)),
@@ -211,7 +211,7 @@ func (s *Orders) CreateOrder(ctx context.Context, in CreateOrderDTOInput) (oapi_
 					return err
 				}
 				pos.Count = int(count)
-				out = &pos
+				// out = &pos
 			}
 		}
 
@@ -219,6 +219,8 @@ func (s *Orders) CreateOrder(ctx context.Context, in CreateOrderDTOInput) (oapi_
 	}); err != nil {
 		return oapi_codegen.OrdersCreateOrderResOperation{}, nil
 	}
+
+	return oapi_codegen.OrdersCreateOrderResOperation{}, nil
 }
 
 var queryUpdateOrder = template.ReplaceAllPairs(`
@@ -245,7 +247,7 @@ RETURNING id, status, updated_at;
 )
 
 func (s *Orders) UpdateOrder(ctx context.Context, req oapi_codegen.OrdersUpdateOrderReq) (*oapi_codegen.OrdersUpdateOrderRes, error) {
-
+	return nil, nil
 }
 
 func a() {
