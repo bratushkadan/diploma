@@ -2088,7 +2088,9 @@ components:
         status:
           type: string
         items:
-          $ref: '#/components/schemas/OrdersGetOrderResItem'
+          type: array
+          items:
+            $ref: '#/components/schemas/OrdersGetOrderResItem'
         created_at:
           type: string
         updated_at:

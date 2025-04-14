@@ -103,9 +103,52 @@ WHERE o.id = $id;
 	tableOrderItems,
 )
 
-// TODO:
 func (s *Orders) GetOrder(ctx context.Context, orderId string) (*oapi_codegen.OrdersGetOrderRes, error) {
-	return nil, nil
+	var out *oapi_codegen.OrdersGetOrderRes
+
+	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		res, err := tx.Execute(ctx, queryGetOperation, table.NewQueryParameters(
+			table.ValueParam("$id", types.UTF8Value(orderId)),
+		))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				out = &oapi_codegen.OrdersGetOrderRes{}
+				var orderItem oapi_codegen.OrdersGetOrderResItem
+				var createdAt, updatedAt time.Time
+				if err := res.ScanNamed(
+					named.Required("id", &out.Id),
+					named.Required("user_id", &out.UserId),
+					named.Required("status", &out.Status),
+					named.Required("created_at", &createdAt),
+					named.Required("updated_at", &updatedAt),
+
+					named.Required("product_id", &orderItem.ProductId),
+					named.Required("product_name", &orderItem.Name),
+					named.Required("product_seller_id", &orderItem.SellerId),
+					named.Required("product_count", &orderItem.Count),
+					named.Required("product_price", &orderItem.Price),
+					named.Required("optional", &orderItem.PictureUrl),
+				); err != nil {
+					return err
+				}
+				out.CreatedAt = createdAt.Format(time.RFC3339)
+				out.UpdatedAt = updatedAt.Format(time.RFC3339)
+
+				out.Items = append(out.Items, orderItem)
+			}
+		}
+
+		return res.Err()
+	}); err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }
 
 var queryListOrders = template.ReplaceAllPairs(`
@@ -185,7 +228,7 @@ type ListOrdersRow struct {
 }
 
 // TODO: понять, LIMIT чего происходит - LIMIT после JOIN'а заказов + позиций?
-// Мне нужно LIMIT заказов, а потом JOIN - нужно будет переписать запрос (но интерфейс останется таким же)
+// FIXME: Мне нужно LIMIT заказов, а потом JOIN - нужно будет переписать запрос (но интерфейс останется таким же)
 func (s *Orders) ListOrders(ctx context.Context, userId string, nextPageToken *string) (oapi_codegen.OrdersListOrdersRes, error) {
 	var out oapi_codegen.OrdersListOrdersRes
 
@@ -379,7 +422,7 @@ func (s *Orders) CreateOrder(ctx context.Context, in CreateOrderDTOInput) (Creat
 
 		return res.Err()
 	}); err != nil {
-		return CreateOrderDTOOutput{}, nil
+		return CreateOrderDTOOutput{}, err
 	}
 
 	return CreateOrderDTOOutput{
@@ -413,15 +456,14 @@ RETURNING id, status, updated_at;
 	tableOrders,
 )
 
-// TODO:
-func (s *Orders) UpdateOrder(ctx context.Context, req oapi_codegen.OrdersUpdateOrderReq) (*oapi_codegen.OrdersUpdateOrderRes, error) {
+func (s *Orders) UpdateOrder(ctx context.Context, orderId, orderStatus string) (*oapi_codegen.OrdersUpdateOrderRes, error) {
 	var out *oapi_codegen.OrdersUpdateOrderRes
 
 	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
-		res, err := tx.Execute(ctx, queryUpdateOperation, table.NewQueryParameters(
-			table.ValueParam("$id", types.UTF8Value(in.Id)),
-			table.ValueParam("$status", types.UTF8Value(in.Status)),
-			table.ValueParam("$updated_at", types.TimestampValueFromTime(in.UpdatedAt)),
+		res, err := tx.Execute(ctx, queryUpdateOrder, table.NewQueryParameters(
+			table.ValueParam("$id", types.UTF8Value(orderId)),
+			table.ValueParam("$status", types.UTF8Value(orderStatus)),
+			table.ValueParam("$updated_at", types.TimestampValueFromTime(time.Now())),
 		))
 		if err != nil {
 			return err

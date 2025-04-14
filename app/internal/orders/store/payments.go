@@ -1,6 +1,16 @@
 package store
 
-import "github.com/bratushkadan/floral/pkg/template"
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/bratushkadan/floral/pkg/template"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/result/named"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
+)
 
 const (
 	tablePayments = "`orders/payments`"
@@ -10,9 +20,9 @@ var queryCreatePayment = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;
 DECLARE $order_id AS Utf8;
 DECLARE $provider AS Json;
-DECLARE $created_at AS Datetime;
-DECLARE $updated_at AS Datetime;
-DECLARE $refunded_at AS Optional<Datetime>;
+DECLARE $created_at AS Timestamp;
+DECLARE $updated_at AS Timestamp;
+DECLARE $refunded_at AS Optional<Timestamp>;
 
 -- $id = UNWRAP(CAST("op1" AS Utf8));
 -- $order_id = UNWRAP(CAST("" AS Utf8));
@@ -22,16 +32,82 @@ DECLARE $refunded_at AS Optional<Datetime>;
 
 INSERT INTO {{table.payments}} (id, order_id, provider, created_at, updated_at, refunded_at)
 VALUES($id, $order_id, $provider, $created_at, $updated_at, $refunded_at)
-RETURNING *;
+RETURNING id, order_id, provider, created_at, updated_at, refunded_at;
 `,
 	"{{table.payments}}",
 	tablePayments,
 )
 
+type CreatePaymentDTOInput struct {
+	Id         string
+	OrderId    string
+	Provider   map[string]any
+	CreatedAt  time.Time
+	RefundedAt *time.Time
+}
+type CreatePaymentDTOOutput struct {
+	Id         string
+	OrderId    string
+	Provider   map[string]any
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	RefundedAt *time.Time
+}
+
+func (s *Orders) CreatePayment(ctx context.Context, in CreatePaymentDTOInput) (CreatePaymentDTOOutput, error) {
+	provider, err := json.Marshal(&in.Provider)
+	if err != nil {
+		return CreatePaymentDTOOutput{}, fmt.Errorf("serialize provider data: %v", err)
+	}
+
+	var out CreatePaymentDTOOutput
+
+	tableQueryParameters := table.NewQueryParameters(
+		table.ValueParam("$id", types.UTF8Value(in.Id)),
+		table.ValueParam("$order_id", types.UTF8Value(in.Id)),
+		table.ValueParam("$provider", types.JSONValueFromBytes(provider)),
+		table.ValueParam("$created_at", types.TimestampValueFromTime(in.CreatedAt)),
+		table.ValueParam("$updated_at", types.TimestampValueFromTime(in.CreatedAt)),
+		table.ValueParam("$refunded_at", types.NullableTimestampValueFromTime(in.RefundedAt)),
+	)
+
+	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		res, err := tx.Execute(ctx, queryCreateOrder, tableQueryParameters)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var providerJsonData []byte
+				if err := res.ScanNamed(
+					named.Required("id", &out.Id),
+					named.Required("order_id", &out.OrderId),
+					named.Required("provider", &providerJsonData),
+					named.Required("created_at", &out.CreatedAt),
+					named.Required("updated_at", &out.UpdatedAt),
+					named.Optional("refunded_at", &out.RefundedAt),
+				); err != nil {
+					return err
+				}
+
+				if err := json.Unmarshal(providerJsonData, &out.Provider); err != nil {
+					return fmt.Errorf("deserialize payment provider data from database: %v", err)
+				}
+			}
+		}
+
+		return res.Err()
+	}); err != nil {
+		return CreatePaymentDTOOutput{}, err
+	}
+
+	return out, nil
+}
+
 var queryGetPayment = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;
-
-$id = UNWRAP(CAST("op1" AS Utf8));
 
 SELECT
   id,
@@ -47,14 +123,61 @@ FROM
 	tablePayments,
 )
 
+type GetPaymentDTOInput struct {
+	Id string
+}
+type GetPaymentDTOOutput struct {
+	Id         string
+	OrderId    string
+	Provider   map[string]any
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	RefundedAt *time.Time
+}
+
+func (s *Orders) GetPayment(ctx context.Context, in GetPaymentDTOInput) (*GetPaymentDTOOutput, error) {
+	var out *GetPaymentDTOOutput
+
+	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		res, err := tx.Execute(ctx, queryGetOrder, table.NewQueryParameters(
+			table.ValueParam("$id", types.UTF8Value(in.Id)),
+		))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				if err := res.ScanNamed(
+					named.Required("id", &out.Id),
+					named.Required("order_id", &out.OrderId),
+					named.Required("provider", &out.Provider),
+					named.Required("created_at", &out.CreatedAt),
+					named.Required("updated_at", &out.UpdatedAt),
+					named.Optional("refunded_at", &out.RefundedAt),
+				); err != nil {
+					return err
+				}
+			}
+		}
+
+		return res.Err()
+	}); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
 var queryUpdatePayment = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;
-DECLARE $refunded_at AS Optional<Datetime>;
+DECLARE $refunded_at AS Optional<Timestamp>;
 
 $to_update = (
-    SELECT
-        $id AS id,
-        $refunded_at AS refunded_at,
+  SELECT
+    $id AS id,
+    $refunded_at AS refunded_at,
 );
 
 UPDATE {{table.payments}} ON
@@ -64,3 +187,49 @@ RETURNING id, order_id, updated_at, refunded_at;
 	"{{table.payments}}",
 	tablePayments,
 )
+
+type UpdatePaymentDTOInput struct {
+	Id         string
+	RefundedAt *time.Time
+}
+type UpdatePaymentDTOOutput struct {
+	Id         string
+	OrderId    string
+	UpdatedAt  time.Time
+	RefundedAt *time.Time
+}
+
+func (s *Orders) UpdatePayment(ctx context.Context, in UpdatePaymentDTOInput) (*UpdatePaymentDTOOutput, error) {
+	var out *UpdatePaymentDTOOutput
+
+	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		res, err := tx.Execute(ctx, queryUpdateOrder, table.NewQueryParameters(
+			table.ValueParam("$id", types.UTF8Value(in.Id)),
+			table.ValueParam("$refunded_at", types.NullableTimestampValueFromTime(in.RefundedAt)),
+		))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				out = &UpdatePaymentDTOOutput{}
+				if err := res.ScanNamed(
+					named.Required("id", &out.Id),
+					named.Required("order_id", &out.OrderId),
+					named.Required("updated_at", &out.UpdatedAt),
+					named.Optional("refunded_at", &out.RefundedAt),
+				); err != nil {
+					return err
+				}
+			}
+		}
+
+		return res.Err()
+	}); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
