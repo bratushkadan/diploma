@@ -149,7 +149,7 @@ func (s *Orders) CreateOperation(ctx context.Context, in CreateOperationDTOInput
 	return out, nil
 }
 
-func (s *Orders) PublishGetCartContentsRequest(ctx context.Context, operationId, userId string) error {
+func (s *Orders) ProducePublishCartContentsRequest(ctx context.Context, operationId, userId string) error {
 	msgBytes, err := json.Marshal(&oapi_codegen.PrivatePublishCartPositionsReqMessage{
 		OperationId: operationId,
 		UserId:      userId,
@@ -168,6 +168,7 @@ var queryUpdateOperation = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;
 DECLARE $status AS Utf8;
 DECLARE $details AS Optional<Utf8>;
+DECLARE $order_id AS Optional<Utf8>;
 DECLARE $updated_at AS Timestamp;
 
 -- $id = "foo";
@@ -180,6 +181,7 @@ $to_update = (
         id,
         $status AS status,
         COALESCE($details, details) AS details,
+				COALESCE($order_id, order_id) AS order_id,
         $updated_at AS updated_at,
     FROM {{table.operations}}
     WHERE id = $id
@@ -187,8 +189,62 @@ $to_update = (
 
 UPDATE {{table.operations}} ON
 SELECT * FROM $to_update
-RETURNING *;
+RETURNING id, status, details, order_id, updated_at;
 `,
 	"{{table.operations}}",
 	tableOperations,
 )
+
+type UpdateOperationDTOInput struct {
+	Id        string
+	Status    string
+	Details   *string
+	OrderId   *string
+	UpdatedAt time.Time
+}
+type UpdateOperationDTOOutput struct {
+	Id        string
+	Status    string
+	Details   *string
+	OrderId   *string
+	UpdatedAt time.Time
+}
+
+func (s *Orders) UpdateOperation(ctx context.Context, in UpdateOperationDTOInput) (*UpdateOperationDTOOutput, error) {
+	var out *UpdateOperationDTOOutput
+
+	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		res, err := tx.Execute(ctx, queryUpdateOperation, table.NewQueryParameters(
+			table.ValueParam("$id", types.UTF8Value(in.Id)),
+			table.ValueParam("$status", types.UTF8Value(in.Status)),
+			table.ValueParam("$details", types.NullableUTF8Value(in.Details)),
+			table.ValueParam("$order_id", types.NullableUTF8Value(in.OrderId)),
+			table.ValueParam("$updated_at", types.TimestampValueFromTime(in.UpdatedAt)),
+		))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				out = &UpdateOperationDTOOutput{}
+				if err := res.ScanNamed(
+					named.Required("id", &out.Id),
+					named.Required("status", &out.Status),
+					named.Optional("details", &out.Details),
+					named.Optional("order_id", &out.OrderId),
+					named.Required("updated_at", &out.UpdatedAt),
+				); err != nil {
+					return err
+				}
+			}
+		}
+
+		return res.Err()
+	}); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}

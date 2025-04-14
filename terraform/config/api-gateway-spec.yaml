@@ -993,7 +993,7 @@ paths:
       parameters:
         - name: user_id
           in: query
-          required: false
+          required: true
           schema:
             type: string
         - name: next_page_token
@@ -2165,7 +2165,9 @@ components:
         status:
           type: string
         items:
-          $ref: '#/components/schemas/OrdersListOrdersResItem'
+          type: array
+          items:
+            $ref: '#/components/schemas/OrdersListOrdersResItem'
         created_at:
           type: string
         updated_at:

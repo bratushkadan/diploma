@@ -33,20 +33,6 @@ CREATE TABLE `orders/order_items` (
 );
 ```
 
-`contents` field schema:
-```go
-type OrderContentsItem struct {
-    ProductId Utf8 `json:"product_id"`
-    Name Utf8 `json:"name"`
-    SellerId Utf8 `json:"seller_id"`
-    Count int32 `json:"count"`
-    Price float64 `json:"price"`
-    // Picture url
-    Picture *Utf8 `json:"picture"`
-}
-type OrderContents = OrderContentsItem[] 
-```
-
 ```sql
 CREATE TABLE `orders/payments` (
   id Utf8 NOT NULL,

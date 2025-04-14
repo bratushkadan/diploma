@@ -31,12 +31,6 @@ func (b *OrdersBuilder) Build() (*Orders, error) {
 		return nil, errors.New("ydb driver is nil")
 	}
 
-	topicCartContents, err := ydbtopic.NewProducer(b.store.db, topicCartContents)
-	if err != nil {
-		return nil, errors.New("setup CartContents topic: %w")
-	}
-	b.store.topicCartContents = topicCartContents
-
 	topicCartPublishRequests, err := ydbtopic.NewProducer(b.store.db, topicCartPublishRequests)
 	if err != nil {
 		return nil, errors.New("setup CartPublishRequsts topic: %w")
@@ -78,7 +72,6 @@ type Orders struct {
 	db     *ydb.Driver
 	logger *zap.Logger
 
-	topicCartContents        *topicwriter.Writer
 	topicCartPublishRequests *topicwriter.Writer
 	topicCartClearRequests   *topicwriter.Writer
 

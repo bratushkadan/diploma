@@ -9,3 +9,7 @@ import (
 func (s *Orders) GetOperation(ctx context.Context, operationId string) (*oapi_codegen.OrdersGetOperationRes, error) {
 	return s.store.GetOperation(ctx, operationId)
 }
+
+func (s *Orders) CancelOperations(ctx context.Context, req oapi_codegen.PrivateOrdersProcessReservedProductsJSONRequestBody) error {
+	return nil
+}

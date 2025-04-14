@@ -89,6 +89,22 @@ stateDiagram-v2
     Завершен --> [*]
 ```
 
+### Operation state diagram
+
+```mermaid
+---
+title: Operation statuses
+---
+stateDiagram-v2
+    [*] --> Created
+    Created --> Aborted
+    Created --> Terminated
+    Created --> Completed
+    Aborted --> [*]
+    Terminated --> [*]
+    Completed --> [*]
+```
+
 ### Serverless Trigger Canceling an order after a timeout
 
 [PlantUML Editor](https://editor.plantuml.com/uml/jLJDJi904BxtAIQSyC0BU6Xu0qtqo0MXCIJQbcrhuaqaQ8m74Y_UCBv19LOGRNc5cJVosm7bDtZHjDrDTsQ_dzbfgr5SDt5oVkQS18dVh9jBAXrvvi8pPruKqR5fdPvwfkPppYbn8TVyoHddqYKUSSeJF9WHdt91F9OECZAvjJayvZ7nKAxmyZbRA54zehWHE258MurMMFTZAXsOfcSYZGLEE_4IZqeyi22wznKmqk42rulSpP7VDRsz2dHeWcRIY6TGeUE0gU86-yIFa3a5M24Tskt42IeLrsrZp_CQOwOYx31KKRegVQ2CORzG5DKxKjr31468EKLYBlVI8t3g0WAfz43bGY6e1WW0LAx9CkfWK_X5PKv0hHBd3hJSkqs4toQUWFKXtPy3oQYnQalwVsuBx6u8xWUiZlJyK-liTvoQluI4cUojfg4hvJVfrlmoXERIHwAUo39WAZUsvVOMxcrTfrh9eItDHXV1l5f76YIYJ1tE8EA7mHPd2mDsqAhIHTTi5lm_IRMv1-YJN0CVIwHByEdQjrhUQB1jfTbpdAhdD-sluGi0)
