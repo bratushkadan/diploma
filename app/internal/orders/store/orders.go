@@ -107,7 +107,7 @@ func (s *Orders) GetOrder(ctx context.Context, orderId string) (*oapi_codegen.Or
 	var out *oapi_codegen.OrdersGetOrderRes
 
 	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
-		res, err := tx.Execute(ctx, queryGetOperation, table.NewQueryParameters(
+		res, err := tx.Execute(ctx, queryGetOrder, table.NewQueryParameters(
 			table.ValueParam("$id", types.UTF8Value(orderId)),
 		))
 		if err != nil {
@@ -161,6 +161,35 @@ DECLARE $page_size AS Optional<Uint32>;
 -- $last_paginated_order_id = UNWRAP(CAST("foo-bar-baz-qux3" AS Utf8));
 -- $last_paginated_created_at = UNWRAP(CAST("2025-04-12T18:03:40Z" AS Timestamp));
 
+$orders = (
+  SELECT
+    id,
+    user_id,
+    status,
+    created_at,
+    updated_at,
+  FROM {{table.orders}}
+  VIEW idx_list_orders
+  WHERE
+    user_id = $user_id
+      AND
+    (
+      (
+        $last_paginated_order_id IS NULL
+          OR
+        $last_paginated_order_id = id
+      )
+        OR
+      (
+        $last_paginated_created_at IS NULL
+          OR
+        $last_paginated_created_at > created_at
+      )
+    )
+  ORDER BY created_at DESC
+  LIMIT COALESCE($page_size + 1, 6u)
+);
+
 SELECT
     o.id AS id,
     o.user_id AS user_id,
@@ -173,27 +202,8 @@ SELECT
     i.count AS produt_count,
     i.price AS product_price,
     i.picture AS product_picture
-FROM {{table.orders}}
-VIEW idx_list_orders o
-JOIN {{table.order_items}} i ON i.order_id = o.id
-WHERE
-    o.user_id = $user_id
-        AND
-    (
-        (
-            $last_paginated_order_id IS NULL
-                OR 
-            $last_paginated_order_id = o.id
-        )
-            OR
-        (
-            $last_paginated_created_at IS NULL
-                OR
-            $last_paginated_created_at > o.created_at
-        )
-    )
-ORDER BY created_at DESC
-LIMIT COALESCE($page_size + 1, 3u);
+FROM $orders o
+JOIN {{table.order_items}} i ON i.order_id = o.id;
 `,
 	"{{table.orders}}",
 	tableOrders,
@@ -227,8 +237,6 @@ type ListOrdersRow struct {
 	ProductPicture  *string
 }
 
-// TODO: понять, LIMIT чего происходит - LIMIT после JOIN'а заказов + позиций?
-// FIXME: Мне нужно LIMIT заказов, а потом JOIN - нужно будет переписать запрос (но интерфейс останется таким же)
 func (s *Orders) ListOrders(ctx context.Context, userId string, nextPageToken *string) (oapi_codegen.OrdersListOrdersRes, error) {
 	var out oapi_codegen.OrdersListOrdersRes
 
