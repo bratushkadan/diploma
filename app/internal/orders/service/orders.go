@@ -257,7 +257,9 @@ func (s *Orders) ProcessPublishedCartPositions(ctx context.Context, req oapi_cod
 
 	wg.Wait()
 
-	s.store.ProduceProductsReservationMessages(ctx, productsReservationMessages...)
+	if err := s.store.ProduceProductsReservationMessages(ctx, productsReservationMessages...); err != nil {
+		return fmt.Errorf("produce products reservation messages: %v", err)
+	}
 
 	return nil
 }
@@ -330,7 +332,6 @@ func (s *Orders) ProcessUnreservedProducts(ctx context.Context, req oapi_codegen
 	return nil
 }
 
-// TODO: need N updates in one YQL query (update N orders)
 func (s *Orders) BatchCancelUnpaidOrders(ctx context.Context, req oapi_codegen.PrivateOrderBatchCancelUnpaidOrdersReq) error {
 	messages := make([]oapi_codegen.PrivateUnreserveProductsReqMessage, 0)
 

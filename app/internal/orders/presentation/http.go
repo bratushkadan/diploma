@@ -46,7 +46,6 @@ func (api *ApiImpl) PrivateOrdersBatchCancelUnpaidOrders(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "ok"})
 }
 
-// TODO:
 func (api *ApiImpl) PrivateOrdersCancelOperations(c *gin.Context) {
 	var reqBody oapi_codegen.PrivateOrdersCancelOperationsJSONRequestBody
 	if err := json.NewDecoder(c.Request.Body).Decode(&reqBody); err != nil {
@@ -57,7 +56,18 @@ func (api *ApiImpl) PrivateOrdersCancelOperations(c *gin.Context) {
 		return
 	}
 
+	if err := api.Service.CancelOperations(c.Request.Context(), reqBody); err != nil {
+		api.Logger.Error("process published cart positions", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
+			Code:    1,
+			Message: "failed to process published cart positions",
+		}))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "ok"})
 }
+
 func (api *ApiImpl) PrivateOrdersProcessPublishedCartPositions(c *gin.Context) {
 	var reqBody oapi_codegen.PrivateOrdersProcessPublishedCartPositionsJSONRequestBody
 	if err := json.NewDecoder(c.Request.Body).Decode(&reqBody); err != nil {
@@ -67,7 +77,19 @@ func (api *ApiImpl) PrivateOrdersProcessPublishedCartPositions(c *gin.Context) {
 		}))
 		return
 	}
+
+	if err := api.Service.ProcessPublishedCartPositions(c.Request.Context(), reqBody); err != nil {
+		api.Logger.Error("process published cart positions", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
+			Code:    1,
+			Message: "failed to process published cart positions",
+		}))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "ok"})
 }
+
 func (api *ApiImpl) PrivateOrdersProcessReservedProducts(c *gin.Context) {
 	var reqBody oapi_codegen.PrivateOrdersProcessReservedProductsJSONRequestBody
 	if err := json.NewDecoder(c.Request.Body).Decode(&reqBody); err != nil {
@@ -78,7 +100,18 @@ func (api *ApiImpl) PrivateOrdersProcessReservedProducts(c *gin.Context) {
 		return
 	}
 
+	if err := api.Service.ProcessReservedProducts(c.Request.Context(), reqBody); err != nil {
+		api.Logger.Error("process reserved products", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
+			Code:    1,
+			Message: "failed to process reserved products",
+		}))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "ok"})
 }
+
 func (api *ApiImpl) PrivateOrdersProcessUnreservedProducts(c *gin.Context) {
 	var reqBody oapi_codegen.PrivateOrdersProcessUnreservedProductsJSONRequestBody
 	if err := json.NewDecoder(c.Request.Body).Decode(&reqBody); err != nil {
@@ -89,7 +122,18 @@ func (api *ApiImpl) PrivateOrdersProcessUnreservedProducts(c *gin.Context) {
 		return
 	}
 
+	if err := api.Service.ProcessUnreservedProducts(c.Request.Context(), reqBody); err != nil {
+		api.Logger.Error("process unreserved products", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
+			Code:    1,
+			Message: "failed to process unreserved products",
+		}))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "ok"})
 }
+
 func (api *ApiImpl) OrdersGetOperation(c *gin.Context, operationId string) {
 	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
 	if !ok {
@@ -130,10 +174,11 @@ func (api *ApiImpl) OrdersGetOperation(c *gin.Context, operationId string) {
 
 	c.JSON(http.StatusOK, op)
 }
+
 func (api *ApiImpl) OrdersListOrders(c *gin.Context, params oapi_codegen.OrdersListOrdersParams) {
-	if params.UserId == nil && params.NextPageToken == nil || params.UserId != nil && params.NextPageToken != nil {
+	if params.UserId == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
-			Errors: []oapi_codegen.Err{{Code: 12, Message: `either "user_id" or "next_page_token" query paramater must be provided`}},
+			Errors: []oapi_codegen.Err{{Code: 12, Message: `"user_id" query paramater must be provided and must not be empty`}},
 		})
 		return
 	}
@@ -146,7 +191,7 @@ func (api *ApiImpl) OrdersListOrders(c *gin.Context, params oapi_codegen.OrdersL
 		return
 	}
 
-	if params.UserId != nil && accessToken.SubjectType == shared_api.SubjectTypeUser && *params.UserId != accessToken.SubjectId {
+	if accessToken.SubjectType == shared_api.SubjectTypeUser && params.UserId != accessToken.SubjectId {
 		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
 		})
@@ -157,6 +202,7 @@ func (api *ApiImpl) OrdersListOrders(c *gin.Context, params oapi_codegen.OrdersL
 
 	c.JSON(http.StatusOK, res)
 }
+
 func (api *ApiImpl) OrdersCreateOrder(c *gin.Context) {
 	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
 	if !ok {
@@ -186,6 +232,7 @@ func (api *ApiImpl) OrdersCreateOrder(c *gin.Context) {
 
 	c.JSON(http.StatusOK, createOrderRes)
 }
+
 func (api *ApiImpl) OrdersGetOrder(c *gin.Context, orderId string) {
 	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
 	if !ok {

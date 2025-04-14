@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	oapi_codegen "github.com/bratushkadan/floral/internal/orders/presentation/generated"
+	"github.com/bratushkadan/floral/internal/orders/store"
 )
 
 const (
@@ -19,7 +21,13 @@ func (s *Orders) GetOperation(ctx context.Context, operationId string) (*oapi_co
 	return s.store.GetOperation(ctx, operationId)
 }
 
-// TODO: need N updates in one YQL query (cancel N operations)
-func (s *Orders) CancelOperations(ctx context.Context, req oapi_codegen.PrivateOrdersProcessReservedProductsJSONRequestBody) error {
+func (s *Orders) CancelOperations(ctx context.Context, req oapi_codegen.PrivateOrderCancelOperationsReq) error {
+	ops := make([]store.UpdateOperationManyDTOInputOperation, 0, len(req.Messages))
+
+	_, err := s.store.UpdateOperationMany(ctx, store.UpdateOperationManyDTOInput{Operations: ops})
+	if err != nil {
+		return fmt.Errorf("update operations: %v", err)
+	}
+
 	return nil
 }
