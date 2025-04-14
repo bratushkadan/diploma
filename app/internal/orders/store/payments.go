@@ -72,7 +72,7 @@ func (s *Orders) CreatePayment(ctx context.Context, in CreatePaymentDTOInput) (C
 	)
 
 	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
-		res, err := tx.Execute(ctx, queryCreateOrder, tableQueryParameters)
+		res, err := tx.Execute(ctx, queryCreatePayment, tableQueryParameters)
 		if err != nil {
 			return err
 		}
@@ -139,7 +139,7 @@ func (s *Orders) GetPayment(ctx context.Context, in GetPaymentDTOInput) (*GetPay
 	var out *GetPaymentDTOOutput
 
 	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
-		res, err := tx.Execute(ctx, queryGetOrder, table.NewQueryParameters(
+		res, err := tx.Execute(ctx, queryGetPayment, table.NewQueryParameters(
 			table.ValueParam("$id", types.UTF8Value(in.Id)),
 		))
 		if err != nil {
@@ -203,7 +203,7 @@ func (s *Orders) UpdatePayment(ctx context.Context, in UpdatePaymentDTOInput) (*
 	var out *UpdatePaymentDTOOutput
 
 	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
-		res, err := tx.Execute(ctx, queryUpdateOrder, table.NewQueryParameters(
+		res, err := tx.Execute(ctx, queryUpdatePayment, table.NewQueryParameters(
 			table.ValueParam("$id", types.UTF8Value(in.Id)),
 			table.ValueParam("$refunded_at", types.NullableTimestampValueFromTime(in.RefundedAt)),
 		))

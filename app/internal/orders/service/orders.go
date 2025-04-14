@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,18 +15,134 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	OperationTypeCreateOrder = "create_order"
+type OrderStatus string
 
-	OperationTypeCreateOrderStatusStarted    = "started"
-	OperationTypeCreateOrderStatusAborted    = "aborted"
-	OperationTypeCreateOrderStatusTerminated = "terminated"
-	OperationTypeCreateOrderStatusCompleted  = "completed"
+const (
+	OrderStatusCreated    OrderStatus = "created"
+	OrderStatusPaid       OrderStatus = "paid"
+	OrderStatusCancelling OrderStatus = "cancelling"
+	OrderStatusCancelled  OrderStatus = "cancelled"
+	OrderStatusProcessed  OrderStatus = "processed"
+	OrderStatusShipped    OrderStatus = "shipped"
+	OrderStatusDelivered  OrderStatus = "delivered"
+	OrderStatusCompleted  OrderStatus = "completed"
 )
 
 var (
 	ErrPermissionDenied = errors.New("permission denied")
+
+	ErrOrderStateMachineInvalidStatus             = errors.New("invalid order status")
+	ErrOrderStateMachineIncorrentStatusTransition = errors.New("incorrect order status transition")
 )
+
+type OrderStateMachine struct {
+	status OrderStatus
+}
+
+func NewOrderStateMachine(status OrderStatus) (*OrderStateMachine, error) {
+	switch status {
+	case OrderStatusCreated, OrderStatusPaid, OrderStatusCancelling, OrderStatusCancelled, OrderStatusProcessed, OrderStatusShipped, OrderStatusDelivered, OrderStatusCompleted:
+		return &OrderStateMachine{status: status}, nil
+	default:
+		return nil, fmt.Errorf(`invalid initial order status for state machine: "%s"`, status)
+	}
+}
+
+func (o *OrderStateMachine) TransitionString(newStatus string) error {
+	switch newStatus {
+	case string(OrderStatusCreated), string(OrderStatusPaid), string(OrderStatusCancelling), string(OrderStatusCancelled), string(OrderStatusProcessed), string(OrderStatusShipped), string(OrderStatusDelivered), string(OrderStatusCompleted):
+		return o.Transition(OrderStatus(newStatus))
+	default:
+		return fmt.Errorf(`%w: "%s"`, ErrOrderStateMachineInvalidStatus, newStatus)
+	}
+}
+
+func NewErrUnavailableTransition(fromStatus, toStatus OrderStatus, availableTransitions ...OrderStatus) error {
+	strAvailableTransitions := make([]string, 0, len(availableTransitions))
+	for _, t := range availableTransitions {
+		strAvailableTransitions = append(strAvailableTransitions, string(t))
+	}
+
+	return fmt.Errorf(
+		`%w: no status transition "%s" -> "%s", available transitions are: "%s" -> "%s"`,
+		ErrOrderStateMachineIncorrentStatusTransition,
+		fromStatus,
+		toStatus,
+		fromStatus,
+		strings.Join(strAvailableTransitions, ", "),
+	)
+}
+
+func NewErrNoTransitionAvailable(fromStatus OrderStatus) error {
+	return fmt.Errorf(
+		`%w: no available transition for status "%s"`,
+		ErrOrderStateMachineIncorrentStatusTransition,
+		fromStatus,
+	)
+}
+
+func (o *OrderStateMachine) Transition(newStatus OrderStatus) error {
+	switch o.status {
+	case OrderStatusCreated:
+		switch newStatus {
+		case OrderStatusPaid, OrderStatusCancelling:
+			o.status = newStatus
+			return nil
+		default:
+			return NewErrUnavailableTransition(o.status, newStatus, OrderStatusPaid, OrderStatusCancelling)
+		}
+	case OrderStatusPaid:
+		switch newStatus {
+		case OrderStatusProcessed, OrderStatusCancelling:
+			o.status = newStatus
+			return nil
+		default:
+			return NewErrUnavailableTransition(o.status, newStatus, OrderStatusProcessed, OrderStatusCancelling)
+		}
+	case OrderStatusCancelling:
+		switch newStatus {
+		case OrderStatusCancelled:
+			o.status = newStatus
+			return nil
+		default:
+			return NewErrUnavailableTransition(o.status, newStatus, OrderStatusCancelled)
+		}
+	case OrderStatusCancelled:
+		return NewErrNoTransitionAvailable(o.status)
+	case OrderStatusProcessed:
+		switch newStatus {
+		case OrderStatusShipped, OrderStatusCancelling:
+			o.status = newStatus
+			return nil
+		default:
+			return NewErrUnavailableTransition(o.status, newStatus, OrderStatusShipped, OrderStatusCancelling)
+		}
+	case OrderStatusShipped:
+		switch newStatus {
+		case OrderStatusDelivered, OrderStatusCompleted:
+			o.status = newStatus
+			return nil
+		default:
+			return NewErrUnavailableTransition(o.status, newStatus, OrderStatusDelivered, OrderStatusCompleted)
+		}
+	case OrderStatusDelivered:
+		switch newStatus {
+		case OrderStatusCompleted:
+			o.status = newStatus
+			return nil
+		default:
+			return NewErrUnavailableTransition(o.status, newStatus, OrderStatusCompleted)
+		}
+	case OrderStatusCompleted:
+		return NewErrNoTransitionAvailable(o.status)
+	default:
+		return fmt.Errorf(`%w: unknown status to transition from: "%s"`, ErrOrderStateMachineIncorrentStatusTransition, o.status)
+	}
+}
+
+func (o *OrderStateMachine) Status() OrderStatus {
+	return o.status
+}
 
 func (s *Orders) ListOrders(ctx context.Context, req oapi_codegen.OrdersListOrdersParams) (oapi_codegen.OrdersListOrdersRes, error) {
 	return s.store.ListOrders(ctx, req.UserId, req.NextPageToken)
@@ -59,7 +176,23 @@ func (s *Orders) UpdateOrder(ctx context.Context, req oapi_codegen.OrdersUpdateO
 		return nil, ErrPermissionDenied
 	}
 
-	// TODO: validate status update check here - invariants according to the state diagram only!
+	order, err := s.store.GetOrder(ctx, orderId)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve order: %v", err)
+	}
+	// not found
+	if order == nil {
+		return nil, nil
+	}
+
+	orderStateMachine, err := NewOrderStateMachine(OrderStatus(order.Status))
+	if err != nil {
+		return nil, fmt.Errorf("new order state machine: %v", err)
+	}
+
+	if err := orderStateMachine.TransitionString(req.Status); err != nil {
+		return nil, err
+	}
 
 	orderUpdateRes, err := s.store.UpdateOrder(ctx, req.Status, orderId)
 	if err != nil {
@@ -112,7 +245,14 @@ func (s *Orders) ProcessPublishedCartPositions(ctx context.Context, req oapi_cod
 	}
 	if len(cancelOperationsMessages) > 0 {
 		wg.Add(1)
-		go func() {}()
+		go func() {
+			if err := s.store.ProduceCancelOperationMessages(ctx, cancelOperationsMessages...); err != nil {
+				defer m.Unlock()
+				m.Lock()
+
+				errs = append(errs, err)
+			}
+		}()
 	}
 
 	wg.Wait()

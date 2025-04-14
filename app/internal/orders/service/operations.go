@@ -6,6 +6,15 @@ import (
 	oapi_codegen "github.com/bratushkadan/floral/internal/orders/presentation/generated"
 )
 
+const (
+	OperationTypeCreateOrder = "create_order"
+
+	OperationTypeCreateOrderStatusStarted    = "started"
+	OperationTypeCreateOrderStatusAborted    = "aborted"
+	OperationTypeCreateOrderStatusTerminated = "terminated"
+	OperationTypeCreateOrderStatusCompleted  = "completed"
+)
+
 func (s *Orders) GetOperation(ctx context.Context, operationId string) (*oapi_codegen.OrdersGetOperationRes, error) {
 	return s.store.GetOperation(ctx, operationId)
 }
