@@ -314,7 +314,7 @@ $to_update = (
 
 UPDATE {{table.operations}} ON
 SELECT * FROM $to_update
-RETURNING id, status, details, order_id, updated_at;
+RETURNING id, user_id, status, details, order_id, updated_at;
 `,
 	"{{table.operations}}",
 	tableOperations,
@@ -330,10 +330,22 @@ type UpdateOperationManyDTOInputOperation struct {
 	OrderId   *string
 	UpdatedAt time.Time
 }
-type UpdateOperationManyDTOOutput struct{}
+type UpdateOperationManyDTOOutput struct {
+	OperationsUpdates []UpdateOperationManyDTOOutputOperationUpdate
+}
+type UpdateOperationManyDTOOutputOperationUpdate struct {
+	OperationId string
+	UserId      string
+	Status      string
+	Details     *string
+	OrderId     *string
+	UpdatedAt   time.Time
+}
 
-func (s *Orders) UpdateOperationMany(ctx context.Context, in UpdateOperationManyDTOInput) (*UpdateOperationManyDTOOutput, error) {
-	var out *UpdateOperationManyDTOOutput
+func (s *Orders) UpdateOperationMany(ctx context.Context, in UpdateOperationManyDTOInput) (UpdateOperationManyDTOOutput, error) {
+	out := UpdateOperationManyDTOOutput{
+		OperationsUpdates: make([]UpdateOperationManyDTOOutputOperationUpdate, 0, len(in.Operations)),
+	}
 
 	operations := make([]types.Value, 0, len(in.Operations))
 	for _, op := range in.Operations {
@@ -355,9 +367,26 @@ func (s *Orders) UpdateOperationMany(ctx context.Context, in UpdateOperationMany
 		}
 		defer func() { _ = res.Close() }()
 
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var opUpdate UpdateOperationManyDTOOutputOperationUpdate
+				if err := res.ScanNamed(
+					named.Required("id", &opUpdate.OperationId),
+					named.Required("user_id", &opUpdate.UserId),
+					named.Required("status", &opUpdate.Status),
+					named.Optional("details", &opUpdate.Details),
+					named.Optional("order_id", &opUpdate.OrderId),
+					named.Required("updated_at", &opUpdate.UpdatedAt),
+				); err != nil {
+					return err
+				}
+				out.OperationsUpdates = append(out.OperationsUpdates, opUpdate)
+			}
+		}
+
 		return res.Err()
 	}); err != nil {
-		return nil, err
+		return out, err
 	}
 
 	return out, nil

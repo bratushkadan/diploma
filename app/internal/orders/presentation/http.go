@@ -34,8 +34,19 @@ func (api *ApiImpl) PrivateOrdersBatchCancelUnpaidOrders(c *gin.Context) {
 		}))
 		return
 	}
+	if err := api.Service.BatchCancelUnpaidOrders(c.Request.Context(), reqBody); err != nil {
+		api.Logger.Error("batch cancel unpaid orders", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
+			Code:    1,
+			Message: "failed to batch cancel unpaid orders",
+		}))
+		return
+	}
 
+	c.JSON(http.StatusOK, gin.H{"message": "ok"})
 }
+
+// TODO:
 func (api *ApiImpl) PrivateOrdersCancelOperations(c *gin.Context) {
 	var reqBody oapi_codegen.PrivateOrdersCancelOperationsJSONRequestBody
 	if err := json.NewDecoder(c.Request.Body).Decode(&reqBody); err != nil {

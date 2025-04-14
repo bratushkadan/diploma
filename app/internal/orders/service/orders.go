@@ -262,18 +262,115 @@ func (s *Orders) ProcessPublishedCartPositions(ctx context.Context, req oapi_cod
 	return nil
 }
 
-// TODO: need N updates in one YQL query (cancel N operations)
-// TODO: need N creates in one YQL query (create N orders)
 func (s *Orders) ProcessReservedProducts(ctx context.Context, req oapi_codegen.PrivateOrdersProcessReservedProductsJSONRequestBody) error {
+	ops := make([]store.UpdateOperationManyDTOInputOperation, 0, len(req.Messages))
+	for _, message := range req.Messages {
+		ops = append(ops, store.UpdateOperationManyDTOInputOperation{
+			Id:        message.OperationId,
+			Status:    OperationTypeCreateOrderStatusCompleted,
+			OrderId:   ptr(uuid.NewString()),
+			UpdatedAt: time.Now(),
+		})
+	}
+
+	updateOpsManyRes, err := s.store.UpdateOperationMany(ctx, store.UpdateOperationManyDTOInput{Operations: ops})
+	if err != nil {
+		return fmt.Errorf("update operations many: %v", err)
+	}
+
+	products := make(map[string][]oapi_codegen.PrivateOrderProcessReservedProductsReqProduct, len(req.Messages))
+	for _, msg := range req.Messages {
+		products[msg.OperationId] = msg.Products
+	}
+
+	orders := make([]store.CreateOrderManyDTOInputOrder, 0, len(req.Messages))
+	for _, opUpdate := range updateOpsManyRes.OperationsUpdates {
+		orders = append(orders, store.CreateOrderManyDTOInputOrder{
+			Id:        *opUpdate.OrderId,
+			UserId:    opUpdate.UserId,
+			Status:    string(OrderStatusCreated),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Products:  products[opUpdate.OperationId],
+		})
+	}
+
+	_, err = s.store.CreateOrderMany(ctx, store.CreateOrderManyDTOInput{Orders: orders})
+	if err != nil {
+		return fmt.Errorf("create order many: %v", err)
+	}
+
+	clearCartMessages := make([]oapi_codegen.PrivateClearCartPositionsReqMessage, 0, len(req.Messages))
+
+	if err := s.store.ProduceCartClearMessages(ctx, clearCartMessages...); err != nil {
+		return fmt.Errorf("publish clear cart messages: %v", err)
+	}
+
 	return nil
 }
 
-// TODO: need N updates in one YQL query (update N orders)
 func (s *Orders) ProcessUnreservedProducts(ctx context.Context, req oapi_codegen.PrivateOrdersProcessUnreservedProductsJSONRequestBody) error {
+	orderUpdates := make([]store.UpdateOrderManyDTOInputOrderUpdate, 0, len(req.Messages))
+
+	for _, msg := range req.Messages {
+		orderUpdates = append(orderUpdates, store.UpdateOrderManyDTOInputOrderUpdate{
+			OrderId:   msg.OrderId,
+			Status:    string(OrderStatusCancelled),
+			UpdatedAt: time.Now(),
+		})
+	}
+
+	_, err := s.store.UpdateOrderMany(ctx, store.UpdateOrderManyDTOInput{
+		OrderUpdates: orderUpdates,
+	})
+	if err != nil {
+		return fmt.Errorf("update orders: %v", err)
+	}
+
 	return nil
 }
 
 // TODO: need N updates in one YQL query (update N orders)
 func (s *Orders) BatchCancelUnpaidOrders(ctx context.Context, req oapi_codegen.PrivateOrderBatchCancelUnpaidOrdersReq) error {
+	messages := make([]oapi_codegen.PrivateUnreserveProductsReqMessage, 0)
+
+	res, err := s.store.ListUnpaidOrders(ctx)
+	if err != nil {
+		return fmt.Errorf("list unpaid orders: %v", err)
+	}
+	unpaidOrders := res.Orders
+
+	orderUpdates := make([]store.UpdateOrderManyDTOInputOrderUpdate, 0, len(unpaidOrders))
+	for _, order := range unpaidOrders {
+		orderUpdates = append(orderUpdates, store.UpdateOrderManyDTOInputOrderUpdate{
+			OrderId:   order.Id,
+			Status:    string(OrderStatusCancelling),
+			UpdatedAt: time.Now(),
+		})
+	}
+
+	_, err = s.store.UpdateOrderMany(ctx, store.UpdateOrderManyDTOInput{OrderUpdates: orderUpdates})
+	if err != nil {
+		return fmt.Errorf("update orders: %v", err)
+	}
+
+	for _, order := range unpaidOrders {
+		products := make([]oapi_codegen.PrivateUnreserveProductsReqProduct, 0)
+		for _, item := range order.Items {
+			products = append(products, oapi_codegen.PrivateUnreserveProductsReqProduct{
+				Id:    item.Id,
+				Count: item.Count,
+			})
+		}
+		messages = append(messages, oapi_codegen.PrivateUnreserveProductsReqMessage{
+			OrderId:  order.Id,
+			Products: products,
+		})
+	}
+
+	if err := s.store.ProduceProductsUnreservationMessages(ctx, messages...); err != nil {
+		return fmt.Errorf("publish products unreservation messages: %v", err)
+	}
+
 	return nil
 }

@@ -40,3 +40,7 @@ func (b *OrdersBuilder) Build() (*Orders, error) {
 
 	return &b.svc, nil
 }
+
+func ptr[T any](v T) *T {
+	return &v
+}

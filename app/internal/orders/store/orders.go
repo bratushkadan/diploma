@@ -553,9 +553,9 @@ type CreateOrderManyDTOInput struct {
 }
 type CreateOrderManyDTOInputOrder struct {
 	Id        string
+	UserId    string
 	Status    string
-	Details   *string
-	OrderId   *string
+	CreatedAt time.Time
 	UpdatedAt time.Time
 	Products  []oapi_codegen.PrivateOrderProcessReservedProductsReqProduct
 }
@@ -567,24 +567,25 @@ func (s *Orders) CreateOrderMany(ctx context.Context, in CreateOrderManyDTOInput
 
 	orders := make([]types.Value, 0, len(in.Orders))
 	for _, order := range in.Orders {
-		order_items := make([]types.Value, 0, len(order.Products))
+		orderItems := make([]types.Value, 0, len(order.Products))
 		for _, product := range order.Products {
-			order_items = append(order_items, types.StructValue(
-				types.StructFieldValue("id", types.UTF8Value(order.Id)),
-				types.StructFieldValue("status", types.UTF8Value(order.Status)),
-				types.StructFieldValue("details", types.NullableUTF8Value(order.Details)),
-				types.StructFieldValue("order_id", types.NullableUTF8Value(order.OrderId)),
-				types.StructFieldValue("updated_at", types.TimestampValueFromTime(order.UpdatedAt)),
+			orderItems = append(orderItems, types.StructValue(
+				types.StructFieldValue("product_id", types.UTF8Value(product.Id)),
+				types.StructFieldValue("seller_id", types.UTF8Value(product.SellerId)),
+				types.StructFieldValue("name", types.UTF8Value(product.Name)),
+				types.StructFieldValue("count", types.Uint32Value(uint32(product.Count))),
+				types.StructFieldValue("price", types.DoubleValue(product.Price)),
+				types.StructFieldValue("picture", types.NullableUTF8Value(product.Picture)),
 			))
 		}
 
 		orders = append(orders, types.StructValue(
 			types.StructFieldValue("id", types.UTF8Value(order.Id)),
+			types.StructFieldValue("user_id", types.UTF8Value(order.UserId)),
 			types.StructFieldValue("status", types.UTF8Value(order.Status)),
-			types.StructFieldValue("details", types.NullableUTF8Value(order.Details)),
-			types.StructFieldValue("order_id", types.NullableUTF8Value(order.OrderId)),
-			types.StructFieldValue("updated_at", types.TimestampValueFromTime(order.UpdatedAt)),
-			types.StructFieldValue("order_items", types.ListItems(orders...)),
+			types.StructFieldValue("created_at", types.DatetimeValueFromTime(order.UpdatedAt)),
+			types.StructFieldValue("updated_at", types.DatetimeValueFromTime(order.UpdatedAt)),
+			types.StructFieldValue("order_items", types.ListValue(orderItems...)),
 		))
 	}
 
@@ -665,21 +666,153 @@ func (s *Orders) UpdateOrder(ctx context.Context, orderId, orderStatus string) (
 	return out, nil
 }
 
-// -- Existing orders only
-// $orders = (
-//   SELECT
-//     o1.id AS id,
-//     o1.user_id AS user_id,
-//     o1.status AS status,
-//     o1.created_at AS created_at,
-//     o1.updated_at AS updated_at,
-//     o1.order_items AS order_items,
-//   FROM AS_TABLE($orders) o1
-//   JOIN `orders/orders` o2 ON o1.id = o2.id
-// );
+var queryUpdateOrderMany = template.ReplaceAllPairs(`
+DECLARE $order_updates AS List<Struct<
+  id:Utf8,
+	status:Utf8,
+	updated_at:Timestamp,
+>>;
 
-func UpdateOrderMany() {
+-- Existing orders only
+$to_update = (
+  SELECT
+    u.id AS id,
+    u.status AS status,
+    u.updated_at AS updated_at,
+  FROM
+  JOIN {{table.orders}} o ON o.id = u.id;
+);
 
+UPDATE {{table.orders}}
+ON SELECT * FROM $to_update
+RETURNING id, status, updated_at;
+`,
+	"{{table.orders}}",
+	tableOrders,
+)
+
+type UpdateOrderManyDTOInput struct {
+	OrderUpdates []UpdateOrderManyDTOInputOrderUpdate
+}
+type UpdateOrderManyDTOInputOrderUpdate struct {
+	OrderId   string
+	Status    string
+	UpdatedAt time.Time
+}
+type UpdateOrderManyDTOOutput struct{}
+
+func (s *Orders) UpdateOrderMany(ctx context.Context, in UpdateOrderManyDTOInput) (UpdateOrderManyDTOOutput, error) {
+	var out UpdateOrderManyDTOOutput
+
+	updates := make([]types.Value, 0, len(in.OrderUpdates))
+	for _, u := range in.OrderUpdates {
+		updates = append(updates, types.StructValue(
+			types.StructFieldValue("id", types.UTF8Value(u.OrderId)),
+			types.StructFieldValue("status", types.UTF8Value(u.Status)),
+			types.StructFieldValue("updated_at", types.TimestampValueFromTime(u.UpdatedAt)),
+		))
+	}
+	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		res, err := tx.Execute(ctx, queryUpdateOrderMany, table.NewQueryParameters(
+			table.ValueParam("$order_updates", types.ListValue(updates...)),
+		))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		return res.Err()
+	}); err != nil {
+		return UpdateOrderManyDTOOutput{}, err
+	}
+
+	return out, nil
+}
+
+var queryListUnpaidOrders = template.ReplaceAllPairs(`
+$unpaid_orders = (
+SELECT
+  o.id AS id,
+FROM {{table.orders}} o
+LEFT ONLY JOIN {{table.payments}} p ON o.id = p.order_id
+WHERE
+  o.status = "created"
+    AND
+  o.created_at + Interval("PT1H") < CurrentUtcDatetime()
+LIMIT 10000
+);
+
+SELECT
+    o.id AS id,
+    oi.product_id AS product_id,
+    oi.count AS count,
+FROM $unpaid_orders o
+JOIN {{table.orderItems}} oi on oi.order_id = o.id;
+`,
+	"{{table.orders}}",
+	tableOrders,
+	"{{table.payments}}",
+	tablePayments,
+	"{{table.orderItems}}",
+	tableOrderItems,
+)
+
+type ListUnpaidOrdersDTOOutput struct {
+	Orders []ListUnpaidOrdersDTOOutputOrder
+}
+type ListUnpaidOrdersDTOOutputOrder struct {
+	Id    string
+	Items []ListUnpaidOrdersDTOOutputOrderItem
+}
+type ListUnpaidOrdersDTOOutputOrderItem struct {
+	Id    string
+	Count int
+}
+
+func (s *Orders) ListUnpaidOrders(ctx context.Context) (ListUnpaidOrdersDTOOutput, error) {
+	orders := make(map[string][]ListUnpaidOrdersDTOOutputOrderItem)
+
+	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		res, err := tx.Execute(ctx, queryListUnpaidOrders, nil)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var id, productId string
+				var count uint32
+				if err := res.ScanNamed(
+					named.Required("id", &id),
+					named.Required("product_id", &productId),
+					named.Required("count", &count),
+				); err != nil {
+					return err
+				}
+				orders[id] = append(orders[id], ListUnpaidOrdersDTOOutputOrderItem{
+					Id:    id,
+					Count: int(count),
+				})
+			}
+		}
+
+		return res.Err()
+	}); err != nil {
+		return ListUnpaidOrdersDTOOutput{}, err
+	}
+
+	out := ListUnpaidOrdersDTOOutput{
+		Orders: make([]ListUnpaidOrdersDTOOutputOrder, 0, len(orders)),
+	}
+	for orderId, orderItems := range orders {
+		out.Orders = append(out.Orders, ListUnpaidOrdersDTOOutputOrder{
+			Id:    orderId,
+			Items: orderItems,
+		})
+	}
+
+	return out, nil
 }
 
 func ptr[T any](v T) *T {
