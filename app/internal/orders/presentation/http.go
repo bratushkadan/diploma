@@ -2,6 +2,7 @@ package presentation
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -200,6 +201,7 @@ func (api *ApiImpl) OrdersGetOrder(c *gin.Context, orderId string) {
 
 	c.JSON(http.StatusOK, res)
 }
+
 func (api *ApiImpl) OrdersUpdateOrder(c *gin.Context, orderId string) {
 	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
 	if !ok {
@@ -209,14 +211,29 @@ func (api *ApiImpl) OrdersUpdateOrder(c *gin.Context, orderId string) {
 		return
 	}
 
-	if !slices.Contains([]string{shared_api.SubjectTypeSeller, shared_api.SubjectTypeAdmin}, accessToken.SubjectType) {
-		c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
-			Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+	var requestBody oapi_codegen.OrdersUpdateOrderReq
+	if err := json.NewDecoder(c.Request.Body).Decode(&requestBody); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "invalid request body"}},
 		})
 		return
 	}
 
-	var res *oapi_codegen.OrdersUpdateOrderRes
+	res, err := api.Service.UpdateOrder(c.Request.Context(), requestBody, orderId, accessToken.SubjectType)
+	if err != nil {
+		if errors.Is(err, service.ErrPermissionDenied) {
+			c.AbortWithStatusJSON(http.StatusForbidden, oapi_codegen.Error{
+				Errors: []oapi_codegen.Err{{Code: 124, Message: "permission denied"}},
+			})
+			return
+		}
+		api.Logger.Error("update order", zap.String("id", orderId), zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "failed to update order"}},
+		})
+		return
+	}
+
 	if res == nil {
 		c.AbortWithStatusJSON(http.StatusNotFound, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 125, Message: "order not found"}},

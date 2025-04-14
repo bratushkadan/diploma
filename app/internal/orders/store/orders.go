@@ -30,7 +30,7 @@ const (
 	ListOrdersPageSize uint32 = 10
 )
 
-func (s *Orders) ProduceProductsReservationMessages(ctx context.Context, messages []oapi_codegen.PrivateReserveProductsReqMessage) error {
+func (s *Orders) ProduceProductsReservationMessages(ctx context.Context, messages ...oapi_codegen.PrivateReserveProductsReqMessage) error {
 	dataBytes := make([][]byte, 0, len(messages))
 	for _, message := range messages {
 		msgBytes, err := json.Marshal(message)
@@ -46,7 +46,7 @@ func (s *Orders) ProduceProductsReservationMessages(ctx context.Context, message
 	return nil
 }
 
-func (s *Orders) ProduceProductsUnreservationMessages(ctx context.Context, messages []oapi_codegen.PrivateUnreserveProductsReqMessage) error {
+func (s *Orders) ProduceProductsUnreservationMessages(ctx context.Context, messages ...oapi_codegen.PrivateUnreserveProductsReqMessage) error {
 	dataBytes := make([][]byte, 0, len(messages))
 	for _, message := range messages {
 		msgBytes, err := json.Marshal(message)
@@ -62,7 +62,7 @@ func (s *Orders) ProduceProductsUnreservationMessages(ctx context.Context, messa
 	return nil
 }
 
-func (s *Orders) ProduceCartClearMessages(ctx context.Context, messages []oapi_codegen.PrivateClearCartPositionsReqMessage) error {
+func (s *Orders) ProduceCartClearMessages(ctx context.Context, messages ...oapi_codegen.PrivateClearCartPositionsReqMessage) error {
 	dataBytes := make([][]byte, 0, len(messages))
 	for _, message := range messages {
 		msgBytes, err := json.Marshal(message)

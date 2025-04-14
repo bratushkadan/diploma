@@ -20,6 +20,22 @@ const (
 	topicCancelOperations = "orders/cancel_operations_topic"
 )
 
+func (s *Orders) ProduceCancelOperationMessages(ctx context.Context, messages ...oapi_codegen.PrivateOrderCancelOperationsReqMessage) error {
+	dataBytes := make([][]byte, 0, len(messages))
+	for _, message := range messages {
+		msgBytes, err := json.Marshal(message)
+		if err != nil {
+			return fmt.Errorf("serialize cancel operation message: %v", err)
+		}
+		dataBytes = append(dataBytes, msgBytes)
+	}
+
+	if err := ydbtopic.Produce(ctx, s.topicCancelOperations, dataBytes...); err != nil {
+		return fmt.Errorf("publish messages cancel operations: %v", err)
+	}
+	return nil
+}
+
 var queryGetOperation = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;
 

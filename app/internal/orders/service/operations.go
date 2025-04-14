@@ -10,6 +10,7 @@ func (s *Orders) GetOperation(ctx context.Context, operationId string) (*oapi_co
 	return s.store.GetOperation(ctx, operationId)
 }
 
+// TODO: need N updates in one YQL query (cancel N operations)
 func (s *Orders) CancelOperations(ctx context.Context, req oapi_codegen.PrivateOrdersProcessReservedProductsJSONRequestBody) error {
 	return nil
 }
