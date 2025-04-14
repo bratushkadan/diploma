@@ -433,6 +433,178 @@ func (s *Orders) CreateOrder(ctx context.Context, in CreateOrderDTOInput) (Creat
 	}, nil
 }
 
+// queryCreateOrderManyTestData
+/*
+$orders = AsList(
+  AsStruct(
+    UNWRAP(CAST("foo-bar-baz-qux7" AS Utf8)) AS id,
+    UNWRAP(CAST("acd559b2-def1-4b01-b501-c642e22dd7da" AS Utf8)) AS user_id,
+    UNWRAP(CAST("created" AS Utf8)) as status,
+    CurrentUtcDatetime() AS created_at,
+    CurrentUtcDatetime() AS updated_at,
+    AsList(
+      AsStruct(
+        UNWRAP(CAST("product-1" AS Utf8)) AS product_id,
+        UNWRAP(CAST("seller-1" AS Utf8)) AS seller_id,
+        UNWRAP(CAST("product 1 name" AS Utf8)) AS name,
+        3u AS count,
+        23.49 AS price,
+        CAST(NULL AS Optional<Utf8>) AS picture,
+      ),
+      AsStruct(
+        UNWRAP(CAST("product-2" AS Utf8)) AS product_id,
+        UNWRAP(CAST("seller-1" AS Utf8)) AS seller_id,
+        UNWRAP(CAST("product 2 name" AS Utf8)) AS name,
+        5u AS count,
+        43.49 AS price,
+        CAST(NULL AS Optional<Utf8>) AS picture,
+      ),
+      AsStruct(
+        UNWRAP(CAST("product-3" AS Utf8)) AS product_id,
+        UNWRAP(CAST("seller-1" AS Utf8)) AS seller_id,
+        UNWRAP(CAST("product 3 name" AS Utf8)) AS name,
+        2u AS count,
+        53.49 AS price,
+        CAST(NULL AS Optional<Utf8>) AS picture,
+      ),
+    ) AS order_items,
+  ),
+  AsStruct(    UNWRAP(CAST("foo-bar-baz-qux8" AS Utf8)) AS id,
+    UNWRAP(CAST("acd559b2-def1-4b01-b501-c642e22dd7da" AS Utf8)) AS user_id,
+    UNWRAP(CAST("created" AS Utf8)) as status,
+    CurrentUtcDatetime() AS created_at,
+    CurrentUtcDatetime() AS updated_at,
+    AsList(
+      AsStruct(
+        UNWRAP(CAST("product-1" AS Utf8)) AS product_id,
+        UNWRAP(CAST("seller-1" AS Utf8)) AS seller_id,
+        UNWRAP(CAST("product 1 name" AS Utf8)) AS name,
+        1u AS count,
+        23.49 AS price,
+        CAST(NULL AS Optional<Utf8>) AS picture,
+      ),
+      AsStruct(
+        UNWRAP(CAST("product-2" AS Utf8)) AS product_id,
+        UNWRAP(CAST("seller-1" AS Utf8)) AS seller_id,
+        UNWRAP(CAST("product 2 name" AS Utf8)) AS name,
+        2u AS count,
+        43.49 AS price,
+        CAST(NULL AS Optional<Utf8>) AS picture,
+      ),
+      AsStruct(
+        UNWRAP(CAST("product-3" AS Utf8)) AS product_id,
+        UNWRAP(CAST("seller-1" AS Utf8)) AS seller_id,
+        UNWRAP(CAST("product 3 name" AS Utf8)) AS name,
+        1u AS count,
+        43.49 AS price,
+        CAST(NULL AS Optional<Utf8>) AS picture,
+      ),
+    ) AS order_items,
+  ),
+);
+*/
+
+var queryCreateOrderMany = template.ReplaceAllPairs(`
+DECLARE $orders AS List<Struct<
+  id:Utf8,
+  user_id:Utf8,
+  status:Utf8,
+  created_at:Datetime,
+  updated_at:Datetime,
+  order_items:List<Struct<
+  	product_id:Utf8,
+  	seller_id:Utf8,
+  	name:Utf8,
+  	count:Uint32,
+  	price:Double,
+  	picture:Optional<Utf8>,
+  >>
+>>;
+
+INSERT INTO {{table.orders}} (id, user_id, status, created_at, updated_at)
+SELECT
+  id,
+  user_id,
+  status,
+  created_at,
+  updated_at
+FROM AS_TABLE($orders);
+
+INSERT INTO {{table.order_items}} (product_id, order_id, seller_id, name, count, price, picture)
+SELECT 
+  oi.product_id AS product_id,
+  o.id AS order_id,
+  oi.seller_id AS seller_id,
+  oi.name AS name,
+  oi.count AS count,
+  oi.price AS price,
+  oi.picture AS picture,
+FROM AS_TABLE($orders) o
+FLATTEN LIST BY order_items AS oi;
+`,
+	"{{table.orders}}",
+	tableOrders,
+	"{{table.order_items}}",
+	tableOrderItems,
+)
+
+type CreateOrderManyDTOInput struct {
+	Orders []CreateOrderManyDTOInputOrder
+}
+type CreateOrderManyDTOInputOrder struct {
+	Id        string
+	Status    string
+	Details   *string
+	OrderId   *string
+	UpdatedAt time.Time
+	Products  []oapi_codegen.PrivateOrderProcessReservedProductsReqProduct
+}
+
+type CreateOrderManyDTOOutput struct{}
+
+func (s *Orders) CreateOrderMany(ctx context.Context, in CreateOrderManyDTOInput) (*CreateOrderManyDTOOutput, error) {
+	var out *CreateOrderManyDTOOutput
+
+	orders := make([]types.Value, 0, len(in.Orders))
+	for _, order := range in.Orders {
+		order_items := make([]types.Value, 0, len(order.Products))
+		for _, product := range order.Products {
+			order_items = append(order_items, types.StructValue(
+				types.StructFieldValue("id", types.UTF8Value(order.Id)),
+				types.StructFieldValue("status", types.UTF8Value(order.Status)),
+				types.StructFieldValue("details", types.NullableUTF8Value(order.Details)),
+				types.StructFieldValue("order_id", types.NullableUTF8Value(order.OrderId)),
+				types.StructFieldValue("updated_at", types.TimestampValueFromTime(order.UpdatedAt)),
+			))
+		}
+
+		orders = append(orders, types.StructValue(
+			types.StructFieldValue("id", types.UTF8Value(order.Id)),
+			types.StructFieldValue("status", types.UTF8Value(order.Status)),
+			types.StructFieldValue("details", types.NullableUTF8Value(order.Details)),
+			types.StructFieldValue("order_id", types.NullableUTF8Value(order.OrderId)),
+			types.StructFieldValue("updated_at", types.TimestampValueFromTime(order.UpdatedAt)),
+			types.StructFieldValue("order_items", types.ListItems(orders...)),
+		))
+	}
+
+	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		res, err := tx.Execute(ctx, queryCreateOrderMany, table.NewQueryParameters(
+			table.ValueParam("$orders", types.ListValue(orders...)),
+		))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		return res.Err()
+	}); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
 var queryUpdateOrder = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;
 DECLARE $status AS Utf8;
@@ -491,6 +663,23 @@ func (s *Orders) UpdateOrder(ctx context.Context, orderId, orderStatus string) (
 	}
 
 	return out, nil
+}
+
+// -- Existing orders only
+// $orders = (
+//   SELECT
+//     o1.id AS id,
+//     o1.user_id AS user_id,
+//     o1.status AS status,
+//     o1.created_at AS created_at,
+//     o1.updated_at AS updated_at,
+//     o1.order_items AS order_items,
+//   FROM AS_TABLE($orders) o1
+//   JOIN `orders/orders` o2 ON o1.id = o2.id
+// );
+
+func UpdateOrderMany() {
+
 }
 
 func ptr[T any](v T) *T {

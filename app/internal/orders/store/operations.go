@@ -264,3 +264,101 @@ func (s *Orders) UpdateOperation(ctx context.Context, in UpdateOperationDTOInput
 
 	return out, nil
 }
+
+// queryUpdateOperationManyTestData
+/*
+-- $operations = AsList(
+--     AsStruct(
+--       UNWRAP(CAST("364b00de-64db-4186-81ba-7ef1be9964e3" AS Utf8)) AS id,
+--       UNWRAP(CAST("completed" AS Utf8)) as status,
+--       NULL as details,
+--       UNWRAP(CAST("order-1" AS Utf8)) AS order_id,
+--       CurrentUtcTimestamp() AS updated_at,
+--     ),
+--     AsStruct(
+--       UNWRAP(CAST("40170abd-1137-4e9f-9b28-a20f85ee0235" AS Utf8)) AS id,
+--       UNWRAP(CAST("completed" AS Utf8)) as status,
+--       NULL as details,
+--       UNWRAP(CAST("order-2" AS Utf8)) AS order_id,
+--       CurrentUtcTimestamp() AS updated_at,
+--     ),
+--     AsStruct(
+--       UNWRAP(CAST("d2409b05-700c-4ad8-bf5e-d3ae2805644e" AS Utf8)) AS id,
+--       UNWRAP(CAST("completed" AS Utf8)) as status,
+--       NULL as details,
+--       UNWRAP(CAST("order-3" AS Utf8)) AS order_id,
+--       CurrentUtcTimestamp() AS updated_at,
+--     ),
+-- );
+*/
+
+var queryUpdateOperationMany = template.ReplaceAllPairs(`
+DECLARE $operations AS List<Struct<
+  id:Utf8,
+  status:Utf8,
+  details:Optional<Utf8>,
+  order_id:Optional<Utf8>,
+  updated_at:Timestamp,
+>>;
+
+$to_update = (
+    SELECT
+        u.id AS id,
+        u.status AS status,
+        COALESCE(u.details, o.details) AS details,
+        COALESCE(u.order_id, o.order_id) AS order_id,
+        u.updated_at AS updated_at,
+    FROM AS_TABLE($operations) u
+    JOIN {{table.operations}} o ON o.id = u.id
+);
+
+UPDATE {{table.operations}} ON
+SELECT * FROM $to_update
+RETURNING id, status, details, order_id, updated_at;
+`,
+	"{{table.operations}}",
+	tableOperations,
+)
+
+type UpdateOperationManyDTOInput struct {
+	Operations []UpdateOperationManyDTOInputOperation
+}
+type UpdateOperationManyDTOInputOperation struct {
+	Id        string
+	Status    string
+	Details   *string
+	OrderId   *string
+	UpdatedAt time.Time
+}
+type UpdateOperationManyDTOOutput struct{}
+
+func (s *Orders) UpdateOperationMany(ctx context.Context, in UpdateOperationManyDTOInput) (*UpdateOperationManyDTOOutput, error) {
+	var out *UpdateOperationManyDTOOutput
+
+	operations := make([]types.Value, 0, len(in.Operations))
+	for _, op := range in.Operations {
+		operations = append(operations, types.StructValue(
+			types.StructFieldValue("id", types.UTF8Value(op.Id)),
+			types.StructFieldValue("status", types.UTF8Value(op.Status)),
+			types.StructFieldValue("details", types.NullableUTF8Value(op.Details)),
+			types.StructFieldValue("order_id", types.NullableUTF8Value(op.OrderId)),
+			types.StructFieldValue("updated_at", types.TimestampValueFromTime(op.UpdatedAt)),
+		))
+	}
+
+	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		res, err := tx.Execute(ctx, queryUpdateOperationMany, table.NewQueryParameters(
+			table.ValueParam("$operations", types.ListValue(operations...)),
+		))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		return res.Err()
+	}); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
