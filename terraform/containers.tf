@@ -630,8 +630,7 @@ resource "yandex_function_trigger" "cancel_unpaid_orders" {
   }
   timer {
     // every hour
-    # cron_expression = "0 * ? * * *"
-    cron_expression = "* * ? * * *"
+    cron_expression = "0 * ? * * *"
     payload         = "123"
   }
 }
