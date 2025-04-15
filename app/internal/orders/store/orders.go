@@ -649,7 +649,7 @@ func (s *Orders) CreateOrderMany(ctx context.Context, in CreateOrderManyDTOInput
 var queryUpdateOrder = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;
 DECLARE $status AS Utf8;
-DECLARE $updated_at AS Timestamp;
+DECLARE $updated_at AS Datetime;
 
 $to_update = (
     SELECT
@@ -676,7 +676,7 @@ func (s *Orders) UpdateOrder(ctx context.Context, orderId, orderStatus string) (
 		res, err := tx.Execute(ctx, queryUpdateOrder, table.NewQueryParameters(
 			table.ValueParam("$id", types.UTF8Value(orderId)),
 			table.ValueParam("$status", types.UTF8Value(orderStatus)),
-			table.ValueParam("$updated_at", types.TimestampValueFromTime(time.Now())),
+			table.ValueParam("$updated_at", types.DatetimeValueFromTime(time.Now())),
 		))
 		if err != nil {
 			return err
@@ -687,13 +687,15 @@ func (s *Orders) UpdateOrder(ctx context.Context, orderId, orderStatus string) (
 			for res.NextRow() {
 				var id string
 				out = &oapi_codegen.OrdersUpdateOrderRes{}
+				var updatedAt time.Time
 				if err := res.ScanNamed(
 					named.Required("id", &id),
 					named.Required("status", &out.Status),
-					named.Required("updated_at", &out.UpdatedAt),
+					named.Required("updated_at", &updatedAt),
 				); err != nil {
 					return err
 				}
+				out.UpdatedAt = updatedAt.Format(time.RFC3339)
 				_ = id
 			}
 		}

@@ -60,11 +60,11 @@ func (o *OrderStateMachine) TransitionString(newStatus string) error {
 func NewErrUnavailableTransition(fromStatus, toStatus OrderStatus, availableTransitions ...OrderStatus) error {
 	strAvailableTransitions := make([]string, 0, len(availableTransitions))
 	for _, t := range availableTransitions {
-		strAvailableTransitions = append(strAvailableTransitions, string(t))
+		strAvailableTransitions = append(strAvailableTransitions, fmt.Sprintf(`"%s"`, string(t)))
 	}
 
 	return fmt.Errorf(
-		`%w: no status transition "%s" -> "%s", available transitions are: "%s" -> "%s"`,
+		`%w: no status transition "%s" -> "%s", available transitions are: "%s" -> %s`,
 		ErrOrderStateMachineIncorrentStatusTransition,
 		fromStatus,
 		toStatus,
@@ -194,7 +194,7 @@ func (s *Orders) UpdateOrder(ctx context.Context, req oapi_codegen.OrdersUpdateO
 		return nil, err
 	}
 
-	orderUpdateRes, err := s.store.UpdateOrder(ctx, req.Status, orderId)
+	orderUpdateRes, err := s.store.UpdateOrder(ctx, orderId, req.Status)
 	if err != nil {
 		return nil, fmt.Errorf("update order: %v", err)
 	}

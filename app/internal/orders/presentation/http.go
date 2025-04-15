@@ -299,6 +299,19 @@ func (api *ApiImpl) OrdersUpdateOrder(c *gin.Context, orderId string) {
 			})
 			return
 		}
+		if errors.Is(err, service.ErrOrderStateMachineInvalidStatus) {
+			c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
+				Errors: []oapi_codegen.Err{{Code: 125, Message: err.Error()}},
+			})
+			return
+		}
+		if errors.Is(err, service.ErrOrderStateMachineIncorrentStatusTransition) {
+			c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
+				Errors: []oapi_codegen.Err{{Code: 126, Message: err.Error()}},
+			})
+			return
+		}
+
 		api.Logger.Error("update order", zap.String("id", orderId), zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 124, Message: "failed to update order"}},
