@@ -97,7 +97,7 @@ SELECT
     i.product_id AS product_id,
     i.name AS product_name,
     i.seller_id AS product_seller_id,
-    i.count AS produt_count,
+    i.count AS product_count,
     i.price AS product_price,
     i.picture AS product_picture
 FROM {{table.orders}} o
@@ -124,8 +124,11 @@ func (s *Orders) GetOrder(ctx context.Context, orderId string) (*oapi_codegen.Or
 
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
-				out = &oapi_codegen.OrdersGetOrderRes{}
+				if out == nil {
+					out = &oapi_codegen.OrdersGetOrderRes{}
+				}
 				var orderItem oapi_codegen.OrdersGetOrderResItem
+				var productCount uint32
 				var createdAt, updatedAt time.Time
 				if err := res.ScanNamed(
 					named.Required("id", &out.Id),
@@ -137,12 +140,13 @@ func (s *Orders) GetOrder(ctx context.Context, orderId string) (*oapi_codegen.Or
 					named.Required("product_id", &orderItem.ProductId),
 					named.Required("product_name", &orderItem.Name),
 					named.Required("product_seller_id", &orderItem.SellerId),
-					named.Required("product_count", &orderItem.Count),
+					named.Required("product_count", &productCount),
 					named.Required("product_price", &orderItem.Price),
-					named.Required("optional", &orderItem.PictureUrl),
+					named.Optional("product_picture", &orderItem.PictureUrl),
 				); err != nil {
 					return err
 				}
+				orderItem.Count = int(productCount)
 				out.CreatedAt = createdAt.Format(time.RFC3339)
 				out.UpdatedAt = updatedAt.Format(time.RFC3339)
 

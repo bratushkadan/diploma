@@ -249,7 +249,14 @@ func (api *ApiImpl) OrdersGetOrder(c *gin.Context, orderId string) {
 		return
 	}
 
-	var res *oapi_codegen.OrdersGetOrderRes
+	res, err := api.Service.GetOrder(c.Request.Context(), orderId)
+	if err != nil {
+		api.Logger.Error("get order", zap.String("id", orderId), zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 125, Message: "failed to get order"}},
+		})
+		return
+	}
 
 	if res == nil {
 		c.AbortWithStatusJSON(http.StatusNotFound, oapi_codegen.Error{
