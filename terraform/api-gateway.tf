@@ -23,12 +23,10 @@ locals {
           sa_id = yandex_iam_service_account.auth_caller.id
         }
         cart = {
-          id    = ""
           id    = local.containers.cart.count > 0 ? yandex_serverless_container.cart[0].id : ""
           sa_id = yandex_iam_service_account.auth_caller.id
         }
         orders = {
-          id    = ""
           id    = local.containers.orders.count > 0 ? yandex_serverless_container.orders[0].id : ""
           sa_id = yandex_iam_service_account.auth_caller.id
         }

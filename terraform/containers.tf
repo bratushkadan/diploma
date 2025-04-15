@@ -15,10 +15,10 @@ locals {
       account            = "0.0.9"
       email_confirmation = "0.0.9"
     }
-    products = "0.0.2"
+    products = "0.0.4"
     catalog  = "0.0.3"
-    cart     = "0.0.3"
-    orders   = "0.0.1-fake"
+    cart     = "0.0.4"
+    orders   = "0.0.2"
     feedback = ""
   }
 
@@ -546,6 +546,7 @@ resource "yandex_serverless_container" "orders" {
   image {
     url = "cr.yandex/${yandex_container_repository.orders_repository.name}:${local.versions.orders}"
     environment = {
+      (local.env.YDB_ENDPOINT) = yandex_ydb_database_serverless.this.ydb_full_endpoint
     }
   }
 
@@ -684,7 +685,7 @@ resource "yandex_function_trigger" "process_products_reservations" {
   }
 }
 
-resource "yandex_function_trigger" "process_products_unreserved" {
+resource "yandex_function_trigger" "process_products_unreserve" {
   count       = local.containers.products.count
   name        = "process-products-unreserved"
   description = "trigger for directing products unreservations messages to products service"
@@ -710,9 +711,9 @@ resource "yandex_function_trigger" "process_orders_with_unreserved_products" {
   description = "trigger for directing unreserved products messages to orders service"
 
   container {
-    id                 = yandex_serverless_container.products[0].id
+    id                 = yandex_serverless_container.orders[0].id
     service_account_id = yandex_iam_service_account.auth_caller.id
-    path               = "/api/private/v1/products/unreserve"
+    path               = "/api/private/v1/order/process-unreserved-products"
   }
 
   data_streams {

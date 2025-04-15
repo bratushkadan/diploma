@@ -58,13 +58,11 @@ go run cmd/cart/main.go
 
 Email confirmation:
 
+1. Bump `local.versions.${SERVICE}` in Terraform
+2. Run the following command:
+
 ```sh
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/cart/main.go
-TAG=0.0.1
-docker build -f build/cart/Dockerfile -t "cart:${TAG}" .
-rm bin
-yc iam create-token | docker login cr.yandex -u iam --password-stdin
-TARGET="cr.yandex/$(../terraform/tf output -json -no-color | jq -cMr .container_registry.value.repository.cart.name):${TAG}"
-docker tag "cart:${TAG}" "${TARGET}"
-docker push "${TARGET}"
+export SERVICE="cart"
+export TAG="$(echo "local.versions.${SERVICE}" | ./terraform/tf console | jq -cMr)"
+./app/scripts/build-push-image.sh
 ```

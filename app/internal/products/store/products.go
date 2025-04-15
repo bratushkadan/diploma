@@ -168,14 +168,14 @@ func (p *Products) Get(ctx context.Context, id uuid.UUID) (*GetProductDTOOutput,
 					return err
 				}
 				if err := json.Unmarshal(picturesJson, &out.Pictures); err != nil {
-					return errors.New("failed to unmarshal product pictures json field")
+					return fmt.Errorf("failed to unmarshal product pictures json field: %v", err)
 				}
 				if err := json.Unmarshal(metadataJson, &out.Metadata); err != nil {
-					return errors.New("failed to unmarshal product metadata json field")
+					return fmt.Errorf("failed to unmarshal product metadata json field: %v", err)
 				}
 				out.Id, err = uuid.Parse(strId)
 				if err != nil {
-					return errors.New("failed to parse uuid from string id")
+					return fmt.Errorf("failed to parse uuid from string id: %v", err)
 				}
 				outProduct = &out
 			}
@@ -348,10 +348,10 @@ func (p *Products) Upsert(ctx context.Context, in UpsertProductDTOInput) (Upsert
 				}
 
 				if err := json.Unmarshal(picturesJson, &out.Pictures); err != nil {
-					return errors.New("failed to unmarshal product pictures json field")
+					return fmt.Errorf("failed to unmarshal product pictures json field: %v", err)
 				}
 				if err := json.Unmarshal(metadataJson, &out.Metadata); err != nil {
-					return errors.New("failed to unmarshal product metadata json field")
+					return fmt.Errorf("failed to unmarshal product metadata json field: %v", err)
 				}
 				out.Id, err = uuid.Parse(strId)
 				if err != nil {
@@ -550,14 +550,14 @@ func (p *Products) List(ctx context.Context, nextPage ListProductsNextPage) ([]L
 					return err
 				}
 				if err := json.Unmarshal(picturesJson, &out.Pictures); err != nil {
-					return errors.New("failed to unmarshal product pictures json field")
+					return fmt.Errorf("failed to unmarshal product pictures json field: %v", err)
 				}
 				if err := json.Unmarshal(metadataJson, &out.Metadata); err != nil {
-					return errors.New("failed to unmarshal product metadata json field")
+					return fmt.Errorf("failed to unmarshal product metadata json field: %v", err)
 				}
 				out.Id, err = uuid.Parse(strId)
 				if err != nil {
-					return errors.New("failed to parse uuid from string id")
+					return fmt.Errorf("failed to parse uuid from string id: %v", err)
 				}
 				outProducts = append(outProducts, out)
 			}
@@ -605,7 +605,6 @@ FROM
 	"{{table.table_products}}", tableProducts,
 )
 
-// TODO: process messages correctly - try to reserve products for several orders and if none products are left decline other requests
 func (p *Products) ReserveProducts(ctx context.Context, messages []oapi_codegen.PrivateReserveProductsReqMessage) error {
 	reserved := make([]oapi_codegen.PrivateOrderProcessReservedProductsReqMessage, 0)
 	failedToReserve := make([]oapi_codegen.PrivateOrderCancelOperationsReqMessage, 0)
@@ -651,14 +650,14 @@ func (p *Products) ReserveProducts(ctx context.Context, messages []oapi_codegen.
 					return err
 				}
 
-				var pictures []string
+				var pictures []ListProductsDTOOutputPicture
 				if err := json.Unmarshal(picturesJson, &pictures); err != nil {
-					return errors.New("failed to unmarshal product pictures json field")
+					return fmt.Errorf("failed to unmarshal product pictures json field: %v", err)
 				}
 
 				if len(pictures) > 0 {
 					picture := pictures[0]
-					product.Picture = &picture
+					product.Picture = &picture.Url
 				}
 
 				product.Count = int(stock)

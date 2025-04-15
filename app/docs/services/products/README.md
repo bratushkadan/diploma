@@ -280,15 +280,11 @@ Sample response:
 
 ### Build for Yandex Cloud Container Registry
 
-Email confirmation:
+1. Bump `local.versions.${SERVICE}` in Terraform
+2. Run the following command:
 
 ```sh
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/products/main.go
-TAG=0.0.2
-docker build -f build/products/Dockerfile -t "products:${TAG}" .
-rm bin
-yc iam create-token | docker login cr.yandex -u iam --password-stdin
-TARGET="cr.yandex/$(../terraform/tf output -json -no-color | jq -cMr .container_registry.value.repository.products.name):${TAG}"
-docker tag "products:${TAG}" "${TARGET}"
-docker push "${TARGET}"
+export SERVICE="products"
+export TAG="$(echo "local.versions.${SERVICE}" | ./terraform/tf console | jq -cMr)"
+./app/scripts/build-push-image.sh
 ```

@@ -305,9 +305,14 @@ func (s *Orders) ProcessReservedProducts(ctx context.Context, req oapi_codegen.P
 	}
 
 	clearCartMessages := make([]oapi_codegen.PrivateClearCartPositionsReqMessage, 0, len(req.Messages))
+	for _, message := range clearCartMessages {
+		clearCartMessages = append(clearCartMessages, oapi_codegen.PrivateClearCartPositionsReqMessage{UserId: message.UserId})
+	}
 
-	if err := s.store.ProduceCartClearMessages(ctx, clearCartMessages...); err != nil {
-		return fmt.Errorf("publish clear cart messages: %v", err)
+	if len(clearCartMessages) > 0 {
+		if err := s.store.ProduceCartClearMessages(ctx, clearCartMessages...); err != nil {
+			return fmt.Errorf("publish clear cart messages: %v", err)
+		}
 	}
 
 	return nil

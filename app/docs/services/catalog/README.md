@@ -107,13 +107,11 @@ GET /products/_search
 
 Email confirmation:
 
+1. Bump `local.versions.${SERVICE}` in Terraform
+2. Run the following command:
+
 ```sh
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin cmd/catalog/main.go
-TAG=0.0.2
-docker build -f build/catalog/Dockerfile -t "catalog:${TAG}" .
-rm bin
-yc iam create-token | docker login cr.yandex -u iam --password-stdin
-TARGET="cr.yandex/$(../terraform/tf output -json -no-color | jq -cMr .container_registry.value.repository.catalog.name):${TAG}"
-docker tag "catalog:${TAG}" "${TARGET}"
-docker push "${TARGET}"
+export SERVICE="catalog"
+export TAG="$(echo "local.versions.${SERVICE}" | ./terraform/tf console | jq -cMr)"
+./app/scripts/build-push-image.sh
 ```
