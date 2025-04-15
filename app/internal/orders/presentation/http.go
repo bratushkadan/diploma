@@ -329,9 +329,11 @@ func (api *ApiImpl) OrdersUpdateOrder(c *gin.Context, orderId string) {
 	c.JSON(http.StatusOK, res)
 }
 
-func (*ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {
+func (api *ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {
+	api.Logger.Info("validation handled", zap.String("validation_message", message))
 	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: message}))
 }
-func (*ApiImpl) ErrorHandler(c *gin.Context, err error, code int) {
+func (api *ApiImpl) ErrorHandler(c *gin.Context, err error, code int) {
+	api.Logger.Error("error handler", zap.Error(err))
 	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: err.Error()}))
 }

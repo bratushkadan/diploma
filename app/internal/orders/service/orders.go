@@ -235,6 +235,7 @@ func (s *Orders) ProcessPublishedCartPositions(ctx context.Context, req oapi_cod
 	if len(productsReservationMessages) > 0 {
 		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			if err := s.store.ProduceProductsReservationMessages(ctx, productsReservationMessages...); err != nil {
 				defer m.Unlock()
 				m.Lock()
@@ -246,6 +247,7 @@ func (s *Orders) ProcessPublishedCartPositions(ctx context.Context, req oapi_cod
 	if len(cancelOperationsMessages) > 0 {
 		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			if err := s.store.ProduceCancelOperationMessages(ctx, cancelOperationsMessages...); err != nil {
 				defer m.Unlock()
 				m.Lock()
@@ -341,6 +343,10 @@ func (s *Orders) BatchCancelUnpaidOrders(ctx context.Context, req oapi_codegen.P
 	}
 	unpaidOrders := res.Orders
 
+	if len(unpaidOrders) == 0 {
+		return nil
+	}
+
 	orderUpdates := make([]store.UpdateOrderManyDTOInputOrderUpdate, 0, len(unpaidOrders))
 	for _, order := range unpaidOrders {
 		orderUpdates = append(orderUpdates, store.UpdateOrderManyDTOInputOrderUpdate{
@@ -368,6 +374,8 @@ func (s *Orders) BatchCancelUnpaidOrders(ctx context.Context, req oapi_codegen.P
 			Products: products,
 		})
 	}
+
+	fmt.Printf("messages: %+v\n", messages)
 
 	if err := s.store.ProduceProductsUnreservationMessages(ctx, messages...); err != nil {
 		return fmt.Errorf("publish products unreservation messages: %v", err)

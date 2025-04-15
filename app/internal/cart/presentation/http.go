@@ -161,7 +161,7 @@ func (api *ApiImpl) PrivateCartPublishContents(c *gin.Context) {
 	}
 
 	if err := api.CartService.CartsPublishPositions(c.Request.Context(), reqBody); err != nil {
-		api.Logger.Error("publish carts positions", zap.Error(err))
+		api.Logger.Error("publish carts positions", zap.Any("opertions", reqBody.Messages), zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: 1, Message: err.Error()}))
 		return
 	}
@@ -176,7 +176,7 @@ func (api *ApiImpl) PrivateCartsClearContents(c *gin.Context) {
 	}
 
 	if err := api.CartService.ClearCarts(c.Request.Context(), reqBody.Messages); err != nil {
-		api.Logger.Error("clear cart", zap.Error(err))
+		api.Logger.Error("clear cart", zap.Any("users", reqBody.Messages), zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: 1, Message: err.Error()}))
 		return
 	}
@@ -184,9 +184,11 @@ func (api *ApiImpl) PrivateCartsClearContents(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "clear carts applied"})
 }
 
-func (*ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {
+func (api *ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {
+	api.Logger.Info("validation handled", zap.String("validation_message", message))
 	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: message}))
 }
-func (*ApiImpl) ErrorHandler(c *gin.Context, err error, code int) {
+func (api *ApiImpl) ErrorHandler(c *gin.Context, err error, code int) {
+	api.Logger.Error("error handler", zap.Error(err))
 	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: err.Error()}))
 }

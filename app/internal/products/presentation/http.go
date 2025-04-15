@@ -611,6 +611,7 @@ func (a *ApiImpl) ProductsDeletePicture(c *gin.Context, productId string, id str
 func (api *ApiImpl) ProductsReserve(c *gin.Context) {
 	var requestBody oapi_codegen.PrivateReserveProductsReq
 	if err := json.NewDecoder(c.Request.Body).Decode(&requestBody); err != nil {
+		api.Logger.Info("unmarshal reserve products request body", zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 0, Message: fmt.Sprintf(`bad request: %s`, err.Error())}},
 		})
@@ -618,6 +619,7 @@ func (api *ApiImpl) ProductsReserve(c *gin.Context) {
 	}
 
 	if err := api.ProductsService.ReserveProducts(c.Request.Context(), requestBody.Messages); err != nil {
+		api.Logger.Error("reserve products", zap.Any("products", requestBody.Messages), zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 0, Message: fmt.Sprintf(`failed to process reserve products messages: %s`, err.Error())}},
 		})
@@ -629,6 +631,7 @@ func (api *ApiImpl) ProductsReserve(c *gin.Context) {
 func (api *ApiImpl) ProductsUnreserve(c *gin.Context) {
 	var requestBody oapi_codegen.PrivateUnreserveProductsReq
 	if err := json.NewDecoder(c.Request.Body).Decode(&requestBody); err != nil {
+		api.Logger.Info("marshal reserve products request body", zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusBadRequest, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 0, Message: fmt.Sprintf(`bad request: %s`, err.Error())}},
 		})
@@ -636,6 +639,7 @@ func (api *ApiImpl) ProductsUnreserve(c *gin.Context) {
 	}
 
 	if err := api.ProductsService.UnreserveProducts(c.Request.Context(), requestBody.Messages); err != nil {
+		api.Logger.Error("unreserve products", zap.Any("products", requestBody.Messages), zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
 			Errors: []oapi_codegen.Err{{Code: 0, Message: fmt.Sprintf(`failed to process unreserve products messages: %s`, err.Error())}},
 		})
@@ -645,10 +649,12 @@ func (api *ApiImpl) ProductsUnreserve(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "processed unreserve products requests"})
 }
 
-func (*ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {
+func (api *ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {
+	api.Logger.Info("validation handled", zap.String("validation_message", message))
 	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: message}))
 }
-func (*ApiImpl) ErrorHandler(c *gin.Context, err error, code int) {
+func (api *ApiImpl) ErrorHandler(c *gin.Context, err error, code int) {
+	api.Logger.Error("error handler", zap.Error(err))
 	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: err.Error()}))
 }
 

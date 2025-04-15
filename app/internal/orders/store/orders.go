@@ -23,7 +23,7 @@ const (
 	tableOrderItems = "`orders/order_items`"
 
 	topicProductsReservations   = "products/products_reservartions_topic"
-	topicProductsUnreservations = "products/products_unreservartions_topic"
+	topicProductsUnreservations = "products/products_unreservations_topic"
 
 	topicCartPublishRequests = "cart/cart_contents_publish_requests_topic"
 	topicCartClearRequests   = "cart/cart_clear_requests_topic"
@@ -661,8 +661,8 @@ $to_update = (
     WHERE id = $id
 );
 
-UPDATE {{table.orders}}
-ON SELECT * FROM $to_update
+UPDATE {{table.orders}} ON
+SELECT * FROM $to_update
 RETURNING id, status, updated_at;
 `,
 	"{{table.orders}}",
@@ -712,7 +712,7 @@ var queryUpdateOrderMany = template.ReplaceAllPairs(`
 DECLARE $order_updates AS List<Struct<
   id:Utf8,
 	status:Utf8,
-	updated_at:Timestamp,
+	updated_at:Datetime,
 >>;
 
 -- Existing orders only
@@ -721,12 +721,12 @@ $to_update = (
     u.id AS id,
     u.status AS status,
     u.updated_at AS updated_at,
-  FROM
-  JOIN {{table.orders}} o ON o.id = u.id;
+  FROM AS_TABLE($order_updates) u
+  JOIN {{table.orders}} o ON o.id = u.id
 );
 
-UPDATE {{table.orders}}
-ON SELECT * FROM $to_update
+UPDATE {{table.orders}} ON
+SELECT * FROM $to_update
 RETURNING id, status, updated_at;
 `,
 	"{{table.orders}}",
@@ -751,7 +751,7 @@ func (s *Orders) UpdateOrderMany(ctx context.Context, in UpdateOrderManyDTOInput
 		updates = append(updates, types.StructValue(
 			types.StructFieldValue("id", types.UTF8Value(u.OrderId)),
 			types.StructFieldValue("status", types.UTF8Value(u.Status)),
-			types.StructFieldValue("updated_at", types.TimestampValueFromTime(u.UpdatedAt)),
+			types.StructFieldValue("updated_at", types.DatetimeValueFromTime(u.UpdatedAt)),
 		))
 	}
 	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
