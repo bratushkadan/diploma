@@ -848,8 +848,6 @@ func (p *Products) UnreserveProducts(ctx context.Context, messages []oapi_codege
 			return err
 		}
 
-		p.l.Info("unreserved", zap.Any("products", results))
-
 		// Publish
 		unreserveProductsByteMessages := make([][]byte, 0, len(messages))
 		for _, msg := range unreserveProductsMessages {
