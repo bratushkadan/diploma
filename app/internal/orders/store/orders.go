@@ -833,7 +833,7 @@ func (s *Orders) ListUnpaidOrders(ctx context.Context) (ListUnpaidOrdersDTOOutpu
 					return err
 				}
 				orders[id] = append(orders[id], ListUnpaidOrdersDTOOutputOrderItem{
-					Id:    id,
+					Id:    productId,
 					Count: int(count),
 				})
 			}

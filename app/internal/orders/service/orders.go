@@ -13,6 +13,7 @@ import (
 	"github.com/bratushkadan/floral/internal/orders/store"
 	shared_api "github.com/bratushkadan/floral/pkg/shared/api"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type OrderStatus string
@@ -343,6 +344,11 @@ func (s *Orders) BatchCancelUnpaidOrders(ctx context.Context, req oapi_codegen.P
 	messages := make([]oapi_codegen.PrivateUnreserveProductsReqMessage, 0)
 
 	res, err := s.store.ListUnpaidOrders(ctx)
+
+	s.l.Info("unpaid orders", zap.Any("unpaid_orders", res.Orders))
+
+	return nil
+
 	if err != nil {
 		return fmt.Errorf("list unpaid orders: %v", err)
 	}

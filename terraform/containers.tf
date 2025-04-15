@@ -15,10 +15,10 @@ locals {
       account            = "0.0.9"
       email_confirmation = "0.0.9"
     }
-    products = "0.0.4"
+    products = "0.0.5"
     catalog  = "0.0.3"
     cart     = "0.0.4"
-    orders   = "0.0.2"
+    orders   = "0.0.4"
     feedback = ""
   }
 
@@ -613,6 +613,24 @@ resource "yandex_function_trigger" "products_reserved_to_orders" {
     service_account_id = yandex_iam_service_account.app.id
     batch_cutoff       = "1"
     batch_size         = 1
+  }
+}
+
+resource "yandex_function_trigger" "cancel_unpaid_orders" {
+  count       = local.containers.orders.count
+  name        = "cancel-unpaid-orders"
+  description = "trigger for cancelling unpaid order"
+
+  container {
+    id                 = yandex_serverless_container.orders[0].id
+    service_account_id = yandex_iam_service_account.auth_caller.id
+    path               = "/api/private/v1/order/batch-cancel-unpaid-orders"
+    retry_attempts     = 1
+    retry_interval     = 10
+  }
+  timer {
+    // every hour
+    cron_expression = "0 * ? * * *"
   }
 }
 
