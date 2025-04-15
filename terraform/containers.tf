@@ -18,7 +18,7 @@ locals {
     products = "0.0.5"
     catalog  = "0.0.3"
     cart     = "0.0.4"
-    orders   = "0.0.4"
+    orders   = "0.0.7"
     feedback = ""
   }
 
@@ -630,7 +630,9 @@ resource "yandex_function_trigger" "cancel_unpaid_orders" {
   }
   timer {
     // every hour
-    cron_expression = "0 * ? * * *"
+    # cron_expression = "0 * ? * * *"
+    cron_expression = "* * ? * * *"
+    payload         = "123"
   }
 }
 

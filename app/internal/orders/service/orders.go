@@ -241,7 +241,7 @@ func (s *Orders) ProcessPublishedCartPositions(ctx context.Context, req oapi_cod
 				defer m.Unlock()
 				m.Lock()
 
-				errs = append(errs, err)
+				errs = append(errs, fmt.Errorf("produce products reservation messages: %v", err))
 			}
 		}()
 	}
@@ -253,15 +253,15 @@ func (s *Orders) ProcessPublishedCartPositions(ctx context.Context, req oapi_cod
 				defer m.Unlock()
 				m.Lock()
 
-				errs = append(errs, err)
+				errs = append(errs, fmt.Errorf("produce cancel operation messages: %v", err))
 			}
 		}()
 	}
 
 	wg.Wait()
 
-	if err := s.store.ProduceProductsReservationMessages(ctx, productsReservationMessages...); err != nil {
-		return fmt.Errorf("produce products reservation messages: %v", err)
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 
 	return nil
@@ -306,8 +306,8 @@ func (s *Orders) ProcessReservedProducts(ctx context.Context, req oapi_codegen.P
 	}
 
 	clearCartMessages := make([]oapi_codegen.PrivateClearCartPositionsReqMessage, 0, len(req.Messages))
-	for _, message := range clearCartMessages {
-		clearCartMessages = append(clearCartMessages, oapi_codegen.PrivateClearCartPositionsReqMessage{UserId: message.UserId})
+	for _, order := range orders {
+		clearCartMessages = append(clearCartMessages, oapi_codegen.PrivateClearCartPositionsReqMessage{UserId: order.UserId})
 	}
 
 	if len(clearCartMessages) > 0 {
@@ -346,8 +346,6 @@ func (s *Orders) BatchCancelUnpaidOrders(ctx context.Context, req oapi_codegen.P
 	res, err := s.store.ListUnpaidOrders(ctx)
 
 	s.l.Info("unpaid orders", zap.Any("unpaid_orders", res.Orders))
-
-	return nil
 
 	if err != nil {
 		return fmt.Errorf("list unpaid orders: %v", err)
