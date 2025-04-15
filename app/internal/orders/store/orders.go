@@ -4,14 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	oapi_codegen "github.com/bratushkadan/floral/internal/orders/presentation/generated"
 	"github.com/bratushkadan/floral/pkg/template"
+	"github.com/bratushkadan/floral/pkg/token"
 	ydbtopic "github.com/bratushkadan/floral/pkg/ydb/topic"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/result/named"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
+	"go.uber.org/zap"
 )
 
 const (
@@ -27,7 +30,11 @@ const (
 )
 
 const (
-	ListOrdersPageSize uint32 = 10
+	ListOrdersPageSize uint32 = 5
+)
+
+var (
+	ErrInvalidListOrdersNextPageToken = "invalid list orders next page token"
 )
 
 func (s *Orders) ProduceProductsReservationMessages(ctx context.Context, messages ...oapi_codegen.PrivateReserveProductsReqMessage) error {
@@ -155,7 +162,7 @@ var queryListOrders = template.ReplaceAllPairs(`
 DECLARE $user_id AS Utf8;
 DECLARE $last_paginated_order_id AS Optional<Utf8>;
 DECLARE $last_paginated_created_at As Optional<Timestamp>;
-DECLARE $page_size AS Optional<Uint32>;
+DECLARE $page_size AS Uint32;
 
 -- $user_id = UNWRAP(CAST("acd559b2-def1-4b01-b501-c642e22dd7da" AS Utf8));
 -- $last_paginated_order_id = UNWRAP(CAST("foo-bar-baz-qux3" AS Utf8));
@@ -173,21 +180,9 @@ $orders = (
   WHERE
     user_id = $user_id
       AND
-    (
-      (
-        $last_paginated_order_id IS NULL
-          OR
-        $last_paginated_order_id = id
-      )
-        OR
-      (
-        $last_paginated_created_at IS NULL
-          OR
-        $last_paginated_created_at > created_at
-      )
-    )
-  ORDER BY created_at DESC
-  LIMIT COALESCE($page_size + 1, 6u)
+    (COALESCE($last_paginated_created_at, created_at), COALESCE($last_paginated_order_id, id)) >= (created_at, id)
+  ORDER BY created_at DESC, id DESC
+  LIMIT $page_size + 1
 );
 
 SELECT
@@ -203,7 +198,8 @@ SELECT
     i.price AS product_price,
     i.picture AS product_picture
 FROM $orders o
-JOIN {{table.order_items}} i ON i.order_id = o.id;
+JOIN {{table.order_items}} i ON i.order_id = o.id
+ORDER BY created_at DESC, id DESC;
 `,
 	"{{table.orders}}",
 	tableOrders,
@@ -237,13 +233,21 @@ type ListOrdersRow struct {
 	ProductPicture  *string
 }
 
+const nextPageTokenEncryptKey = "puqsyuv4jxjd74rs43yj3lyegcji2qpe"
+
 func (s *Orders) ListOrders(ctx context.Context, userId string, nextPageToken *string) (oapi_codegen.OrdersListOrdersRes, error) {
 	var out oapi_codegen.OrdersListOrdersRes
 
 	var nextPage ListOrdersNextPage
 	if nextPageToken != nil {
+		token, err := token.DecryptToken(*nextPageToken, nextPageTokenEncryptKey)
+		if err != nil {
+			s.logger.Info("decode next page token", zap.Error(err))
+			return oapi_codegen.OrdersListOrdersRes{}, fmt.Errorf("%s: %w", ErrInvalidListOrdersNextPageToken, err)
+		}
+
 		var nextPageDto ListOrdersNextPageDto
-		if err := json.Unmarshal([]byte(*nextPageToken), &nextPageDto); err != nil {
+		if err := json.Unmarshal([]byte(token), &nextPageDto); err != nil {
 			return oapi_codegen.OrdersListOrdersRes{}, fmt.Errorf("decode next page token: %v", err)
 		}
 		createdAt, err := time.Parse(time.RFC3339, nextPageDto.CreatedAt)
@@ -252,7 +256,6 @@ func (s *Orders) ListOrders(ctx context.Context, userId string, nextPageToken *s
 		}
 		nextPage.CreatedAt = &createdAt
 		nextPage.OrderId = &nextPageDto.OrderId
-
 	}
 
 	readTx := table.TxControl(table.BeginTx(table.WithStaleReadOnly()), table.CommitTx())
@@ -264,7 +267,7 @@ func (s *Orders) ListOrders(ctx context.Context, userId string, nextPageToken *s
 			table.ValueParam("$user_id", types.UTF8Value(userId)),
 			table.ValueParam("$last_paginated_order_id", types.NullableUTF8Value(nextPage.OrderId)),
 			table.ValueParam("$last_paginated_created_at", types.NullableTimestampValueFromTime(nextPage.CreatedAt)),
-			table.ValueParam("$page_size", types.NullableUint32Value(ptr(ListOrdersPageSize))),
+			table.ValueParam("$page_size", types.Uint32Value(ListOrdersPageSize)),
 		))
 		if err != nil {
 			return err
@@ -285,7 +288,7 @@ func (s *Orders) ListOrders(ctx context.Context, userId string, nextPageToken *s
 					named.Required("product_seller_id", &orderRow.ProductSellerId),
 					named.Required("produt_count", &orderRow.ProductCount),
 					named.Required("product_price", &orderRow.ProductPrice),
-					named.Required("product_picture", &orderRow.ProductPicture),
+					named.Optional("product_picture", &orderRow.ProductPicture),
 				); err != nil {
 					return err
 				}
@@ -303,25 +306,25 @@ func (s *Orders) ListOrders(ctx context.Context, userId string, nextPageToken *s
 		lastOrderId = &ordersRows[len(ordersRows)-1].Id
 	}
 	orders := make(map[string]*oapi_codegen.OrdersListOrdersResOrder)
-	for _, row := range ordersRows {
-		_, ok := orders[row.Id]
+	for _, order := range ordersRows {
+		_, ok := orders[order.Id]
 		if !ok {
-			orders[row.Id] = &oapi_codegen.OrdersListOrdersResOrder{
-				Id:        row.Id,
-				Status:    row.Status,
-				UserId:    row.UserId,
-				CreatedAt: ptr(row.CreatedAt.Format(time.RFC3339)),
-				UpdatedAt: ptr(row.UpdatedAt.Format(time.RFC3339)),
+			orders[order.Id] = &oapi_codegen.OrdersListOrdersResOrder{
+				Id:        order.Id,
+				Status:    order.Status,
+				UserId:    order.UserId,
+				CreatedAt: ptr(order.CreatedAt.Format(time.RFC3339)),
+				UpdatedAt: ptr(order.UpdatedAt.Format(time.RFC3339)),
 			}
 		}
 
-		orders[row.Id].Items = append(orders[row.Id].Items, oapi_codegen.OrdersListOrdersResItem{
-			ProductId:  row.ProductId,
-			Name:       row.ProductName,
-			Count:      int(row.ProductCount),
-			Price:      row.ProductPrice,
-			SellerId:   row.ProductSellerId,
-			PictureUrl: row.ProductPicture,
+		orders[order.Id].Items = append(orders[order.Id].Items, oapi_codegen.OrdersListOrdersResItem{
+			ProductId:  order.ProductId,
+			Name:       order.ProductName,
+			Count:      int(order.ProductCount),
+			Price:      order.ProductPrice,
+			SellerId:   order.ProductSellerId,
+			PictureUrl: order.ProductPicture,
 		})
 	}
 
@@ -332,18 +335,43 @@ func (s *Orders) ListOrders(ctx context.Context, userId string, nextPageToken *s
 		}
 		delete(orders, *lastOrderId)
 
-		data, err := json.Marshal(&newNextPage)
+		s.logger.Info("new next page", zap.Any("next_page", newNextPage))
+
+		tokenBytes, err := json.Marshal(&newNextPage)
 		if err != nil {
 			return oapi_codegen.OrdersListOrdersRes{}, fmt.Errorf("serialize next page: %v", err)
 		}
 
-		out.NextPageToken = ptr(string(data))
+		token, err := token.EncryptToken(string(tokenBytes), nextPageTokenEncryptKey)
+		if err != nil {
+			return oapi_codegen.OrdersListOrdersRes{}, fmt.Errorf("encrypt next page token: %w", err)
+		}
+
+		out.NextPageToken = &token
 	}
 
 	out.Orders = make([]oapi_codegen.OrdersListOrdersResOrder, 0, len(orders))
 	for _, order := range orders {
 		out.Orders = append(out.Orders, *order)
 	}
+
+	// s.logger.Info("orders map", zap.Any("orders", orders))
+	// s.logger.Info("orders rows", zap.Any("rows", ordersRows))
+
+	slices.SortFunc(out.Orders, func(orderA, orderB oapi_codegen.OrdersListOrdersResOrder) int {
+		createdAtA, _ := time.Parse(time.RFC3339, *orderA.CreatedAt)
+		createdAtB, _ := time.Parse(time.RFC3339, *orderB.CreatedAt)
+		if res := createdAtB.Compare(createdAtA); res != 0 {
+			return res
+		}
+		if orderA.Id > orderB.Id {
+			return -1
+		}
+		if orderA.Id < orderB.Id {
+			return 1
+		}
+		return 0
+	})
 
 	return out, nil
 }

@@ -198,7 +198,14 @@ func (api *ApiImpl) OrdersListOrders(c *gin.Context, params oapi_codegen.OrdersL
 		return
 	}
 
-	var res oapi_codegen.OrdersListOrdersRes
+	res, err := api.Service.ListOrders(c.Request.Context(), params)
+	if err != nil {
+		api.Logger.Error("list orders", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, oapi_codegen.Error{
+			Errors: []oapi_codegen.Err{{Code: 124, Message: "failed to list orders"}},
+		})
+		return
+	}
 
 	c.JSON(http.StatusOK, res)
 }
