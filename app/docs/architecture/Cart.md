@@ -1,4 +1,4 @@
-# Auth service
+# Cart service architecture
 
 ## Technical Details & Limitations
 

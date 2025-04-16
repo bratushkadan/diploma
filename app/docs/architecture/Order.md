@@ -1,4 +1,4 @@
-# Order service
+# Order service architecture
 
 ## Architecture diagrams
 

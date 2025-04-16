@@ -1,4 +1,4 @@
-# Feedback
+# Feedback service architecture
 
 ## Technical Details & Limitations
 
