@@ -14,8 +14,8 @@ tags:
     description: Cart service
   - name: orders
     description: Orders service
-  - name: feedback
-    description: Product reviews service
+  # - name: feedback
+  #   description: Product reviews service
 
 paths:
   ### Users
@@ -2232,213 +2232,213 @@ components:
           type: string
 
     ### Feedback
-    PrivateFeedbackProcessCompletedOrderReq:
-      x-tags:
-        - private_api
-      type: object
-      required:
-        - messages
-      additionalProperties: false
-      properties:
-        messages:
-          type: array
-          items:
-            $ref: '#/components/schemas/PrivateFeedbackProcessCompletedOrderReqMessage'
-    PrivateFeedbackProcessCompletedOrderReqMessage:
-      x-tags:
-        - private_api
-      type: object
-      required:
-        - products
-        - user_id
-        - order_id
-      additionalProperties: false
-      properties:
-        products:
-          $ref: '#/components/schemas/PrivateFeedbackProcessCompletedOrderReqProducts'
-        order_id:
-          type: string
-    PrivateFeedbackProcessCompletedOrderReqProducts:
-      type: object
-      x-tags:
-        - private_api
-      required:
-        - id
-      additionalProperties: false
-      properties:
-        id:
-          type: string
-    PrivateFeedbackProcessCompletedOrderRes:
-      x-tags:
-        - private_api
-      type: object
-    FeedbackListProductRatingsRes:
-      type: object
-      required:
-        - ratings
-      additionalProperties: false
-      properties:
-        ratings:
-          type: array
-          items:
-            $ref: '#/components/schemas/FeedbackListProductRatingsResRating'
-    FeedbackListProductRatingsResRating:
-      type: object
-      required:
-        - rating
-      additionalProperties: false
-      properties:
-        product_id:
-          type: string
-        rating:
-          type: integer
-          format: double
-          minimum: 0
-          maximum: 5.0
-    FeedbackGetProductRatingRes:
-      type: object
-      required:
-        - product_id
-        - rating
-      additionalProperties: false
-      properties:
-        product_id:
-          type: string
-        rating:
-          type: integer
-          format: double
-          minimum: 0
-          maximum: 5.0
-    FeedbackListProductReviewsRes:
-      type: object
-      required:
-        - reviews
-        - next_page_token
-      additionalProperties: false
-      properties:
-        reviews:
-          type: array
-          items:
-            $ref: '#/components/schemas/FeedbackListProductReviewsResReview'
-        next_page_token:
-          type: string
-          nullable: true
-    FeedbackListProductReviewsResReview:
-      type: object
-      required:
-        - id
-        - product_id
-        - user_id
-        - rating
-        - review
-        - created_at
-        - updated_at
-      additionalProperties: false
-      properties:
-        id:
-          type: string
-        product_id:
-          type: string
-        user_id:
-          type: string
-        rating:
-          type: number
-          format: double
-        review:
-          type: string
-        created_at:
-          type: string
-        updated_at:
-          type: string
-    FeedbackCreateProductReviewReq:
-      type: object
-      required:
-        - rating
-        - review
-      additionalProperties: false
-      properties:
-        rating:
-          type: number
-          format: double
-        review:
-          type: string
-    FeedbackCreateProductReviewRes:
-      type: object
-      required:
-        - id
-        - product_id
-        - user_id
-        - rating
-        - review
-        - created_at
-        - updated_at
-      additionalProperties: false
-      properties:
-        id:
-          type: string
-        product_id:
-          type: string
-        user_id:
-          type: string
-        rating:
-          type: number
-          format: double
-        review:
-          type: string
-        created_at:
-          type: string
-        updated_at:
-          type: string
-    FeedbackGetProductReviewRes:
-      type: object
-      required:
-        - id
-        - product_id
-        - user_id
-        - rating
-        - review
-        - created_at
-        - updated_at
-      additionalProperties: false
-      properties:
-        id:
-          type: string
-        product_id:
-          type: string
-        user_id:
-          type: string
-        rating:
-          type: number
-          format: double
-        review:
-          type: string
-        created_at:
-          type: string
-        updated_at:
-          type: string
-    FeedbackUpdateProductReviewReq:
-      type: object
-      additionalProperties: false
-      properties:
-        rating:
-          type: number
-          format: double
-        review:
-          type: string
-    FeedbackUpdateProductReviewRes:
-      type: object
-      required:
-        - id
-      additionalProperties: false
-      properties:
-        id:
-          type: string
-        rating:
-          type: number
-          format: double
-        review:
-          type: string
-    FeedbackDeleteProductReviewRes:
+    # PrivateFeedbackProcessCompletedOrderReq:
+    #   x-tags:
+    #     - private_api
+    #   type: object
+    #   required:
+    #     - messages
+    #   additionalProperties: false
+    #   properties:
+    #     messages:
+    #       type: array
+    #       items:
+    #         $ref: '#/components/schemas/PrivateFeedbackProcessCompletedOrderReqMessage'
+    # PrivateFeedbackProcessCompletedOrderReqMessage:
+    #   x-tags:
+    #     - private_api
+    #   type: object
+    #   required:
+    #     - products
+    #     - user_id
+    #     - order_id
+    #   additionalProperties: false
+    #   properties:
+    #     products:
+    #       $ref: '#/components/schemas/PrivateFeedbackProcessCompletedOrderReqProducts'
+    #     order_id:
+    #       type: string
+    # PrivateFeedbackProcessCompletedOrderReqProducts:
+    #   type: object
+    #   x-tags:
+    #     - private_api
+    #   required:
+    #     - id
+    #   additionalProperties: false
+    #   properties:
+    #     id:
+    #       type: string
+    # PrivateFeedbackProcessCompletedOrderRes:
+    #   x-tags:
+    #     - private_api
+    #   type: object
+    # FeedbackListProductRatingsRes:
+    #   type: object
+    #   required:
+    #     - ratings
+    #   additionalProperties: false
+    #   properties:
+    #     ratings:
+    #       type: array
+    #       items:
+    #         $ref: '#/components/schemas/FeedbackListProductRatingsResRating'
+    # FeedbackListProductRatingsResRating:
+    #   type: object
+    #   required:
+    #     - rating
+    #   additionalProperties: false
+    #   properties:
+    #     product_id:
+    #       type: string
+    #     rating:
+    #       type: integer
+    #       format: double
+    #       minimum: 0
+    #       maximum: 5.0
+    # FeedbackGetProductRatingRes:
+    #   type: object
+    #   required:
+    #     - product_id
+    #     - rating
+    #   additionalProperties: false
+    #   properties:
+    #     product_id:
+    #       type: string
+    #     rating:
+    #       type: integer
+    #       format: double
+    #       minimum: 0
+    #       maximum: 5.0
+    # FeedbackListProductReviewsRes:
+    #   type: object
+    #   required:
+    #     - reviews
+    #     - next_page_token
+    #   additionalProperties: false
+    #   properties:
+    #     reviews:
+    #       type: array
+    #       items:
+    #         $ref: '#/components/schemas/FeedbackListProductReviewsResReview'
+    #     next_page_token:
+    #       type: string
+    #       nullable: true
+    # FeedbackListProductReviewsResReview:
+    #   type: object
+    #   required:
+    #     - id
+    #     - product_id
+    #     - user_id
+    #     - rating
+    #     - review
+    #     - created_at
+    #     - updated_at
+    #   additionalProperties: false
+    #   properties:
+    #     id:
+    #       type: string
+    #     product_id:
+    #       type: string
+    #     user_id:
+    #       type: string
+    #     rating:
+    #       type: number
+    #       format: double
+    #     review:
+    #       type: string
+    #     created_at:
+    #       type: string
+    #     updated_at:
+    #       type: string
+    # FeedbackCreateProductReviewReq:
+    #   type: object
+    #   required:
+    #     - rating
+    #     - review
+    #   additionalProperties: false
+    #   properties:
+    #     rating:
+    #       type: number
+    #       format: double
+    #     review:
+    #       type: string
+    # FeedbackCreateProductReviewRes:
+    #   type: object
+    #   required:
+    #     - id
+    #     - product_id
+    #     - user_id
+    #     - rating
+    #     - review
+    #     - created_at
+    #     - updated_at
+    #   additionalProperties: false
+    #   properties:
+    #     id:
+    #       type: string
+    #     product_id:
+    #       type: string
+    #     user_id:
+    #       type: string
+    #     rating:
+    #       type: number
+    #       format: double
+    #     review:
+    #       type: string
+    #     created_at:
+    #       type: string
+    #     updated_at:
+    #       type: string
+    # FeedbackGetProductReviewRes:
+    #   type: object
+    #   required:
+    #     - id
+    #     - product_id
+    #     - user_id
+    #     - rating
+    #     - review
+    #     - created_at
+    #     - updated_at
+    #   additionalProperties: false
+    #   properties:
+    #     id:
+    #       type: string
+    #     product_id:
+    #       type: string
+    #     user_id:
+    #       type: string
+    #     rating:
+    #       type: number
+    #       format: double
+    #     review:
+    #       type: string
+    #     created_at:
+    #       type: string
+    #     updated_at:
+    #       type: string
+    # FeedbackUpdateProductReviewReq:
+    #   type: object
+    #   additionalProperties: false
+    #   properties:
+    #     rating:
+    #       type: number
+    #       format: double
+    #     review:
+    #       type: string
+    # FeedbackUpdateProductReviewRes:
+    #   type: object
+    #   required:
+    #     - id
+    #   additionalProperties: false
+    #   properties:
+    #     id:
+    #       type: string
+    #     rating:
+    #       type: number
+    #       format: double
+    #     review:
+    #       type: string
+    # FeedbackDeleteProductReviewRes:
       type: object
       required:
         - id
