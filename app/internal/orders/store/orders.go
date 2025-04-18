@@ -79,7 +79,7 @@ func (s *Orders) ProduceCartClearMessages(ctx context.Context, messages ...oapi_
 		dataBytes = append(dataBytes, msgBytes)
 	}
 
-	if err := ydbtopic.Produce(ctx, s.topicCartPublishRequests, dataBytes...); err != nil {
+	if err := ydbtopic.Produce(ctx, s.topicCartClearRequests, dataBytes...); err != nil {
 		return fmt.Errorf("publish message request publish cart contents: %v", err)
 	}
 	return nil

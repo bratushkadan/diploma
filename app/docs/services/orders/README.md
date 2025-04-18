@@ -95,7 +95,24 @@ export YOOMONEY_NOTIFICATIONS_SECRET="$(echo $YOOMONEY_NOTIFICATIONS_SECRET_PAYL
 go run cmd/orders/main.go
 ```
 
-## CURLs for testing
+## Testing
+
+### Run fake produce Yoomoney Payment Notification
+
+prepare:
+
+```sh
+TF_OUTPUT=$(../terraform/tf output -json -no-color)
+YOOMONEY_NOTIFICATIONS_SECRET_SECRET_ID="$(echo $TF_OUTPUT | jq -cMr .yoomoney_payment_provider_notifications_secret_secret_id.value)"
+YOOMONEY_NOTIFICATIONS_SECRET_PAYLOAD=$(yc lockbox payload get "${YOOMONEY_NOTIFICATIONS_SECRET_SECRET_ID}")
+export YOOMONEY_NOTIFICATIONS_SECRET="$(echo $YOOMONEY_NOTIFICATIONS_SECRET_PAYLOAD | yq -M '.entries.[] | select(.key == "notification_secret").text_value')"
+```
+
+run
+
+```sh
+go run cmd/orders/tests/produce-yoomoney-payment-notification/main.go
+```
 
 ## Build docker image locally
 

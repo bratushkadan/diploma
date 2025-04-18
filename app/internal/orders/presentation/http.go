@@ -351,6 +351,8 @@ func (api *ApiImpl) OrdersUpdateOrder(c *gin.Context, orderId string) {
 }
 
 func (api *ApiImpl) OrdersProcessPaymentYoomoney(c *gin.Context) {
+	api.Logger.Info("Content-Type value", zap.String("val", c.GetHeader("Content-Type")))
+
 	// should already be validated by the Oapi validator
 	req := service.ProcessYoomoneyPaymentNotificationReq{
 		NotificationType: c.PostForm("notification_type"),
@@ -408,6 +410,7 @@ func (api *ApiImpl) OrdersProcessPaymentYoomoney(c *gin.Context) {
 
 func (api *ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {
 	api.Logger.Info("validation handled", zap.String("validation_message", message))
+	api.Logger.Info("Content-Type value", zap.String("val", c.GetHeader("Content-Type")))
 	c.JSON(code, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{Code: code, Message: message}))
 }
 func (api *ApiImpl) ErrorHandler(c *gin.Context, err error, code int) {
