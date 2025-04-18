@@ -1039,250 +1039,275 @@ paths:
         type: serverless_containers
         container_id: '${containers.orders.id}'
         service_account_id: '${containers.orders.sa_id}'
+  /api/v1/order/process-payment/yoomoney:
+    post:
+      summary: Process YooMoney Payment Notification
+      description: Process YooMoney Payment Notification
+      operationId: orders_process_payment_yoomoney
+      tags:
+        - orders
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrdersProcessYoomoneyPaymentReq'
+      responses:
+        200:
+          description: ok response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrdersProcessYoomoneyPaymentRes'
+      x-yc-apigateway-validator:
+        validateRequestBody: true
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: '${containers.orders.id}'
+        service_account_id: '${containers.orders.sa_id}'
   # TODO:
   # ProcessPayment (process payment, thus change status of an order)
   # /api/v1/order/processPayment/{provider} (e.g. yoomoney)
 
   ### Feedback
-  /api/private/v1/feedback/orders/process_completed_order:
-    x-private-api: true
-    post:
-      summary: Process completed order contents
-      description: Process completed order contents (so that user has a permission to leave feedback for a product)
-      tags:
-        - feedback
-      operationId: feedback_process_completed_order
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PrivateFeedbackProcessCompletedOrderReq'
-      responses:
-        200:
-          description: Products data
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PrivateFeedbackProcessCompletedOrderRes'
-        default:
-          $ref: '#/components/responses/Error'
+  # /api/private/v1/feedback/orders/process_completed_order:
+  #   x-private-api: true
+  #   post:
+  #     summary: Process completed order contents
+  #     description: Process completed order contents (so that user has a permission to leave feedback for a product)
+  #     tags:
+  #       - feedback
+  #     operationId: feedback_process_completed_order
+  #     requestBody:
+  #       content:
+  #         application/json:
+  #           schema:
+  #             $ref: '#/components/schemas/PrivateFeedbackProcessCompletedOrderReq'
+  #     responses:
+  #       200:
+  #         description: Products data
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#/components/schemas/PrivateFeedbackProcessCompletedOrderRes'
+  #       default:
+  #         $ref: '#/components/responses/Error'
   # TODO:
-  # /api/v1/feedback/products/rating:
+  # # /api/v1/feedback/products/rating:
+  # #   get:
+  # #     # @ ListRatings - get rating by list of ids (max 20)
+  # #     # FeedbackListProductRatingsRes
+  # #     # GetRating
+  # /api/v1/feedback/products/{product_id}/rating:
   #   get:
-  #     # @ ListRatings - get rating by list of ids (max 20)
-  #     # FeedbackListProductRatingsRes
-  #     # GetRating
-  /api/v1/feedback/products/{product_id}/rating:
-    get:
-      summary: Get product rating
-      description: Get product rating
-      operationId: feedback_get_product_rating
-      tags:
-        - feedback
-      parameters:
-        - name: product_id
-          description: product id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        200:
-          description: Product rating payload
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FeedbackGetProductRatingRes'
-        default:
-          $ref: '#/components/responses/Error'
-      x-yc-apigateway-validator:
-        validateRequestBody: true
-      x-yc-apigateway-integration:
-        type: serverless_containers
-        container_id: '${containers.feedback.id}'
-        service_account_id: '${containers.feedback.sa_id}'
-  /api/v1/feedback/products/{product_id}/reviews:
-    get:
-      summary: List product reviews
-      description: List product reviews
-      operationId: feedback_list_product_reviews
-      tags:
-        - feedback
-      parameters:
-        - name: product_id
-          description: product id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: next_page_token
-          in: query
-          required: false
-          schema:
-            type: string
-      responses:
-        200:
-          description: Product reviews payload
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FeedbackListProductReviewsRes'
-        default:
-          $ref: '#/components/responses/Error'
-      x-yc-apigateway-validator:
-        validateRequestBody: true
-      x-yc-apigateway-integration:
-        type: serverless_containers
-        container_id: '${containers.feedback.id}'
-        service_account_id: '${containers.feedback.sa_id}'
-    post:
-      summary: Add product review
-      description: Add product review
-      operationId: feedback_add_product_review
-      tags:
-        - feedback
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: product_id
-          description: product id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FeedbackCreateProductReviewReq'
-      responses:
-        200:
-          description: Product reviews payload
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FeedbackCreateProductReviewRes'
-        default:
-          $ref: '#/components/responses/Error'
-      x-yc-apigateway-validator:
-        validateRequestBody: true
-      x-yc-apigateway-integration:
-        type: serverless_containers
-        container_id: '${containers.feedback.id}'
-        service_account_id: '${containers.feedback.sa_id}'
-  # GetReview, EditReview (rating + text), DeleteReview
-  /api/v1/feedback/reviews/{product_id}/reviews/{review_id}:
-    get:
-      summary: Get product review
-      description: Get product review
-      operationId: feedback_get_product_review
-      tags:
-        - feedback
-      parameters:
-        - name: product_id
-          description: product id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: review_id
-          description: review id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        200:
-          description: Product review payload
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FeedbackGetProductReviewRes'
-        default:
-          $ref: '#/components/responses/Error'
-      x-yc-apigateway-validator:
-        validateRequestBody: true
-      x-yc-apigateway-integration:
-        type: serverless_containers
-        container_id: '${containers.feedback.id}'
-        service_account_id: '${containers.feedback.sa_id}'
-    patch:
-      summary: Update product review
-      description: Update product review
-      operationId: feedback_update_product_review
-      tags:
-        - feedback
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: product_id
-          description: product id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: review_id
-          description: review id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FeedbackUpdateProductReviewReq'
-      responses:
-        200:
-          description: Product review update payload
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FeedbackUpdateProductReviewRes'
-        default:
-          $ref: '#/components/responses/Error'
-      x-yc-apigateway-validator:
-        validateRequestBody: true
-      x-yc-apigateway-integration:
-        type: serverless_containers
-        container_id: '${containers.feedback.id}'
-        service_account_id: '${containers.feedback.sa_id}'
-    delete:
-      summary: Delete product review
-      description: Delete product review
-      operationId: feedback_delete_product_review
-      tags:
-        - feedback
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: product_id
-          description: product id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: review_id
-          description: review id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        200:
-          description: Deleted product review
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FeedbackDeleteProductReviewRes'
-        default:
-          $ref: '#/components/responses/Error'
-      x-yc-apigateway-validator:
-        validateRequestBody: true
-      x-yc-apigateway-integration:
-        type: serverless_containers
-        container_id: '${containers.feedback.id}'
-        service_account_id: '${containers.feedback.sa_id}'
+  #     summary: Get product rating
+  #     description: Get product rating
+  #     operationId: feedback_get_product_rating
+  #     tags:
+  #       - feedback
+  #     parameters:
+  #       - name: product_id
+  #         description: product id
+  #         in: path
+  #         required: true
+  #         schema:
+  #           type: string
+  #     responses:
+  #       200:
+  #         description: Product rating payload
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#/components/schemas/FeedbackGetProductRatingRes'
+  #       default:
+  #         $ref: '#/components/responses/Error'
+  #     x-yc-apigateway-validator:
+  #       validateRequestBody: true
+  #     x-yc-apigateway-integration:
+  #       type: serverless_containers
+  #       container_id: '${containers.feedback.id}'
+  #       service_account_id: '${containers.feedback.sa_id}'
+  # /api/v1/feedback/products/{product_id}/reviews:
+  #   get:
+  #     summary: List product reviews
+  #     description: List product reviews
+  #     operationId: feedback_list_product_reviews
+  #     tags:
+  #       - feedback
+  #     parameters:
+  #       - name: product_id
+  #         description: product id
+  #         in: path
+  #         required: true
+  #         schema:
+  #           type: string
+  #       - name: next_page_token
+  #         in: query
+  #         required: false
+  #         schema:
+  #           type: string
+  #     responses:
+  #       200:
+  #         description: Product reviews payload
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#/components/schemas/FeedbackListProductReviewsRes'
+  #       default:
+  #         $ref: '#/components/responses/Error'
+  #     x-yc-apigateway-validator:
+  #       validateRequestBody: true
+  #     x-yc-apigateway-integration:
+  #       type: serverless_containers
+  #       container_id: '${containers.feedback.id}'
+  #       service_account_id: '${containers.feedback.sa_id}'
+  #   post:
+  #     summary: Add product review
+  #     description: Add product review
+  #     operationId: feedback_add_product_review
+  #     tags:
+  #       - feedback
+  #     security:
+  #       - bearerAuth: []
+  #     parameters:
+  #       - name: product_id
+  #         description: product id
+  #         in: path
+  #         required: true
+  #         schema:
+  #           type: string
+  #     requestBody:
+  #       content:
+  #         application/json:
+  #           schema:
+  #             $ref: '#/components/schemas/FeedbackCreateProductReviewReq'
+  #     responses:
+  #       200:
+  #         description: Product reviews payload
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#/components/schemas/FeedbackCreateProductReviewRes'
+  #       default:
+  #         $ref: '#/components/responses/Error'
+  #     x-yc-apigateway-validator:
+  #       validateRequestBody: true
+  #     x-yc-apigateway-integration:
+  #       type: serverless_containers
+  #       container_id: '${containers.feedback.id}'
+  #       service_account_id: '${containers.feedback.sa_id}'
+  # # GetReview, EditReview (rating + text), DeleteReview
+  # /api/v1/feedback/reviews/{product_id}/reviews/{review_id}:
+    # get:
+    #   summary: Get product review
+    #   description: Get product review
+    #   operationId: feedback_get_product_review
+    #   tags:
+    #     - feedback
+    #   parameters:
+    #     - name: product_id
+    #       description: product id
+    #       in: path
+    #       required: true
+    #       schema:
+    #         type: string
+    #     - name: review_id
+    #       description: review id
+    #       in: path
+    #       required: true
+    #       schema:
+    #         type: string
+    #   responses:
+    #     200:
+    #       description: Product review payload
+    #       content:
+    #         application/json:
+    #           schema:
+    #             $ref: '#/components/schemas/FeedbackGetProductReviewRes'
+    #     default:
+    #       $ref: '#/components/responses/Error'
+    #   x-yc-apigateway-validator:
+    #     validateRequestBody: true
+    #   x-yc-apigateway-integration:
+    #     type: serverless_containers
+    #     container_id: '${containers.feedback.id}'
+    #     service_account_id: '${containers.feedback.sa_id}'
+    # patch:
+    #   summary: Update product review
+    #   description: Update product review
+    #   operationId: feedback_update_product_review
+    #   tags:
+    #     - feedback
+    #   security:
+    #     - bearerAuth: []
+    #   parameters:
+    #     - name: product_id
+    #       description: product id
+    #       in: path
+    #       required: true
+    #       schema:
+    #         type: string
+    #     - name: review_id
+    #       description: review id
+    #       in: path
+    #       required: true
+    #       schema:
+    #         type: string
+    #   requestBody:
+    #     content:
+    #       application/json:
+    #         schema:
+    #           $ref: '#/components/schemas/FeedbackUpdateProductReviewReq'
+    #   responses:
+    #     200:
+    #       description: Product review update payload
+    #       content:
+    #         application/json:
+    #           schema:
+    #             $ref: '#/components/schemas/FeedbackUpdateProductReviewRes'
+    #     default:
+    #       $ref: '#/components/responses/Error'
+    #   x-yc-apigateway-validator:
+    #     validateRequestBody: true
+    #   x-yc-apigateway-integration:
+    #     type: serverless_containers
+    #     container_id: '${containers.feedback.id}'
+    #     service_account_id: '${containers.feedback.sa_id}'
+    # delete:
+    #   summary: Delete product review
+    #   description: Delete product review
+    #   operationId: feedback_delete_product_review
+    #   tags:
+    #     - feedback
+    #   security:
+    #     - bearerAuth: []
+    #   parameters:
+    #     - name: product_id
+    #       description: product id
+    #       in: path
+    #       required: true
+    #       schema:
+    #         type: string
+    #     - name: review_id
+    #       description: review id
+    #       in: path
+    #       required: true
+    #       schema:
+    #         type: string
+    #   responses:
+    #     200:
+    #       description: Deleted product review
+    #       content:
+    #         application/json:
+    #           schema:
+    #             $ref: '#/components/schemas/FeedbackDeleteProductReviewRes'
+    #     default:
+    #       $ref: '#/components/responses/Error'
+    #   x-yc-apigateway-validator:
+    #     validateRequestBody: true
+    #   x-yc-apigateway-integration:
+    #     type: serverless_containers
+    #     container_id: '${containers.feedback.id}'
+    #     service_account_id: '${containers.feedback.sa_id}'
 
 components:
   securitySchemes:
@@ -2043,6 +2068,29 @@ components:
       x-tags:
         - private_api
       type: object
+    PrivateOrderProcessPaymentReq:
+      x-tags:
+        - private_api
+      type: object
+      required:
+        - messages
+      additionalProperties: false
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivateOrderProcessPaymentReqMessage'
+    # FIXME: determine all required fields
+    PrivateOrderProcessPaymentReqMessage:
+      x-tags:
+        - private_api
+      type: object
+      # required:
+        # - 
+      additionalProperties: false
+      properties:
+        field_1:
+          type: string
     OrdersGetOperationRes:
       type: object
       required:
@@ -2446,6 +2494,18 @@ components:
       properties:
         id:
           type: string
+    OrdersProcessYoomoneyPaymentReq:
+      type: object
+      required:
+        - operation_id
+      properties:
+        operation_id:
+          type: array
+          items:
+            type: string
+    OrdersProcessYoomoneyPaymentRes:
+      type: object
+
 
     ### Errors
     Err:

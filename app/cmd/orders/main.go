@@ -96,6 +96,9 @@ func main() {
 
 	apiImpl := &presentation.ApiImpl{Logger: logger, Service: svc}
 
+	// FIXME: add to OpenAPI spec
+	r.POST("/process-payment", apiImpl.ProcessPayment)
+
 	bearerAuthenticator, err := auth.NewJwtBearerAuthenticator(env[setup.EnvKeyAuthTokenPublicKey])
 	if err != nil {
 		logger.Fatal("failed to setup jwt bearer authenticator", zap.Error(err))
