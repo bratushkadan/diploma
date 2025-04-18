@@ -329,19 +329,60 @@ func (api *ApiImpl) OrdersUpdateOrder(c *gin.Context, orderId string) {
 	c.JSON(http.StatusOK, res)
 }
 
-func (api *ApiImpl) ProcessPayment(c *gin.Context) {
-	if err := c.Request.ParseForm(); err != nil {
-		api.Logger.Info("process payment form body parse error", zap.Error(err))
-		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
-			Code:    1,
-			Message: fmt.Sprintf("invalid request body: %v", err),
-		}))
+func (api *ApiImpl) OrdersProcessPaymentYoomoney(c *gin.Context) {
+	// should already be validated by the Oapi validator
+	req := service.ProcessYoomoneyPaymentNotificationReq{
+		NotificationType: c.PostForm("notification_type"),
+		OperationId:      c.PostForm("operation_id"),
+		Amount:           c.PostForm("amount"),
+		Currency:         c.PostForm("currency"),
+		Datetime:         c.PostForm("datetime"),
+		Sender:           c.PostForm("sender"),
+		Codepro:          c.PostForm("codepro"),
+		Label:            c.PostForm("label"),
+
+		Sha1Hash: c.PostForm("sha1_hash"),
 	}
 
-	api.Logger.Info("payment request", zap.Any("form_data", c.Request.PostForm))
+	// formData := c.Request.PostForm
+
+	api.Logger.Info(
+		"Yoomoney process payment notification request",
+		zap.Any("yoomoney_meta", map[string]any{
+			"sender":            req.Sender,
+			"currency":          req.Currency,
+			"operation_id":      req.OperationId,
+			"notification_type": req.NotificationType,
+			"sha1_hash":         req.Sha1Hash,
+			"datetime":          req.Datetime,
+		}),
+		zap.String("amount", req.Amount),
+		// zap.Any("form_data", formData),
+	)
+
+	if err := api.Service.ProcessYoomoneyPaymentNotification(c.Request.Context(), req); err != nil {
+		if errors.Is(err, service.ErrYoomoneyPaymentNotificationValidation) || errors.Is(err, service.ErrYoomoneyPaymentNotificationIntegrityCheckFailed) {
+			api.Logger.Info("Yoomoney payment notification bad input", zap.Error(err))
+			c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
+				Code:    1,
+				Message: err.Error(),
+			}))
+			return
+		}
+
+		api.Logger.Error("process Yoomoney payment", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
+			Code:    1,
+			Message: "failed to process Yoomoney payment",
+		}))
+		return
+	}
+
+	api.Logger.Info("yoomoney payment request processed", zap.Any("yoomoney_meta", map[string]any{
+		"operation_id": req.OperationId,
+	}))
 
 	c.JSON(http.StatusOK, gin.H{"message": "ok"})
-	//
 }
 
 func (api *ApiImpl) ErrorHandlerValidation(c *gin.Context, message string, code int) {

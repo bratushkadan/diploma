@@ -24,6 +24,8 @@ CREATE TABLE `orders/order_items` (
 CREATE TABLE `orders/payments` (
   id Utf8 NOT NULL,
   order_id Utf8 NOT NULL,
+  amount Double NOT NULL,
+  currency_iso_4217 Uint32 NOT NULL,
   provider Json NOT NULL,
   created_at Timestamp NOT NULL,
   updated_at Timestamp NOT NULL,

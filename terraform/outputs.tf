@@ -42,6 +42,10 @@ output "infra_tokens_lockbox_secret_id" {
   value = data.yandex_lockbox_secret.token_infra.id
 }
 
+output "yoomoney_payment_provider_notifications_secret_secret_id" {
+  value = data.yandex_lockbox_secret.yoomoney_payment_provider_notifications_secret.id
+}
+
 
 output "container_registry" {
   value = {

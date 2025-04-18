@@ -26,6 +26,8 @@ const (
 	EnvKeyAuthTokenPublicKey      = "APP_AUTH_TOKEN_PUBLIC_KEY"
 	EnvKeyAuthTokenPrivateKeyPath = "APP_AUTH_TOKEN_PRIVATE_KEY_PATH"
 	EnvKeyAuthTokenPublicKeyPath  = "APP_AUTH_TOKEN_PUBLIC_KEY_PATH"
+
+	EnvKeyYoomoneyNotificationSecret = "YOOMONEY_NOTIFICATIONS_SECRET"
 )
 
 const (

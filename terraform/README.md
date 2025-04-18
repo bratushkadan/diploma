@@ -58,7 +58,19 @@ Paste it's id to `data.yandex_lockbox_secret.token_infra` Terraform resource:
 
 ```terraform
 data "yandex_lockbox_secret" "token_infra" {
-  secret_id = ""
+  name = "token-ids-infra"
+}
+```
+
+Create Lockbox secret `yoomoney-payment-provider-notifications-secret` with the following fields:
+
+- `notification_secret`
+
+It will be imported in Terraform
+
+```terraform
+data "yandex_lockbox_secret" "yoomoney_payment_provider_notifications_secret" {
+  name = "yoomoney-payment-provider-notifications-secret"
 }
 ```
 

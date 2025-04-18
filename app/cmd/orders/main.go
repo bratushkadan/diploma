@@ -46,6 +46,7 @@ func main() {
 	env := cfg.AssertEnv(
 		setup.EnvKeyYdbEndpoint,
 		setup.EnvKeyAuthTokenPublicKey,
+		setup.EnvKeyYoomoneyNotificationSecret,
 	)
 
 	authMethod := cfg.EnvDefault(setup.EnvKeyYdbAuthMethod, ydbpkg.YdbAuthMethodMetadata)
@@ -89,15 +90,13 @@ func main() {
 	svc, err := service.NewBuilder().
 		Logger(logger).
 		Store(store).
+		YoomoneyPaymentNotificationSecret(env[setup.EnvKeyYoomoneyNotificationSecret]).
 		Build()
 	if err != nil {
 		logger.Fatal("new cart service", zap.Error(err))
 	}
 
 	apiImpl := &presentation.ApiImpl{Logger: logger, Service: svc}
-
-	// FIXME: add to OpenAPI spec
-	r.POST("/process-payment", apiImpl.ProcessPayment)
 
 	bearerAuthenticator, err := auth.NewJwtBearerAuthenticator(env[setup.EnvKeyAuthTokenPublicKey])
 	if err != nil {

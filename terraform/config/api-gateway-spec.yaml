@@ -885,6 +885,28 @@ paths:
                 $ref: '#/components/schemas/PrivateOrderCancelOperationsRes'
         default:
           $ref: '#/components/responses/Error'
+  /api/private/v1/order/process-payment-notifications:
+    x-private-api: true
+    post:
+      summary: Process payment notifications
+      description: Process payment notifications
+      tags:
+        - orders
+      operationId: private_orders_process_payment_notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivateOrderProcessPaymentNotificationsReq'
+      responses:
+        200:
+          description: rocess payment notifications res
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivateOrderProcessPaymentNotificationsRes'
+        default:
+          $ref: '#/components/responses/Error'
   /api/v1/order/operations/{operation_id}:
     get:
       summary: Get orders operation
@@ -1048,7 +1070,7 @@ paths:
         - orders
       requestBody:
         content:
-          multipart/form-data:
+          application/x-www-form-urlencoded:
             schema:
               $ref: '#/components/schemas/OrdersProcessYoomoneyPaymentReq'
       responses:
@@ -1197,117 +1219,117 @@ paths:
   #       service_account_id: '${containers.feedback.sa_id}'
   # # GetReview, EditReview (rating + text), DeleteReview
   # /api/v1/feedback/reviews/{product_id}/reviews/{review_id}:
-    # get:
-    #   summary: Get product review
-    #   description: Get product review
-    #   operationId: feedback_get_product_review
-    #   tags:
-    #     - feedback
-    #   parameters:
-    #     - name: product_id
-    #       description: product id
-    #       in: path
-    #       required: true
-    #       schema:
-    #         type: string
-    #     - name: review_id
-    #       description: review id
-    #       in: path
-    #       required: true
-    #       schema:
-    #         type: string
-    #   responses:
-    #     200:
-    #       description: Product review payload
-    #       content:
-    #         application/json:
-    #           schema:
-    #             $ref: '#/components/schemas/FeedbackGetProductReviewRes'
-    #     default:
-    #       $ref: '#/components/responses/Error'
-    #   x-yc-apigateway-validator:
-    #     validateRequestBody: true
-    #   x-yc-apigateway-integration:
-    #     type: serverless_containers
-    #     container_id: '${containers.feedback.id}'
-    #     service_account_id: '${containers.feedback.sa_id}'
-    # patch:
-    #   summary: Update product review
-    #   description: Update product review
-    #   operationId: feedback_update_product_review
-    #   tags:
-    #     - feedback
-    #   security:
-    #     - bearerAuth: []
-    #   parameters:
-    #     - name: product_id
-    #       description: product id
-    #       in: path
-    #       required: true
-    #       schema:
-    #         type: string
-    #     - name: review_id
-    #       description: review id
-    #       in: path
-    #       required: true
-    #       schema:
-    #         type: string
-    #   requestBody:
-    #     content:
-    #       application/json:
-    #         schema:
-    #           $ref: '#/components/schemas/FeedbackUpdateProductReviewReq'
-    #   responses:
-    #     200:
-    #       description: Product review update payload
-    #       content:
-    #         application/json:
-    #           schema:
-    #             $ref: '#/components/schemas/FeedbackUpdateProductReviewRes'
-    #     default:
-    #       $ref: '#/components/responses/Error'
-    #   x-yc-apigateway-validator:
-    #     validateRequestBody: true
-    #   x-yc-apigateway-integration:
-    #     type: serverless_containers
-    #     container_id: '${containers.feedback.id}'
-    #     service_account_id: '${containers.feedback.sa_id}'
-    # delete:
-    #   summary: Delete product review
-    #   description: Delete product review
-    #   operationId: feedback_delete_product_review
-    #   tags:
-    #     - feedback
-    #   security:
-    #     - bearerAuth: []
-    #   parameters:
-    #     - name: product_id
-    #       description: product id
-    #       in: path
-    #       required: true
-    #       schema:
-    #         type: string
-    #     - name: review_id
-    #       description: review id
-    #       in: path
-    #       required: true
-    #       schema:
-    #         type: string
-    #   responses:
-    #     200:
-    #       description: Deleted product review
-    #       content:
-    #         application/json:
-    #           schema:
-    #             $ref: '#/components/schemas/FeedbackDeleteProductReviewRes'
-    #     default:
-    #       $ref: '#/components/responses/Error'
-    #   x-yc-apigateway-validator:
-    #     validateRequestBody: true
-    #   x-yc-apigateway-integration:
-    #     type: serverless_containers
-    #     container_id: '${containers.feedback.id}'
-    #     service_account_id: '${containers.feedback.sa_id}'
+  # get:
+  #   summary: Get product review
+  #   description: Get product review
+  #   operationId: feedback_get_product_review
+  #   tags:
+  #     - feedback
+  #   parameters:
+  #     - name: product_id
+  #       description: product id
+  #       in: path
+  #       required: true
+  #       schema:
+  #         type: string
+  #     - name: review_id
+  #       description: review id
+  #       in: path
+  #       required: true
+  #       schema:
+  #         type: string
+  #   responses:
+  #     200:
+  #       description: Product review payload
+  #       content:
+  #         application/json:
+  #           schema:
+  #             $ref: '#/components/schemas/FeedbackGetProductReviewRes'
+  #     default:
+  #       $ref: '#/components/responses/Error'
+  #   x-yc-apigateway-validator:
+  #     validateRequestBody: true
+  #   x-yc-apigateway-integration:
+  #     type: serverless_containers
+  #     container_id: '${containers.feedback.id}'
+  #     service_account_id: '${containers.feedback.sa_id}'
+  # patch:
+  #   summary: Update product review
+  #   description: Update product review
+  #   operationId: feedback_update_product_review
+  #   tags:
+  #     - feedback
+  #   security:
+  #     - bearerAuth: []
+  #   parameters:
+  #     - name: product_id
+  #       description: product id
+  #       in: path
+  #       required: true
+  #       schema:
+  #         type: string
+  #     - name: review_id
+  #       description: review id
+  #       in: path
+  #       required: true
+  #       schema:
+  #         type: string
+  #   requestBody:
+  #     content:
+  #       application/json:
+  #         schema:
+  #           $ref: '#/components/schemas/FeedbackUpdateProductReviewReq'
+  #   responses:
+  #     200:
+  #       description: Product review update payload
+  #       content:
+  #         application/json:
+  #           schema:
+  #             $ref: '#/components/schemas/FeedbackUpdateProductReviewRes'
+  #     default:
+  #       $ref: '#/components/responses/Error'
+  #   x-yc-apigateway-validator:
+  #     validateRequestBody: true
+  #   x-yc-apigateway-integration:
+  #     type: serverless_containers
+  #     container_id: '${containers.feedback.id}'
+  #     service_account_id: '${containers.feedback.sa_id}'
+  # delete:
+  #   summary: Delete product review
+  #   description: Delete product review
+  #   operationId: feedback_delete_product_review
+  #   tags:
+  #     - feedback
+  #   security:
+  #     - bearerAuth: []
+  #   parameters:
+  #     - name: product_id
+  #       description: product id
+  #       in: path
+  #       required: true
+  #       schema:
+  #         type: string
+  #     - name: review_id
+  #       description: review id
+  #       in: path
+  #       required: true
+  #       schema:
+  #         type: string
+  #   responses:
+  #     200:
+  #       description: Deleted product review
+  #       content:
+  #         application/json:
+  #           schema:
+  #             $ref: '#/components/schemas/FeedbackDeleteProductReviewRes'
+  #     default:
+  #       $ref: '#/components/responses/Error'
+  #   x-yc-apigateway-validator:
+  #     validateRequestBody: true
+  #   x-yc-apigateway-integration:
+  #     type: serverless_containers
+  #     container_id: '${containers.feedback.id}'
+  #     service_account_id: '${containers.feedback.sa_id}'
 
 components:
   securitySchemes:
@@ -2068,7 +2090,7 @@ components:
       x-tags:
         - private_api
       type: object
-    PrivateOrderProcessPaymentReq:
+    PrivateOrderProcessPaymentNotificationsReq:
       x-tags:
         - private_api
       type: object
@@ -2079,18 +2101,35 @@ components:
         messages:
           type: array
           items:
-            $ref: '#/components/schemas/PrivateOrderProcessPaymentReqMessage'
-    # FIXME: determine all required fields
-    PrivateOrderProcessPaymentReqMessage:
+            $ref: '#/components/schemas/PrivateOrderProcessPaymentNotificationsReqMessage'
+    PrivateOrderProcessPaymentNotificationsReqMessage:
       x-tags:
         - private_api
       type: object
-      # required:
-        # - 
+      required:
+        - order_id
+        - amount
+        - currency_iso_4217
+        - provider_meta
+        - datetime
       additionalProperties: false
       properties:
-        field_1:
+        order_id:
           type: string
+        amount:
+          type: number
+          format: double
+        currency_iso_4217:
+          type: integer
+        datetime:
+          type: string
+          format: date-time
+        provider_meta:
+          type: object
+    PrivateOrderProcessPaymentNotificationsRes:
+      x-tags:
+        - private_api
+      type: object
     OrdersGetOperationRes:
       type: object
       required:
@@ -2278,6 +2317,46 @@ components:
           type: string
         order_id:
           type: string
+    OrdersProcessYoomoneyPaymentReq:
+      type: object
+      required:
+        - operation_id
+        - amount
+        - notification_type
+        - datetime
+        - currency
+        - sha1_hash
+      properties:
+        # https://yoomoney.ru/docs/payment-buttons/using-api/notifications#parameters
+        operation_id:
+          type: string
+        amount:
+          type: number
+          format: double
+        notification_type:
+          type: string
+          enum: [p2p-incoming, card-incoming]
+        label:
+          type: string
+          nullable: true
+        datetime:
+          type: string
+          format: date-time
+        currency:
+          type: number
+          enum: [643]
+        sha1_hash:
+          description: sha1 hash that is used to check the integrity of payment processing request
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+          # oneOf:
+          #   - minItems: 1
+          #     maxItems: 1
+    OrdersProcessYoomoneyPaymentRes:
+      type: object
 
     ### Feedback
     # PrivateFeedbackProcessCompletedOrderReq:
@@ -2487,25 +2566,13 @@ components:
     #     review:
     #       type: string
     # FeedbackDeleteProductReviewRes:
-      type: object
-      required:
-        - id
-      additionalProperties: false
-      properties:
-        id:
-          type: string
-    OrdersProcessYoomoneyPaymentReq:
-      type: object
-      required:
-        - operation_id
-      properties:
-        operation_id:
-          type: array
-          items:
-            type: string
-    OrdersProcessYoomoneyPaymentRes:
-      type: object
-
+    # type: object
+    # required:
+    #   - id
+    # additionalProperties: false
+    # properties:
+    #   id:
+    #     type: string
 
     ### Errors
     Err:

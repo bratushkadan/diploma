@@ -61,6 +61,12 @@ func (b *OrdersBuilder) Build() (*Orders, error) {
 	}
 	b.store.topicCancelOperations = topicCancelOperations
 
+	topicProcessedPaymentsNotifications, err := ydbtopic.NewProducer(b.store.db, topicProcessedPaymentsNotifications)
+	if err != nil {
+		return nil, errors.New("setup ProductsUnreservations topic: %w")
+	}
+	b.store.topicProcessedPaymentsNotifications = topicProcessedPaymentsNotifications
+
 	if b.store.logger == nil {
 		b.store.logger = zap.NewNop()
 	}
@@ -79,4 +85,6 @@ type Orders struct {
 	topicProductsUnreservations *topicwriter.Writer
 
 	topicCancelOperations *topicwriter.Writer
+
+	topicProcessedPaymentsNotifications *topicwriter.Writer
 }

@@ -37,6 +37,8 @@ CREATE TABLE `orders/order_items` (
 CREATE TABLE `orders/payments` (
   id Utf8 NOT NULL,
   order_id Utf8 NOT NULL,
+  amount Double NOT NULL,
+  currency_iso_4217 Uint32 NOT NULL,
   provider Json NOT NULL,
   created_at Timestamp NOT NULL,
   updated_at Timestamp NOT NULL,
@@ -76,6 +78,22 @@ Orders that are older than one hour and are not paid online (if not paid by cash
 ## Run
 
 ### Setup env and run
+
+```sh
+TF_OUTPUT=$(../terraform/tf output -json -no-color)
+export YDB_ENDPOINT="$(echo "${TF_OUTPUT}" | jq -cMr .ydb.value.full_endpoint)"
+export YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS="$(scripts/ydb_access_token.sh)"
+export YDB_AUTH_METHOD=environ
+APP_SA_STATIC_KEY_SECRET_ID="$(echo $TF_OUTPUT | jq -cMr .app_sa.value.static_key_lockbox_secret_id)"
+SECRET=$(yc lockbox payload get "${APP_SA_STATIC_KEY_SECRET_ID}")
+INFRA_TOKENS_SECRET_ID="$(echo $TF_OUTPUT | jq -cMr .infra_tokens_lockbox_secret_id.value)"
+INFRA_TOKENS_SECRET="$(yc lockbox payload get "${INFRA_TOKENS_SECRET_ID}")"
+export APP_AUTH_TOKEN_PUBLIC_KEY="$(echo $INFRA_TOKENS_SECRET | yq -M '.entries.[] | select(.key == "auth_token_public.key").text_value')"
+YOOMONEY_NOTIFICATIONS_SECRET_SECRET_ID="$(echo $TF_OUTPUT | jq -cMr .yoomoney_payment_provider_notifications_secret_secret_id.value)"
+YOOMONEY_NOTIFICATIONS_SECRET_PAYLOAD=$(yc lockbox payload get "${YOOMONEY_NOTIFICATIONS_SECRET_SECRET_ID}")
+export YOOMONEY_NOTIFICATIONS_SECRET="$(echo $YOOMONEY_NOTIFICATIONS_SECRET_PAYLOAD | yq -M '.entries.[] | select(.key == "notification_secret").text_value')"
+go run cmd/orders/main.go
+```
 
 ## CURLs for testing
 

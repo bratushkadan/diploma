@@ -10,6 +10,8 @@ import (
 type Orders struct {
 	l     *zap.Logger
 	store *store.Orders
+
+	yoomoneyPaymentNotificationSecret string
 }
 
 type OrdersBuilder struct {
@@ -29,6 +31,11 @@ func (b *OrdersBuilder) Store(store *store.Orders) *OrdersBuilder {
 	return b
 }
 
+func (b *OrdersBuilder) YoomoneyPaymentNotificationSecret(secret string) *OrdersBuilder {
+	b.svc.yoomoneyPaymentNotificationSecret = secret
+	return b
+}
+
 func (b *OrdersBuilder) Build() (*Orders, error) {
 	if b.svc.store == nil {
 		return nil, errors.New("store is nil")
@@ -36,6 +43,10 @@ func (b *OrdersBuilder) Build() (*Orders, error) {
 
 	if b.svc.l == nil {
 		b.svc.l = zap.NewNop()
+	}
+
+	if b.svc.yoomoneyPaymentNotificationSecret == "" {
+		return nil, errors.New("payment notification secret for Yoomoney is empty")
 	}
 
 	return &b.svc, nil

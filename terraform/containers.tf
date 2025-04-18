@@ -8,6 +8,10 @@ data "yandex_lockbox_secret" "token_infra" {
   name = "token-ids-infra"
 }
 
+data "yandex_lockbox_secret" "yoomoney_payment_provider_notifications_secret" {
+  name = "yoomoney-payment-provider-notifications-secret"
+}
+
 
 locals {
   versions = {
@@ -71,6 +75,8 @@ locals {
     "APP_AUTH_TOKEN_PUBLIC_KEY",
 
     "YMQ_TRIGGER_HTTP_ENDPOINTS_ENABLED",
+
+    "YOOMONEY_NOTIFICATIONS_SECRET",
 
     "OPENSEARCH_USER",
     "OPENSEARCH_PASSWORD",
@@ -181,12 +187,19 @@ locals {
       environment_variable = local.env.APP_AUTH_TOKEN_PUBLIC_KEY
       },
     ]
-    orders = [{
-      id                   = data.yandex_lockbox_secret.token_infra.id
-      version_id           = data.yandex_lockbox_secret.token_infra.current_version[0].id
-      key                  = "auth_token_public.key"
-      environment_variable = local.env.APP_AUTH_TOKEN_PUBLIC_KEY
+    orders = [
+      {
+        id                   = data.yandex_lockbox_secret.token_infra.id
+        version_id           = data.yandex_lockbox_secret.token_infra.current_version[0].id
+        key                  = "auth_token_public.key"
+        environment_variable = local.env.APP_AUTH_TOKEN_PUBLIC_KEY
       },
+      {
+        id                   = data.yandex_lockbox_secret.yoomoney_payment_provider_notifications_secret.id
+        version_id           = data.yandex_lockbox_secret.yoomoney_payment_provider_notifications_secret.current_version[0].id
+        key                  = "notification_secret"
+        environment_variable = local.env.YOOMONEY_NOTIFICATIONS_SECRET
+      }
     ]
     feedback = []
   }
@@ -725,7 +738,7 @@ resource "yandex_function_trigger" "process_products_unreserve" {
 }
 
 resource "yandex_function_trigger" "process_orders_with_unreserved_products" {
-  count       = local.containers.products.count
+  count       = local.containers.orders.count
   name        = "process-products-unreservations"
   description = "trigger for directing unreserved products messages to orders service"
 
@@ -738,6 +751,26 @@ resource "yandex_function_trigger" "process_orders_with_unreserved_products" {
   data_streams {
     database           = yandex_ydb_database_serverless.this.database_path
     stream_name        = yandex_ydb_topic.products_unreserved.name
+    service_account_id = yandex_iam_service_account.app.id
+    batch_cutoff       = "1"
+    batch_size         = 1
+  }
+}
+
+resource "yandex_function_trigger" "process_payment_notifications" {
+  count       = local.containers.orders.count
+  name        = "process-payment-notifications"
+  description = "trigger for directing payment notificaitons messages to orders service"
+
+  container {
+    id                 = yandex_serverless_container.orders[0].id
+    service_account_id = yandex_iam_service_account.auth_caller.id
+    path               = "/api/private/v1/order/process-payment-notifications"
+  }
+
+  data_streams {
+    database           = yandex_ydb_database_serverless.this.database_path
+    stream_name        = yandex_ydb_topic.orders_payment_notifications.name
     service_account_id = yandex_iam_service_account.app.id
     batch_cutoff       = "1"
     batch_size         = 1

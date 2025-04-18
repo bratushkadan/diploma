@@ -104,3 +104,15 @@ resource "yandex_ydb_topic" "orders_cancel_operations" {
 
   partition_write_speed_kbps = 128
 }
+
+resource "yandex_ydb_topic" "orders_payment_notifications" {
+  database_endpoint = yandex_ydb_database_serverless.this.ydb_full_endpoint
+  name              = "orders/payment_notifications_topic"
+  description       = "topic for processed payments notification from external providers"
+
+  supported_codecs       = []
+  partitions_count       = 1
+  retention_period_hours = 1
+
+  partition_write_speed_kbps = 128
+}
