@@ -11,12 +11,54 @@ import (
 	"time"
 
 	oapi_codegen "github.com/bratushkadan/floral/internal/orders/presentation/generated"
+	"github.com/bratushkadan/floral/internal/orders/store"
+	"github.com/google/uuid"
 )
 
 var (
 	ErrYoomoneyPaymentNotificationValidation           = errors.New("invalid payment notificaiton input parameter")
 	ErrYoomoneyPaymentNotificationIntegrityCheckFailed = errors.New("payment notification integrity check failed")
 )
+
+func (s *Orders) ProcessPaymentNotifications(ctx context.Context, reqMessages []oapi_codegen.PrivateOrderProcessPaymentNotificationsReqMessage) error {
+	// TODO: check if there's enough funds in payments, otherwise do not change status of order to "Paid"
+	paymentRecords := make([]store.CreatePaymentDTOInput, 0, len(reqMessages))
+	orderUpdates := make([]store.UpdateOrderManyDTOInputOrderUpdate, 0, len(reqMessages))
+	updateTime := time.Now()
+	for _, msg := range reqMessages {
+		paymentId := uuid.NewString()
+
+		paymentRecords = append(paymentRecords, store.CreatePaymentDTOInput{
+			Id:              paymentId,
+			OrderId:         msg.OrderId,
+			Amount:          msg.Amount,
+			CurrencyIso4217: uint32(msg.CurrencyIso4217),
+			Provider:        msg.ProviderMeta,
+			CreatedAt:       msg.Datetime,
+			RefundedAt:      nil,
+		})
+
+		orderUpdates = append(orderUpdates, store.UpdateOrderManyDTOInputOrderUpdate{
+			OrderId:   msg.OrderId,
+			Status:    string(OrderStatusPaid),
+			UpdatedAt: updateTime,
+		})
+	}
+
+	_, err := s.store.CreatePaymentMany(ctx, paymentRecords)
+	if err != nil {
+		return fmt.Errorf("created payment many: %v", err)
+	}
+
+	_, err = s.store.UpdateOrderMany(ctx, store.UpdateOrderManyDTOInput{
+		OrderUpdates: orderUpdates,
+	})
+	if err != nil {
+		return fmt.Errorf("update order many: %v", err)
+	}
+
+	return nil
+}
 
 type ProcessYoomoneyPaymentNotificationReq struct {
 	NotificationType string
@@ -99,7 +141,7 @@ func (s *Orders) ProcessYoomoneyPaymentNotification(ctx context.Context, req Pro
 		)
 	}
 
-	if err := s.store.ProduceProcessedPaymentsNotificationsMessages(ctx, oapi_codegen.PrivateOrderProcessPaymentReqMessage{
+	if err := s.store.ProduceProcessedPaymentsNotificationsMessages(ctx, oapi_codegen.PrivateOrderProcessPaymentNotificationsReqMessage{
 		OrderId:         orderId,
 		CurrencyIso4217: currency,
 		Datetime:        paymentTime,

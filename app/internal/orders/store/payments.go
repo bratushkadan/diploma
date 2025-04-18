@@ -20,6 +20,48 @@ const (
 	topicProcessedPaymentsNotifications = "orders/payment_notifications_topic"
 )
 
+var queryCreatePaymentMany = template.ReplaceAllPairs(`
+DECLARE $payments AS List<Struct<
+  id:Utf8,
+  order_id:Utf8,
+  amount:Double,
+  currency_iso_4217:Uint32,
+  provider:Json,
+  created_at:Timestamp,
+  updated_at:Timestamp,
+  refunded_at:Optional<Timestamp>,
+>>;
+
+-- $payments = AsList(
+--     AsStruct(
+--       UNWRAP(CAST("op6" AS Utf8)) AS id,
+--       UNWRAP(CAST("" AS Utf8)) AS order_id,
+--       53.33 AS amount,
+--       643u AS currency_iso_4217,
+--       CurrentUtcTimestamp() AS created_at,
+--       CurrentUtcTimestamp() AS updated_at,
+--       @@{"name": "yoomoney"}@@j AS provider,
+--     ),
+--     AsStruct(
+--       UNWRAP(CAST("op7" AS Utf8)) AS id,
+--       UNWRAP(CAST("" AS Utf8)) AS order_id,
+--       23.33 AS amount,
+--       643u AS currency_iso_4217,
+--       CurrentUtcTimestamp() AS created_at,
+--       CurrentUtcTimestamp() AS updated_at,
+--       @@{"name": "yoomoney"}@@j AS provider,
+--     ),
+-- );
+
+INSERT INTO {{table.payments}}
+SELECT * FROM AS_TABLE($payments);
+-- https://github.com/ydb-platform/ydb/issues/15551
+-- RETURNING id, order_id, amount, currency_iso_4217, provider, created_at, updated_at, refunded_at;
+`,
+	"{{table.payments}}",
+	tablePayments,
+)
+
 var queryCreatePayment = template.ReplaceAllPairs(`
 DECLARE $id AS Utf8;
 DECLARE $order_id AS Utf8;
@@ -76,7 +118,7 @@ func (s *Orders) CreatePayment(ctx context.Context, in CreatePaymentDTOInput) (C
 
 	tableQueryParameters := table.NewQueryParameters(
 		table.ValueParam("$id", types.UTF8Value(in.Id)),
-		table.ValueParam("$order_id", types.UTF8Value(in.Id)),
+		table.ValueParam("$order_id", types.UTF8Value(in.OrderId)),
 		table.ValueParam("$amount", types.DoubleValue(in.Amount)),
 		table.ValueParam("$currency_iso_4217", types.Uint32Value(in.CurrencyIso4217)),
 		table.ValueParam("$provider", types.JSONValueFromBytes(provider)),
@@ -120,6 +162,43 @@ func (s *Orders) CreatePayment(ctx context.Context, in CreatePaymentDTOInput) (C
 	}
 
 	return out, nil
+}
+
+func (s *Orders) CreatePaymentMany(ctx context.Context, in []CreatePaymentDTOInput) ([]CreatePaymentDTOOutput, error) {
+	rows := make([]types.Value, 0, len(in))
+	for _, record := range in {
+		provider, err := json.Marshal(&record.Provider)
+		if err != nil {
+			return nil, fmt.Errorf("serialize provider data: %v", err)
+		}
+
+		rows = append(rows, types.StructValue(
+			types.StructFieldValue("id", types.UTF8Value(record.Id)),
+			types.StructFieldValue("order_id", types.UTF8Value(record.OrderId)),
+			types.StructFieldValue("amount", types.DoubleValue(record.Amount)),
+			types.StructFieldValue("currency_iso_4217", types.Uint32Value(record.CurrencyIso4217)),
+			types.StructFieldValue("provider", types.JSONValueFromBytes(provider)),
+			types.StructFieldValue("created_at", types.TimestampValueFromTime(record.CreatedAt)),
+			types.StructFieldValue("updated_at", types.TimestampValueFromTime(record.CreatedAt)),
+			types.StructFieldValue("refunded_at", types.NullableTimestampValueFromTime(record.RefundedAt)),
+		))
+	}
+
+	if err := s.db.Table().DoTx(ctx, func(ctx context.Context, tx table.TransactionActor) error {
+		res, err := tx.Execute(ctx, queryCreatePaymentMany, table.NewQueryParameters(
+			table.ValueParam("$payments", types.ListValue(rows...)),
+		))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = res.Close() }()
+
+		return res.Err()
+	}); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 var queryGetPayment = template.ReplaceAllPairs(`
@@ -256,7 +335,7 @@ func (s *Orders) UpdatePayment(ctx context.Context, in UpdatePaymentDTOInput) (*
 	return out, nil
 }
 
-func (s *Orders) ProduceProcessedPaymentsNotificationsMessages(ctx context.Context, messages ...oapi_codegen.PrivateOrderProcessPaymentReqMessage) error {
+func (s *Orders) ProduceProcessedPaymentsNotificationsMessages(ctx context.Context, messages ...oapi_codegen.PrivateOrderProcessPaymentNotificationsReqMessage) error {
 	dataBytes := make([][]byte, 0, len(messages))
 	for _, message := range messages {
 		msgBytes, err := json.Marshal(message)

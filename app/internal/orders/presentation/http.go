@@ -274,6 +274,27 @@ func (api *ApiImpl) OrdersGetOrder(c *gin.Context, orderId string) {
 	c.JSON(http.StatusOK, res)
 }
 
+func (api *ApiImpl) PrivateOrdersProcessPaymentNotifications(c *gin.Context) {
+	var reqBody oapi_codegen.PrivateOrdersProcessPaymentNotificationsJSONRequestBody
+	if err := json.NewDecoder(c.Request.Body).Decode(&reqBody); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
+			Code:    1,
+			Message: fmt.Sprintf("invalid request body: %v", err),
+		}))
+		return
+	}
+	if err := api.Service.ProcessPaymentNotifications(c.Request.Context(), reqBody.Messages); err != nil {
+		api.Logger.Error("process payment notifications", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, xhttp.NewErrorResponse(xhttp.ErrorResponseErr{
+			Code:    1,
+			Message: "failed to process payment notifications",
+		}))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "ok"})
+}
+
 func (api *ApiImpl) OrdersUpdateOrder(c *gin.Context, orderId string) {
 	accessToken, ok := auth.AccessTokenFromContext(c.Request.Context())
 	if !ok {
