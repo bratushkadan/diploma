@@ -120,8 +120,6 @@ func (s *Orders) ProcessYoomoneyPaymentNotification(ctx context.Context, req Pro
 
 	labelParts := strings.Split(req.Label, ":")
 	orderId := labelParts[0]
-	// FIXME:
-	// orderId = "5f81f6fe-0b02-430d-8a95-38d8d3f55759"
 	if orderId == "" {
 		return fmt.Errorf(
 			`%w: invalid empty "label" field`,

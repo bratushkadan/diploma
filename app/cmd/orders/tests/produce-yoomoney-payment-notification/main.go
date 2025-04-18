@@ -20,15 +20,27 @@ import (
 	"github.com/google/uuid"
 )
 
+/*
+
+Как получить amount:
+
+SELECT
+  SUM(count * price) AS sum,
+FROM `orders/order_items`
+WHERE order_id = "<id>"
+GROUP BY order_id;
+
+*/
+
 func main() {
 	env := cfg.AssertEnv(setup.EnvKeyYoomoneyNotificationSecret)
 
-	apiUrl := "http://localhost:8080/api/v1/order/process-payment/yoomoney"
+	apiUrl := "https://d5d0b63n81bf2dbcn9q6.z7jmlavt.apigw.yandexcloud.net/api/v1/order/process-payment/yoomoney"
 
 	notificationSecret := env[setup.EnvKeyYoomoneyNotificationSecret]
 
-	orderId := "foobar"
-	var amount float64 = 299.45
+	orderId := "4834c398-ba67-484f-a5f8-5623c4f8882d"
+	var amount float64 = 289.97
 
 	notificationType := "card-incoming"
 	operationId := uuid.NewString()

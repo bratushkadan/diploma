@@ -21,8 +21,8 @@ locals {
     }
     products = "0.0.5"
     catalog  = "0.0.3"
-    cart     = "0.0.4"
-    orders   = "0.0.8"
+    cart     = "0.0.5"
+    orders   = "0.0.9"
     feedback = ""
   }
 
