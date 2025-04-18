@@ -133,19 +133,24 @@ o->o: Обновление статуса заказа\n(обработка со
 
 ### External Payments Provider triggering state change of an order
 
-[PlantUML Editor](https://editor.plantuml.com/uml/bP0n3e9044NxFSN6IWilO66uWHUWGI6HgEm6CBQ0ZOcTiVOCAn452Ng5FpToLYjAYzb9Pl_xypDEadfnkjsiXUOUBaBjHQaSu8GE5HtuhT58lD72K84ATtHqHED6FAGCBvGmQ71ZTJQGNY9rtsaM-q6SV7-K47eyLHE9CwiBvbhKVM_ZHaEKlE1XdUKkc2-LMes4-d4NN3cHtTcot6Qh9ENMYWhQKmuZcJHuSd7_1-kbiA2s80zAcrK89uXyUwOF)
+[PlantUML Editor](https://editor.plantuml.com/uml/hL8zJiCm5Dvz2giJ7Ne1XgWtO4RAKgWbAgYT9gbGjj020Z5KGin5J32wKKDJcgHNUBuHdrseA3yRYoq_Vt_lsUqexeJni7_60kozurxGaJ5lq3rLb9iRh0KjEQrfHTgCAATNgimTBNs9eacffemqBMaETDhWdOW7kqe7OLU4aI_tXEm6geVIeL9z9KNIT72LiC5G30KyN-1LaURc0h8rpSmj_5m0Xnpy8MmcDBT9kEEaY3EZ6bdVgE1MqLpYc5A91gvnBdnfiLyxqkRg8mnZGSjJoJwd1pGqWjRAgko0OKaPPh2mpVDpSNIYr6cJgQJLyhm1g8zcZ0WW8eBpD9CVFRcIBu7CK9ZZgWHZqsvE9NSHRLTu0zoxjTmDabjBBu3X59NCvcLT4SMXIknKrMUSPuUlVes1j_s761WPV9x0Na13RzWS1mra0S-2Vn_vbZN5g2htZRQ-Y6H7RqPc3AxU266KTcUiZO-4__eE)
 
-![](https://img.plantuml.biz/plantuml/png/bP0n3e9044NxFSN6IWilO66uWHUWGI6HgEm6CBQ0ZOcTiVOCAn452Ng5FpToLYjAYzb9Pl_xypDEadfnkjsiXUOUBaBjHQaSu8GE5HtuhT58lD72K84ATtHqHED6FAGCBvGmQ71ZTJQGNY9rtsaM-q6SV7-K47eyLHE9CwiBvbhKVM_ZHaEKlE1XdUKkc2-LMes4-d4NN3cHtTcot6Qh9ENMYWhQKmuZcJHuSd7_1-kbiA2s80zAcrK89uXyUwOF)
+![](https://img.plantuml.biz/plantuml/png/hL8zJiCm5Dvz2giJ7Ne1XgWtO4RAKgWbAgYT9gbGjj020Z5KGin5J32wKKDJcgHNUBuHdrseA3yRYoq_Vt_lsUqexeJni7_60kozurxGaJ5lq3rLb9iRh0KjEQrfHTgCAATNgimTBNs9eacffemqBMaETDhWdOW7kqe7OLU4aI_tXEm6geVIeL9z9KNIT72LiC5G30KyN-1LaURc0h8rpSmj_5m0Xnpy8MmcDBT9kEEaY3EZ6bdVgE1MqLpYc5A91gvnBdnfiLyxqkRg8mnZGSjJoJwd1pGqWjRAgko0OKaPPh2mpVDpSNIYr6cJgQJLyhm1g8zcZ0WW8eBpD9CVFRcIBu7CK9ZZgWHZqsvE9NSHRLTu0zoxjTmDabjBBu3X59NCvcLT4SMXIknKrMUSPuUlVes1j_s761WPV9x0Na13RzWS1mra0S-2Vn_vbZN5g2htZRQ-Y6H7RqPc3AxU266KTcUiZO-4__eE)
 
 ```plantuml
 @startuml
 participant "Внешний платежный\n провайдер" as p
-participant "Orders" as o
+participant "Orders\n(endpoint Yoomoney)" as oy
+queue "Шина сообщений" as q
+participant "Orders\n(ядро обработки информации\nо платежах)" as o
 
-p->o: Детали платежа\n(вызов webhook)
+p->oy: Детали платежа\n(вызов webhook)
+oy-->>q: Публикация сообщения с\nуведомлением о прошедшем платеже
+oy->p: Ответ
+destroy oy
+o-->>q: Чтения сообщений с\nуведомлением о прошедшем платеже
+o->o: Создание записи о платеже
 o->o: Обновление статуса заказа
-o->o: Обновление статуса платежа
-o->p: Ответ
 
 @enduml
 ```
