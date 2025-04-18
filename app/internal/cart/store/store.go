@@ -169,12 +169,14 @@ func (c *Cart) GetCartPositionsMany(ctx context.Context, messages []oapi_codegen
 
 	out := make([]oapi_codegen.PrivateOrderProcessPublishedCartPositionsReqMessage, 0, len(messages))
 	for _, msg := range messages {
-		if cartPositions, ok := positions[msg.UserId]; ok {
-			out = append(out, oapi_codegen.PrivateOrderProcessPublishedCartPositionsReqMessage{
-				OperationId:   msg.OperationId,
-				CartPositions: cartPositions,
-			})
+		cartPositions, ok := positions[msg.UserId]
+		if !ok {
+			cartPositions = make([]oapi_codegen.PrivateOrderProcessPublishedCartPositionsReqCartPosition, 0)
 		}
+		out = append(out, oapi_codegen.PrivateOrderProcessPublishedCartPositionsReqMessage{
+			OperationId:   msg.OperationId,
+			CartPositions: cartPositions,
+		})
 	}
 
 	return out, nil
@@ -376,6 +378,6 @@ func (c *Cart) PublishCartContents(ctx context.Context, messages []oapi_codegen.
 		marshaledMessages = append(marshaledMessages, marshaledPosition)
 	}
 
-	c.logger.Info("publish cart contents", zap.Any("messages", messages))
+	c.logger.Info("publish cart contents", zap.Any("messages", marshaledMessages))
 	return ydbtopic.Produce(ctx, c.topicCartContents, marshaledMessages...)
 }

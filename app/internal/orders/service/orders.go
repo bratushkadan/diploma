@@ -230,6 +230,8 @@ func (s *Orders) ProcessPublishedCartPositions(ctx context.Context, req oapi_cod
 		})
 	}
 
+	s.l.Info("published cart positions", zap.Any("reservation_messages", productsReservationMessages), zap.Any("cancel_operations_messages", cancelOperationsMessages))
+
 	var wg sync.WaitGroup
 	var errs []error
 	var m sync.Mutex

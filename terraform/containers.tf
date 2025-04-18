@@ -22,7 +22,7 @@ locals {
     products = "0.0.5"
     catalog  = "0.0.3"
     cart     = "0.0.4"
-    orders   = "0.0.7"
+    orders   = "0.0.8"
     feedback = ""
   }
 

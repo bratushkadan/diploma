@@ -73,6 +73,8 @@ func (c *Cart) CartsPublishPositions(ctx context.Context, req oapi_codegen.Priva
 		return fmt.Errorf("get cart positions many: %w", err)
 	}
 
+	c.l.Info("carts positions many", zap.Any("positions", positions))
+
 	if err := c.store.PublishCartContents(ctx, positions); err != nil {
 		return fmt.Errorf("publish cart contents: %w", err)
 	}
